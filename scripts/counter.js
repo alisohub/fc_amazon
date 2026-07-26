@@ -11,8 +11,6 @@
 
     // --- DEFAULT SETTINGS ---
     let settings = {
-        barcodeRegex: '^tsx[a-z0-9]+',
-        soundAlerts: true,
         overlayOpacity: 0.35
     };
 
@@ -25,11 +23,11 @@
         console.warn('Could not read settings from localStorage', e);
     }
 
-    // --- KEYWORDS FOR NOTIFICATION DETECTION (EN, PL, UK) ---
+    const TOTE_REGEX = /^tsx[a-z0-9]+/i;
     const SUCCESS_TEXTS = ['success', 'linked', 'pomyślnie', 'przypisano', 'успішно'];
     const ERROR_TEXTS = ['error', 'invalid', 'failed', 'błąd', 'nieprawidłow', 'помилка'];
 
-    // --- STATE PERSISTENCE ---
+    // --- STATE ---
     let itemCounter = 0;
     try {
         const savedCount = localStorage.getItem(STORAGE_KEY_COUNT);
@@ -41,6 +39,7 @@
     }
 
     let active = false;
+    let overlayVisible = true;
     let cooldownUntil = 0;
 
     function saveCount(count) {
@@ -86,16 +85,20 @@
             backdropFilter: 'blur(3px)',
             userSelect: 'none',
             cursor: 'move',
-            transition: 'opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease',
-            opacity: settings.overlayOpacity.toString(),
+            transition: 'opacity 0.2s ease',
+            opacity: overlayVisible ? settings.overlayOpacity.toString() : '0',
             border: '1px solid rgba(255, 255, 255, 0.15)',
             display: active ? 'block' : 'none'
         });
 
         overlay.innerHTML = `📦 <span id="sh-overlay-count">${itemCounter}</span>`;
 
-        overlay.addEventListener('mouseenter', () => { overlay.style.opacity = '0.9'; });
-        overlay.addEventListener('mouseleave', () => { overlay.style.opacity = settings.overlayOpacity.toString(); });
+        overlay.addEventListener('mouseenter', () => { 
+            if (overlayVisible) overlay.style.opacity = '0.9'; 
+        });
+        overlay.addEventListener('mouseleave', () => { 
+            if (overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString(); 
+        });
 
         let isDragging = false, startX, startY, initialLeft, initialTop;
         overlay.addEventListener('mousedown', (e) => {
@@ -128,19 +131,6 @@
 
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count;
-
-        const overlay = document.getElementById('sh-item-overlay');
-        if (overlay) {
-            overlay.style.opacity = '1';
-            overlay.style.transform = 'scale(1.15)';
-            overlay.style.backgroundColor = 'rgba(6, 125, 98, 0.8)';
-
-            setTimeout(() => {
-                overlay.style.transform = 'scale(1)';
-                overlay.style.backgroundColor = 'rgba(35, 47, 62, 0.4)';
-                overlay.style.opacity = settings.overlayOpacity.toString();
-            }, 400);
-        }
     }
 
     function verifyAndCount(scannedBarcode) {
@@ -194,10 +184,7 @@
         if (!input.matches('input:not([type="hidden"]):not([disabled])') || isInsideModal(input)) return;
 
         const rawValue = input.value?.trim();
-        if (!rawValue) return;
-
-        const regex = new RegExp(settings.barcodeRegex, 'i');
-        if (!regex.test(rawValue)) return;
+        if (!rawValue || !TOTE_REGEX.test(rawValue)) return;
 
         const now = Date.now();
         if (now < cooldownUntil) return;
@@ -205,6 +192,18 @@
 
         setTimeout(() => verifyAndCount(rawValue), 50);
     }
+
+    // Toggle Overlay via F10
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'F10' && active) {
+            e.preventDefault();
+            overlayVisible = !overlayVisible;
+            const overlay = document.getElementById('sh-item-overlay');
+            if (overlay) {
+                overlay.style.opacity = overlayVisible ? settings.overlayOpacity.toString() : '0';
+            }
+        }
+    });
 
     document.addEventListener('keydown', handleScan, true);
     document.addEventListener('change', handleScan, true);
@@ -227,9 +226,9 @@
         },
         isActive: () => active,
         getCount: () => itemCounter,
-        resetCount: () => {
-            updateCounterUI(0);
-            console.log('🔄 Item Counter Reset to 0');
+        setCount: (newCount) => {
+            updateCounterUI(newCount);
+            console.log(`🔄 Item Counter manually set to ${newCount}`);
         },
         getSettings: () => settings,
         updateSettings: (newSettings) => {
@@ -240,7 +239,7 @@
                 console.warn('Failed to persist settings', e);
             }
             const overlay = document.getElementById('sh-item-overlay');
-            if (overlay) overlay.style.opacity = settings.overlayOpacity.toString();
+            if (overlay && overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString();
         }
     };
 

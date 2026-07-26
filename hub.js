@@ -29,32 +29,28 @@
                 const handler = window.__itemCounter;
                 if (!handler) return;
                 const settings = handler.getSettings();
+                const currentCount = handler.getCount();
+
                 container.innerHTML = `
                     <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #cbd5e1; font-size: 12px; color: #475569;">
-                        <label style="display:block; margin-bottom:2px; font-weight:600;">Barcode Regex Pattern:</label>
-                        <input type="text" id="sh-cfg-regex" value="${settings.barcodeRegex}" style="width:100%; padding:4px; font-size:11px; margin-bottom:6px; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:4px;" />
+                        <label style="display:block; margin-bottom:2px; font-weight:600;">Manual Counter Edit:</label>
+                        <input type="number" id="sh-cfg-count" value="${currentCount === 0 ? '' : currentCount}" placeholder="666" style="width:100%; padding:4px; font-size:12px; margin-bottom:6px; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:4px;" />
 
                         <label style="display:block; margin-bottom:2px; font-weight:600;">Overlay Opacity (<span id="sh-lbl-opacity">${settings.overlayOpacity}</span>):</label>
                         <input type="range" id="sh-cfg-opacity" min="0.1" max="1" step="0.05" value="${settings.overlayOpacity}" style="width:100%; margin-bottom:6px;" />
-
-                        <button id="sh-btn-reset-count" style="width:100%; background:#ef4444; color:#fff; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer;">Reset Counter to 0</button>
                     </div>
                 `;
 
-                container.querySelector('#sh-cfg-regex').addEventListener('change', (e) => {
-                    handler.updateSettings({ barcodeRegex: e.target.value.trim() });
+                // Handle manual count update
+                container.querySelector('#sh-cfg-count').addEventListener('input', (e) => {
+                    const val = parseInt(e.target.value, 10);
+                    handler.setCount(isNaN(val) ? 0 : val);
                 });
 
                 container.querySelector('#sh-cfg-opacity').addEventListener('input', (e) => {
                     const val = parseFloat(e.target.value);
                     container.querySelector('#sh-lbl-opacity').textContent = val;
                     handler.updateSettings({ overlayOpacity: val });
-                });
-
-                container.querySelector('#sh-btn-reset-count').addEventListener('click', () => {
-                    if (confirm('Are you sure you want to reset the item counter?')) {
-                        handler.resetCount();
-                    }
                 });
             }
         }
@@ -109,9 +105,9 @@
                 #sh-root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; z-index: 999999; }
                 #sh-panel { position: fixed; top: 0; right: -320px; width: 300px; height: 100vh; z-index: 999998; background: #ffffff; border-left: 1px solid #e0e0e0; box-shadow: -4px 0 16px rgba(0,0,0,0.15); transition: right 0.25s ease-in-out; display: flex; flex-direction: column; }
                 #sh-panel.sh-open { right: 0; }
-                .sh-header { background: #232f3e; color: white; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; }
-                .sh-header h3 { margin: 0; font-size: 15px; }
-                .sh-close { background: none; border: none; color: #aab7c4; font-size: 18px; cursor: pointer; }
+                .sh-header { background: #232f3e; color: white; padding: 14px 16px; display: flex; flex-row; justify-content: space-between; align-items: center; min-height: 48px; box-sizing: border-box; }
+                .sh-header h3 { margin: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                .sh-close { background: none; border: none; color: #aab7c4; font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1; }
                 .sh-close:hover { color: white; }
                 .sh-body { padding: 12px; overflow-y: auto; flex: 1; }
                 .sh-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 10px; background: #f8fafc; display: flex; flex-direction: column; }
@@ -144,10 +140,16 @@
         const togglePanel = () => panel.classList.toggle('sh-open');
         closeBtn.onclick = togglePanel;
 
+        // Open menu by typing "menu"
+        let keyBuffer = '';
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'F10') {
-                e.preventDefault();
-                togglePanel();
+            if (e.key.length === 1) {
+                keyBuffer += e.key.toLowerCase();
+                if (keyBuffer.length > 10) keyBuffer = keyBuffer.slice(-10);
+                if (keyBuffer.endsWith('menu')) {
+                    togglePanel();
+                    keyBuffer = '';
+                }
             }
         });
 
