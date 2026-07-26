@@ -19,6 +19,13 @@
             file: 'auto_lpn.js',
             description: 'Auto-clicks LPN reassignment on scanner input.',
             getHandler: () => window.__autoLpn
+        },
+        {
+          id: 'counter',
+          name: 'Unit Counter',
+          file: 'counter.js',
+          description: 'Counts.',
+          getHandler: () => window.__counter
         }
     ];
 
