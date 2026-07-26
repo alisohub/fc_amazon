@@ -8,7 +8,11 @@
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';
     const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
 
-    let settings = { overlayOpacity: 0.35 };
+    // Default settings includes the counterOption (1, 2, 3, or 4 for break schedules)
+    let settings = { 
+        overlayOpacity: 0.35,
+        counterOption: 1 
+    };
 
     try {
         const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
@@ -16,7 +20,6 @@
     } catch (e) { console.warn('Could not read settings', e); }
 
     const TOTE_REGEX = /^tsx[a-z0-9]+/i;
-    // Dictionary works automatically regardless of the UI language toggle
     const SUCCESS_TEXTS = ['success', 'linked', 'pomyślnie', 'przypisano', 'успішно'];
     const ERROR_TEXTS = ['error', 'invalid', 'failed', 'błąd', 'nieprawidłow', 'помилка'];
 
@@ -34,6 +37,66 @@
         itemCounter = count;
         try { localStorage.setItem(STORAGE_KEY_COUNT, count.toString()); } 
         catch (e) {}
+    }
+
+    // --- RATE LOGIC (UPH) ---
+    function calculateUPH() {
+        if (itemCounter === 0) return 0;
+
+        const now = new Date();
+        const hours = now.getHours();
+
+        // Determine Shift (Night shift starts at 18:30, Day starts at 06:30)
+        const isNight = hours >= 17 || hours < 6;
+        let shiftStart = new Date(now);
+
+        if (isNight) {
+            // If it is past midnight but before 6 AM, the shift started yesterday
+            if (hours < 6) shiftStart.setDate(shiftStart.getDate() - 1);
+            shiftStart.setHours(18, 30, 0, 0);
+        } else {
+            shiftStart.setHours(6, 30, 0, 0);
+        }
+
+        const elapsedMs = now - shiftStart;
+        if (elapsedMs <= 0) return 0; // Shift hasn't officially started yet
+
+        let breakStart = new Date(shiftStart);
+        let breakEnd = new Date(shiftStart);
+        const opt = settings.counterOption || 1;
+
+        // Break Timetables
+        if (isNight) {
+            if (opt === 1) { breakStart.setHours(23, 20, 0, 0); breakEnd.setHours(23, 50, 0, 0); }
+            else if (opt === 2) { breakStart.setHours(23, 50, 0, 0); breakEnd.setDate(breakEnd.getDate()+1); breakEnd.setHours(0, 20, 0, 0); }
+            else if (opt === 3) { breakStart.setDate(breakStart.getDate()+1); breakStart.setHours(0, 20, 0, 0); breakEnd.setDate(breakEnd.getDate()+1); breakEnd.setHours(0, 50, 0, 0); }
+            else if (opt === 4) { breakStart.setDate(breakStart.getDate()+1); breakStart.setHours(0, 50, 0, 0); breakEnd.setDate(breakEnd.getDate()+1); breakEnd.setHours(1, 20, 0, 0); }
+        } else {
+            if (opt === 1) { breakStart.setHours(11, 20, 0, 0); breakEnd.setHours(11, 50, 0, 0); }
+            else if (opt === 2) { breakStart.setHours(11, 50, 0, 0); breakEnd.setHours(12, 20, 0, 0); }
+            else if (opt === 3) { breakStart.setHours(12, 20, 0, 0); breakEnd.setHours(12, 50, 0, 0); }
+            else if (opt === 4) { breakStart.setHours(12, 50, 0, 0); breakEnd.setHours(13, 20, 0, 0); }
+        }
+
+        let effectiveMs = elapsedMs;
+
+        // If currently on break, freeze time at the start of the break
+        if (now >= breakStart && now < breakEnd) {
+            effectiveMs = breakStart - shiftStart;
+        }
+        // If the break has passed, deduct the 30 minutes from total elapsed time
+        else if (now >= breakEnd) {
+            effectiveMs = elapsedMs - (30 * 60 * 1000);
+        }
+
+        // Cap to a max of 10 working hours (10 * 60 * 60 * 1000)
+        const maxMs = 10 * 60 * 60 * 1000;
+        if (effectiveMs > maxMs) effectiveMs = maxMs;
+
+        const hoursWorked = effectiveMs / (1000 * 60 * 60);
+        if (hoursWorked <= 0) return 0;
+
+        return Math.round(itemCounter / hoursWorked);
     }
 
     function isInsideModal(el) {
@@ -74,7 +137,7 @@
             display: active ? 'block' : 'none'
         });
 
-        overlay.innerHTML = `📦 <span id="sh-overlay-count">${itemCounter}</span>`;
+        overlay.innerHTML = `📦 <span id="sh-overlay-count">${itemCounter}</span> <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> ⚡ <span id="sh-overlay-uph">${calculateUPH()}</span>`;
 
         overlay.addEventListener('mouseenter', () => { 
             if (overlayVisible) overlay.style.opacity = '1'; 
@@ -83,7 +146,6 @@
             if (overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString(); 
         });
 
-        // Dragging Logic with Check against Window Bounds
         let isDragging = false, startX, startY, initialLeft, initialTop;
 
         overlay.addEventListener('mousedown', (e) => {
@@ -94,7 +156,6 @@
             initialLeft = rect.left;
             initialTop = rect.top;
 
-            // Switch from right/bottom coords to left/top coords for drag mapping
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
             overlay.style.left = `${initialLeft}px`;
@@ -107,11 +168,9 @@
             let newLeft = initialLeft + (e.clientX - startX);
             let newTop = initialTop + (e.clientY - startY);
 
-            // Define maximum bounds to prevent element from leaving viewport
             const maxLeft = window.innerWidth - overlay.offsetWidth;
             const maxTop = window.innerHeight - overlay.offsetHeight;
 
-            // Clamp values
             newLeft = Math.max(0, Math.min(newLeft, maxLeft));
             newTop = Math.max(0, Math.min(newTop, maxTop));
 
@@ -121,7 +180,6 @@
 
         document.addEventListener('mouseup', () => { isDragging = false; });
         window.addEventListener('resize', () => {
-            // Recalculate bounds if window is shrunk while overlay is near edge
             if (!active) return;
             const rect = overlay.getBoundingClientRect();
             if (rect.right > window.innerWidth || rect.bottom > window.innerHeight) {
@@ -136,8 +194,18 @@
 
     function updateCounterUI(count) {
         saveCount(count);
+
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count;
+
+        const overlayUPH = document.getElementById('sh-overlay-uph');
+        if (overlayUPH) overlayUPH.textContent = calculateUPH();
+
+        // Dynamically update the Settings Hub input field without replacing focus
+        const hubInput = document.getElementById('sh-cfg-count');
+        if (hubInput && document.activeElement !== hubInput) {
+            hubInput.value = count === 0 ? '' : count;
+        }
     }
 
     function verifyAndCount(scannedBarcode) {
@@ -175,7 +243,6 @@
         });
 
         observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-
         setTimeout(() => { if (!resolved) observer.disconnect(); }, 2500);
     }
 
@@ -197,6 +264,7 @@
         setTimeout(() => verifyAndCount(rawValue), 50);
     }
 
+    // Toggle Overlay Visibility via F10
     document.addEventListener('keydown', (e) => {
         if (e.key === 'F10' && active) {
             e.preventDefault();
@@ -208,6 +276,14 @@
             }
         }
     });
+
+    // Update the UPH independently every 1 minute so the rate stays accurate even if they aren't scanning
+    setInterval(() => {
+        if (active && overlayVisible) {
+            const uphEl = document.getElementById('sh-overlay-uph');
+            if (uphEl) uphEl.textContent = calculateUPH();
+        }
+    }, 60000);
 
     document.addEventListener('keydown', handleScan, true);
     document.addEventListener('change', handleScan, true);
@@ -232,8 +308,12 @@
         updateSettings: (newSettings) => {
             settings = { ...settings, ...newSettings };
             try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
+
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay && overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString();
+
+            // Refresh rate UI in case the lunch break option was just changed
+            updateCounterUI(itemCounter);
         }
     };
 
