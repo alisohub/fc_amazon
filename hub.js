@@ -8,6 +8,9 @@
 
     const REPO_BASE_URL = 'https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/main/scripts';
 
+    // Global Language State
+    let currentLang = localStorage.getItem('sh_hub_lang') || 'EN';
+
     // ==========================================
     //   SCRIPT REGISTRY
     // ==========================================
@@ -23,7 +26,7 @@
             id: 'item-counter',
             name: 'Item Counter',
             file: 'counter.js',
-            description: 'Tracks and counts linked items/totes with local persistence.',
+            description: 'Tracks and counts linked items with local persistence.',
             getHandler: () => window.__itemCounter,
             renderSettings: (container) => {
                 const handler = window.__itemCounter;
@@ -31,25 +34,26 @@
                 const settings = handler.getSettings();
                 const currentCount = handler.getCount();
 
+                // Minimalist Emoji Settings
                 container.innerHTML = `
                     <div class="sh-settings-divider"></div>
-                    <label class="sh-label">Manual Counter Edit:</label>
-                    <input type="number" id="sh-cfg-count" class="sh-input" value="${currentCount === 0 ? '' : currentCount}" placeholder="666" />
-
-                    <label class="sh-label" style="margin-top: 12px;">Overlay Opacity (<span id="sh-lbl-opacity">${settings.overlayOpacity}</span>):</label>
-                    <input type="range" id="sh-cfg-opacity" class="sh-range" min="0" max="1" step="0.05" value="${settings.overlayOpacity}" />
+                    <div class="sh-setting-row" title="Manual Counter Edit">
+                        <span class="sh-emoji">✏️</span>
+                        <input type="number" id="sh-cfg-count" class="sh-input" value="${currentCount === 0 ? '' : currentCount}" placeholder="666" />
+                    </div>
+                    <div class="sh-setting-row" title="Overlay Opacity">
+                        <span class="sh-emoji">👻</span>
+                        <input type="range" id="sh-cfg-opacity" class="sh-range" min="0" max="1" step="0.05" value="${settings.overlayOpacity}" />
+                    </div>
                 `;
 
-                // Handle manual count update
                 container.querySelector('#sh-cfg-count').addEventListener('input', (e) => {
                     const val = parseInt(e.target.value, 10);
                     handler.setCount(isNaN(val) ? 0 : val);
                 });
 
-                // Handle opacity update
                 container.querySelector('#sh-cfg-opacity').addEventListener('input', (e) => {
                     const val = parseFloat(e.target.value);
-                    container.querySelector('#sh-lbl-opacity').textContent = val;
                     handler.updateSettings({ overlayOpacity: val });
                 });
             }
@@ -102,150 +106,130 @@
         hub.id = 'sh-root';
         hub.innerHTML = `
             <style>
-                /* Material UI Reset & Base */
-                #sh-root {
-                    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-                    z-index: 999999;
-                }
+                #sh-root { font-family: 'Roboto', -apple-system, sans-serif; z-index: 999999; }
+
+                /* Left-Side Panel */
                 #sh-panel {
-                    position: fixed;
-                    top: 0;
-                    right: -340px;
-                    width: 320px;
-                    height: 100vh;
-                    z-index: 999998;
-                    background: #f8f9fa; /* Material Surface */
-                    box-shadow: -8px 0 24px rgba(0,0,0,0.12);
-                    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    display: flex;
-                    flex-direction: column;
+                    position: fixed; top: 0; left: -340px; width: 320px; height: 100vh;
+                    z-index: 999998; background: #fafafa; box-shadow: 4px 0 24px rgba(0,0,0,0.12);
+                    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    display: flex; flex-direction: column;
                 }
-                #sh-panel.sh-open { right: 0; }
+                #sh-panel.sh-open { left: 0; }
 
-                /* Header */
+                /* Header: Fixed Flex Alignment to prevent wrapping */
                 .sh-header {
-                    background: #ffffff;
-                    padding: 16px 20px;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    border-bottom: 1px solid #e0e0e0;
+                    background: #ffffff; padding: 14px 16px; display: flex;
+                    justify-content: space-between; align-items: center;
+                    border-bottom: 1px solid #e0e0e0; flex-wrap: nowrap;
                 }
-                .sh-header h3 {
-                    margin: 0;
-                    font-size: 16px;
-                    font-weight: 500;
-                    color: #202124;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
+                .sh-title-wrapper { display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden; }
+                .sh-header h3 { margin: 0; font-size: 16px; font-weight: 500; color: #202124; white-space: nowrap; }
+
+                /* Language Selector */
+                .sh-lang-opts { display: flex; gap: 4px; margin-right: 12px; }
+                .sh-lang-btn {
+                    background: transparent; border: 1px solid #dadce0; border-radius: 4px;
+                    padding: 2px 6px; font-size: 11px; cursor: pointer; color: #5f6368; font-weight: 600;
+                    transition: all 0.2s;
                 }
+                .sh-lang-btn.active { background: #1a73e8; color: #ffffff; border-color: #1a73e8; }
+                .sh-lang-btn:hover:not(.active) { background: #f1f3f4; }
+
                 .sh-close {
-                    background: transparent;
-                    border: none;
-                    color: #5f6368;
-                    font-size: 20px;
-                    cursor: pointer;
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: background 0.2s, color 0.2s;
+                    background: none; border: none; color: #5f6368; font-size: 20px;
+                    cursor: pointer; display: flex; align-items: center; justify-content: center;
+                    width: 28px; height: 28px; border-radius: 50%; padding: 0; line-height: 1;
                 }
-                .sh-close:hover {
-                    background: rgba(0,0,0,0.04);
-                    color: #202124;
-                }
+                .sh-close:hover { background: rgba(0,0,0,0.05); }
 
-                /* Body & Cards */
-                .sh-body {
-                    padding: 16px;
-                    overflow-y: auto;
-                    flex: 1;
-                }
+                /* Cards */
+                .sh-body { padding: 16px; overflow-y: auto; flex: 1; }
                 .sh-card {
-                    background: #ffffff;
-                    border: 1px solid #dadce0;
-                    border-radius: 12px;
-                    padding: 16px;
-                    margin-bottom: 12px;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-                    display: flex;
-                    flex-direction: column;
-                    transition: box-shadow 0.2s;
+                    background: #ffffff; border: 1px solid #dadce0; border-radius: 10px;
+                    padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);
                 }
-                .sh-card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.08); }
-                .sh-card-top {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-start;
-                }
-                .sh-card-info { flex: 1; padding-right: 16px; }
-                .sh-card-title { font-weight: 500; color: #202124; font-size: 14px; margin-bottom: 4px; }
-                .sh-card-desc { font-size: 12px; color: #5f6368; line-height: 1.4; }
+                .sh-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+                .sh-card-info { flex: 1; padding-right: 12px; }
+                .sh-card-title { font-weight: 500; font-size: 14px; color: #202124; margin-bottom: 4px; }
+                .sh-card-desc { font-size: 12px; color: #5f6368; line-height: 1.3; }
 
-                /* Material 3 Toggle Switch */
-                .sh-switch { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; margin-top: 2px; }
+                /* Settings UI */
+                .sh-card-settings { display: none; margin-top: 10px; }
+                .sh-settings-divider { height: 1px; background: #f1f3f4; margin: 10px 0; }
+                .sh-setting-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+                .sh-emoji { font-size: 16px; line-height: 1; opacity: 0.8; }
+                .sh-input {
+                    flex: 1; padding: 6px 10px; font-size: 13px; border: 1px solid #dadce0;
+                    border-radius: 6px; box-sizing: border-box; outline: none;
+                }
+                .sh-input:focus { border-color: #1a73e8; }
+                .sh-range { flex: 1; accent-color: #1a73e8; cursor: pointer; }
+
+                /* Switch */
+                .sh-switch { position: relative; width: 34px; height: 20px; flex-shrink: 0; }
                 .sh-switch input { opacity: 0; width: 0; height: 0; }
                 .sh-slider {
                     position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
                     background-color: #dadce0; transition: .3s; border-radius: 20px;
                 }
                 .sh-slider:before {
-                    position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px;
-                    background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                    position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+                    background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.2);
                 }
                 input:checked + .sh-slider { background-color: #1a73e8; }
-                input:checked + .sh-slider:before { transform: translateX(16px); }
-                input:disabled + .sh-slider { opacity: 0.5; cursor: not-allowed; }
-
-                /* Settings Container Styles */
-                .sh-card-settings { display: none; margin-top: 12px; }
-                .sh-settings-divider { height: 1px; background: #f1f3f4; margin: 12px 0; }
-                .sh-label { display: block; font-size: 12px; font-weight: 500; color: #5f6368; margin-bottom: 6px; }
-                .sh-input {
-                    width: 100%; padding: 8px 12px; font-size: 13px; color: #202124;
-                    background: #ffffff; border: 1px solid #dadce0; border-radius: 6px;
-                    box-sizing: border-box; transition: border 0.2s, box-shadow 0.2s; outline: none;
-                }
-                .sh-input:focus { border-color: #1a73e8; box-shadow: 0 0 0 1px #1a73e8 inset; }
-                .sh-range { width: 100%; cursor: pointer; accent-color: #1a73e8; }
+                input:checked + .sh-slider:before { transform: translateX(14px); }
             </style>
+
             <div id="sh-panel">
                 <div class="sh-header">
-                    <h3>🛠️ Workstation Tools</h3>
-                    <button class="sh-close" id="sh-close-btn" title="Close">✖</button>
+                    <div class="sh-title-wrapper">
+                        <h3>🛠️ Workstation Tools</h3>
+                    </div>
+                    <div class="sh-lang-opts">
+                        <button class="sh-lang-btn ${currentLang === 'UA' ? 'active' : ''}" data-lang="UA">UA</button>
+                        <button class="sh-lang-btn ${currentLang === 'PL' ? 'active' : ''}" data-lang="PL">PL</button>
+                        <button class="sh-lang-btn ${currentLang === 'EN' ? 'active' : ''}" data-lang="EN">EN</button>
+                    </div>
+                    <button class="sh-close" id="sh-close-btn">✖</button>
                 </div>
                 <div class="sh-body" id="sh-list"></div>
             </div>
         `;
         document.body.appendChild(hub);
 
-        const closeBtn = document.getElementById('sh-close-btn');
         const panel = document.getElementById('sh-panel');
-        const list = document.getElementById('sh-list');
-        const togglePanel = () => panel.classList.toggle('sh-open');
-        closeBtn.onclick = togglePanel;
+        document.getElementById('sh-close-btn').onclick = () => panel.classList.toggle('sh-open');
 
-        // Smart "menu" key buffer (Ignores inputs so you can scan/type freely)
+        // Language Selector Logic
+        document.querySelectorAll('.sh-lang-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                document.querySelectorAll('.sh-lang-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentLang = e.target.getAttribute('data-lang');
+                localStorage.setItem('sh_hub_lang', currentLang);
+                console.log(`🌍 Hub language set to: ${currentLang}`);
+                // In the future, this can trigger a re-render of labels
+            };
+        });
+
+        // Key buffer for opening menu (ignores input fields)
         let keyBuffer = '';
         document.addEventListener('keydown', (e) => {
-            // Ignore keystrokes if the user is typing inside an input box or text area
-            const activeTag = e.target.tagName;
-            if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
             if (e.key.length === 1) {
                 keyBuffer += e.key.toLowerCase();
                 if (keyBuffer.length > 5) keyBuffer = keyBuffer.slice(-5);
                 if (keyBuffer.endsWith('menu')) {
-                    togglePanel();
-                    keyBuffer = ''; // reset after opening
+                    panel.classList.toggle('sh-open');
+                    keyBuffer = '';
                 }
             }
         });
 
+        // Render Cards
         SCRIPTS.forEach(script => {
             const handler = script.getHandler();
             const isCurrentlyActive = handler ? handler.isActive() : false;
@@ -265,7 +249,7 @@
                 </div>
                 <div class="sh-card-settings" id="sh-settings-${script.id}"></div>
             `;
-            list.appendChild(card);
+            document.getElementById('sh-list').appendChild(card);
 
             const chk = card.querySelector(`#sh-chk-${script.id}`);
             const settingsContainer = card.querySelector(`#sh-settings-${script.id}`);

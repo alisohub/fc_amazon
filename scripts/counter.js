@@ -5,38 +5,26 @@
     }
     window.__counterLoaded = true;
 
-    // --- LOCAL STORAGE KEYS ---
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';
     const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
 
-    // --- DEFAULT SETTINGS ---
-    let settings = {
-        overlayOpacity: 0.35
-    };
+    let settings = { overlayOpacity: 0.35 };
 
     try {
         const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
-        if (savedSettings) {
-            settings = { ...settings, ...JSON.parse(savedSettings) };
-        }
-    } catch (e) {
-        console.warn('Could not read settings from localStorage', e);
-    }
+        if (savedSettings) settings = { ...settings, ...JSON.parse(savedSettings) };
+    } catch (e) { console.warn('Could not read settings', e); }
 
     const TOTE_REGEX = /^tsx[a-z0-9]+/i;
+    // Dictionary works automatically regardless of the UI language toggle
     const SUCCESS_TEXTS = ['success', 'linked', 'pomyślnie', 'przypisano', 'успішно'];
     const ERROR_TEXTS = ['error', 'invalid', 'failed', 'błąd', 'nieprawidłow', 'помилка'];
 
-    // --- STATE ---
     let itemCounter = 0;
     try {
         const savedCount = localStorage.getItem(STORAGE_KEY_COUNT);
-        if (savedCount !== null) {
-            itemCounter = parseInt(savedCount, 10) || 0;
-        }
-    } catch (e) {
-        console.warn('Could not read count from localStorage', e);
-    }
+        if (savedCount !== null) itemCounter = parseInt(savedCount, 10) || 0;
+    } catch (e) {}
 
     let active = false;
     let overlayVisible = true;
@@ -44,11 +32,8 @@
 
     function saveCount(count) {
         itemCounter = count;
-        try {
-            localStorage.setItem(STORAGE_KEY_COUNT, count.toString());
-        } catch (e) {
-            console.warn('Could not save count to localStorage', e);
-        }
+        try { localStorage.setItem(STORAGE_KEY_COUNT, count.toString()); } 
+        catch (e) {}
     }
 
     function isInsideModal(el) {
@@ -70,19 +55,17 @@
 
         Object.assign(overlay.style, {
             position: 'fixed',
-            bottom: '15px',
-            right: '15px',
+            bottom: '15px', right: '15px',
             zIndex: '999999',
-            backgroundColor: 'rgba(35, 47, 62, 0.4)',
+            backgroundColor: 'rgba(35, 47, 62, 0.5)',
             color: '#ffffff',
-            padding: '4px 10px',
+            padding: '4px 12px',
             borderRadius: '20px',
-            fontFamily: 'monospace, Arial, sans-serif',
-            fontSize: '12px',
+            fontFamily: 'monospace, sans-serif',
+            fontSize: '13px',
             fontWeight: 'bold',
-            letterSpacing: '0.5px',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-            backdropFilter: 'blur(3px)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+            backdropFilter: 'blur(4px)',
             userSelect: 'none',
             cursor: 'move',
             transition: 'opacity 0.2s ease',
@@ -94,13 +77,15 @@
         overlay.innerHTML = `📦 <span id="sh-overlay-count">${itemCounter}</span>`;
 
         overlay.addEventListener('mouseenter', () => { 
-            if (overlayVisible) overlay.style.opacity = '0.9'; 
+            if (overlayVisible) overlay.style.opacity = '1'; 
         });
         overlay.addEventListener('mouseleave', () => { 
             if (overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString(); 
         });
 
+        // Dragging Logic with Check against Window Bounds
         let isDragging = false, startX, startY, initialLeft, initialTop;
+
         overlay.addEventListener('mousedown', (e) => {
             isDragging = true;
             startX = e.clientX;
@@ -108,6 +93,8 @@
             const rect = overlay.getBoundingClientRect();
             initialLeft = rect.left;
             initialTop = rect.top;
+
+            // Switch from right/bottom coords to left/top coords for drag mapping
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
             overlay.style.left = `${initialLeft}px`;
@@ -116,11 +103,32 @@
 
         document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            overlay.style.left = `${initialLeft + (e.clientX - startX)}px`;
-            overlay.style.top = `${initialTop + (e.clientY - startY)}px`;
+
+            let newLeft = initialLeft + (e.clientX - startX);
+            let newTop = initialTop + (e.clientY - startY);
+
+            // Define maximum bounds to prevent element from leaving viewport
+            const maxLeft = window.innerWidth - overlay.offsetWidth;
+            const maxTop = window.innerHeight - overlay.offsetHeight;
+
+            // Clamp values
+            newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+            newTop = Math.max(0, Math.min(newTop, maxTop));
+
+            overlay.style.left = `${newLeft}px`;
+            overlay.style.top = `${newTop}px`;
         });
 
         document.addEventListener('mouseup', () => { isDragging = false; });
+        window.addEventListener('resize', () => {
+            // Recalculate bounds if window is shrunk while overlay is near edge
+            if (!active) return;
+            const rect = overlay.getBoundingClientRect();
+            if (rect.right > window.innerWidth || rect.bottom > window.innerHeight) {
+                overlay.style.left = `${Math.max(0, window.innerWidth - rect.width - 15)}px`;
+                overlay.style.top = `${Math.max(0, window.innerHeight - rect.height - 15)}px`;
+            }
+        });
 
         document.body.appendChild(overlay);
         return overlay;
@@ -128,7 +136,6 @@
 
     function updateCounterUI(count) {
         saveCount(count);
-
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count;
     }
@@ -160,7 +167,6 @@
                 if (hasSuccess) {
                     resolved = true;
                     saveCount(itemCounter + 1);
-                    console.log(`✅ Success: [${scannedBarcode}] | Total: ${itemCounter}`);
                     updateCounterUI(itemCounter);
                     observer.disconnect();
                     return;
@@ -170,9 +176,7 @@
 
         observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
-        setTimeout(() => {
-            if (!resolved) observer.disconnect();
-        }, 2500);
+        setTimeout(() => { if (!resolved) observer.disconnect(); }, 2500);
     }
 
     function handleScan(e) {
@@ -193,7 +197,6 @@
         setTimeout(() => verifyAndCount(rawValue), 50);
     }
 
-    // Toggle Overlay via F10
     document.addEventListener('keydown', (e) => {
         if (e.key === 'F10' && active) {
             e.preventDefault();
@@ -201,43 +204,34 @@
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay) {
                 overlay.style.opacity = overlayVisible ? settings.overlayOpacity.toString() : '0';
+                overlay.style.display = overlayVisible ? 'block' : 'none'; 
             }
         }
     });
 
     document.addEventListener('keydown', handleScan, true);
     document.addEventListener('change', handleScan, true);
-
     createOrGetOverlay();
 
     window.__itemCounter = {
         enable: () => {
             active = true;
             const overlay = createOrGetOverlay();
-            if (overlay) overlay.style.display = 'block';
+            if (overlay) overlay.style.display = overlayVisible ? 'block' : 'none';
             updateCounterUI(itemCounter);
-            console.log('✅ Item Counter Enabled');
         },
         disable: () => {
             active = false;
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay) overlay.style.display = 'none';
-            console.log('⏸️ Item Counter Disabled');
         },
         isActive: () => active,
         getCount: () => itemCounter,
-        setCount: (newCount) => {
-            updateCounterUI(newCount);
-            console.log(`🔄 Item Counter manually set to ${newCount}`);
-        },
+        setCount: (newCount) => updateCounterUI(newCount),
         getSettings: () => settings,
         updateSettings: (newSettings) => {
             settings = { ...settings, ...newSettings };
-            try {
-                localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
-            } catch (e) {
-                console.warn('Failed to persist settings', e);
-            }
+            try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay && overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString();
         }
