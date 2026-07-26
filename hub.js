@@ -33,22 +33,21 @@
                 if (!handler) return;
                 const settings = handler.getSettings();
                 const currentCount = handler.getCount();
-                const currentOpt = settings.diningOption || 1; // Default option to 1
 
                 container.innerHTML = `
                     <div class="sh-settings-divider"></div>
 
-                    <div class="sh-setting-row" title="Manual Counter Edit & Options">
-                        <span class="sh-emoji">✏️</span>
-                        <input type="number" id="sh-cfg-count" class="sh-input sh-input-small" min="0" value="${currentCount === 0 ? '' : currentCount}" placeholder="666" />
+                    <div class="sh-setting-row" title="Options & Manual Edit">
+                        <span class="sh-emoji">🍴</span>
 
-                        <span class="sh-emoji" style="margin-left: 6px;">🍽️</span>
-                        <div class="sh-segmented-control" id="sh-cfg-options">
-                            <button class="sh-segment ${currentOpt === 1 ? 'active' : ''}" data-val="1">1</button>
-                            <button class="sh-segment ${currentOpt === 2 ? 'active' : ''}" data-val="2">2</button>
-                            <button class="sh-segment ${currentOpt === 3 ? 'active' : ''}" data-val="3">3</button>
-                            <button class="sh-segment ${currentOpt === 4 ? 'active' : ''}" data-val="4">4</button>
+                        <div class="sh-opt-group">
+                            <div class="sh-opt-btn ${settings.counterOption === 1 ? 'active' : ''}" data-val="1">1</div>
+                            <div class="sh-opt-btn ${settings.counterOption === 2 ? 'active' : ''}" data-val="2">2</div>
+                            <div class="sh-opt-btn ${settings.counterOption === 3 ? 'active' : ''}" data-val="3">3</div>
+                            <div class="sh-opt-btn ${settings.counterOption === 4 ? 'active' : ''}" data-val="4">4</div>
                         </div>
+
+                        <input type="number" id="sh-cfg-count" class="sh-input sh-input-small" min="0" value="${currentCount === 0 ? '' : currentCount}" placeholder="666" />
                     </div>
 
                     <div class="sh-setting-row" title="Overlay Opacity">
@@ -57,27 +56,28 @@
                     </div>
                 `;
 
-                // Handle manual count update (prevents negative numbers)
-                container.querySelector('#sh-cfg-count').addEventListener('input', (e) => {
-                    let val = parseInt(e.target.value, 10);
-                    if (val < 0) {
-                        val = 0;
-                        e.target.value = 0;
-                    }
-                    handler.setCount(isNaN(val) ? 0 : val);
-                });
-
-                // Handle dining option selection
-                container.querySelectorAll('.sh-segment').forEach(btn => {
+                // Handle Options Selection
+                container.querySelectorAll('.sh-opt-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
-                        container.querySelectorAll('.sh-segment').forEach(b => b.classList.remove('active'));
+                        container.querySelectorAll('.sh-opt-btn').forEach(b => b.classList.remove('active'));
                         e.target.classList.add('active');
                         const val = parseInt(e.target.getAttribute('data-val'), 10);
-                        handler.updateSettings({ diningOption: val });
+                        handler.updateSettings({ counterOption: val });
                     });
                 });
 
-                // Handle opacity update
+                // Handle Manual Count Update (Prevent negative numbers)
+                container.querySelector('#sh-cfg-count').addEventListener('input', (e) => {
+                    let val = parseInt(e.target.value, 10);
+                    if (isNaN(val)) val = 0;
+                    if (val < 0) {
+                        val = 0;
+                        e.target.value = 0; // Revert visually in input
+                    }
+                    handler.setCount(val);
+                });
+
+                // Handle Opacity Slider
                 container.querySelector('#sh-cfg-opacity').addEventListener('input', (e) => {
                     const val = parseFloat(e.target.value);
                     handler.updateSettings({ overlayOpacity: val });
@@ -183,28 +183,26 @@
                 /* Settings UI */
                 .sh-card-settings { display: none; margin-top: 10px; }
                 .sh-settings-divider { height: 1px; background: #f1f3f4; margin: 10px 0; }
-                .sh-setting-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+                .sh-setting-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
                 .sh-emoji { font-size: 16px; line-height: 1; opacity: 0.8; }
 
+                /* Option Buttons */
+                .sh-opt-group { display: flex; gap: 4px; flex: 1; }
+                .sh-opt-btn {
+                    background: #ffffff; border: 1px solid #dadce0; border-radius: 6px;
+                    color: #5f6368; font-size: 12px; font-weight: 600; padding: 4px 0;
+                    flex: 1; text-align: center; cursor: pointer; transition: all 0.2s;
+                }
+                .sh-opt-btn:hover:not(.active) { background: #f1f3f4; }
+                .sh-opt-btn.active { background: #1a73e8; border-color: #1a73e8; color: #ffffff; }
+
+                /* Inputs */
                 .sh-input {
                     padding: 6px 10px; font-size: 13px; border: 1px solid #dadce0;
                     border-radius: 6px; box-sizing: border-box; outline: none; transition: border 0.2s;
                 }
                 .sh-input:focus { border-color: #1a73e8; }
-                .sh-input-small { width: 35%; flex: none; }
-
-                /* Segmented Options Control */
-                .sh-segmented-control {
-                    display: flex; gap: 3px; flex: 1; background: #f1f3f4;
-                    padding: 3px; border-radius: 8px;
-                }
-                .sh-segment {
-                    flex: 1; background: transparent; border: none; border-radius: 6px;
-                    padding: 5px 0; font-size: 12px; color: #5f6368; font-weight: 500;
-                    cursor: pointer; transition: all 0.2s;
-                }
-                .sh-segment.active { background: #1a73e8; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-                .sh-segment:hover:not(.active) { background: #e8eaed; color: #202124; }
+                .sh-input-small { width: 35%; flex: 0 0 35%; }
 
                 .sh-range { flex: 1; accent-color: #1a73e8; cursor: pointer; }
 
