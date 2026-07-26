@@ -1,5 +1,5 @@
 (() => {
-    // Prevent duplicate UI instances on multiple executions
+    // If already loaded, toggle panel and return
     if (window.__scriptHubLoaded) {
         const panel = document.getElementById('sh-panel');
         if (panel) panel.classList.toggle('sh-open');
@@ -7,58 +7,59 @@
     }
     window.__scriptHubLoaded = true;
 
-    // Base raw directory matching your exact GitHub path + scripts folder
     const REPO_BASE_URL = 'https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/main/scripts';
 
     // ==========================================
     // 📦 SCRIPT REGISTRY
-    // List only the filenames sitting inside your "scripts" folder!
     // ==========================================
     const SCRIPTS = [
         {
             id: 'auto-lpn',
             name: 'Auto Reassign LPN',
             file: 'auto_lpn.js',
-            description: 'Auto-clicks LPN reassignment on scanner input.'
-        },
-        {
-            id: 'future-tool',
-            name: 'Future Automation',
-            file: 'future_tool.js',
-            description: 'Placeholder for your next workstation automation.'
+            description: 'Auto-clicks LPN reassignment on scanner input.',
+            getHandler: () => window.__autoLpn
         }
     ];
 
     /**
-     * Fetches target script dynamically from your /scripts folder
+     * Downloads and enables or disables script on checkbox change
      */
-    async function fetchAndRunScript(scriptObj, btnElement) {
-        const originalText = btnElement.innerText;
-        btnElement.innerText = 'Downloading...';
-        btnElement.disabled = true;
+    async function handleToggle(scriptObj, checkbox) {
+        const isChecked = checkbox.checked;
+        let handler = scriptObj.getHandler();
 
-        // Build target URL: .../main/scripts/ + filename + cache-buster timestamp
-        const fullUrl = `${REPO_BASE_URL}/${scriptObj.file}?cb=${Date.now()}`;
+        // Fetch script dynamically if not in memory
+        if (isChecked && !handler) {
+            checkbox.disabled = true;
+            const fullUrl = `${REPO_BASE_URL}/${scriptObj.file}?cb=${Date.now()}`;
 
-        try {
-            const response = await fetch(fullUrl);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status} - Could not retrieve file 'scripts/${scriptObj.file}'`);
+            try {
+                const response = await fetch(fullUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const jsCode = await response.text();
+                const scriptEl = document.createElement('script');
+                scriptEl.textContent = jsCode;
+                document.head.appendChild(scriptEl);
+
+                handler = scriptObj.getHandler();
+                checkbox.disabled = false;
+            } catch (err) {
+                alert(`⚠️ Failed to load ${scriptObj.name}:\n${err.message}`);
+                checkbox.checked = false;
+                checkbox.disabled = false;
+                return;
             }
+        }
 
-            const jsCode = await response.text();
-
-            // Inject script directly into current DOM context
-            const scriptEl = document.createElement('script');
-            scriptEl.textContent = jsCode;
-            document.head.appendChild(scriptEl);
-
-            btnElement.innerText = 'Active ✅';
-            btnElement.style.background = '#16a34a';
-        } catch (err) {
-            alert(`⚠️ Failed to execute "${scriptObj.name}":\n${err.message}`);
-            btnElement.innerText = originalText;
-            btnElement.disabled = false;
+        // Trigger state change
+        if (handler) {
+            if (isChecked) {
+                handler.enable();
+            } else {
+                handler.disable();
+            }
         }
     }
 
@@ -76,23 +77,6 @@
           font-size: 13px;
           z-index: 999999;
         }
-        #sh-toggle {
-          position: fixed;
-          top: 100px;
-          right: 0;
-          z-index: 999999;
-          background: #232f3e;
-          color: #ffffff;
-          border: 1px solid #3a4d61;
-          border-right: none;
-          border-radius: 6px 0 0 6px;
-          padding: 8px 12px;
-          cursor: pointer;
-          font-weight: bold;
-          box-shadow: -2px 2px 8px rgba(0,0,0,0.2);
-          transition: background 0.2s;
-        }
-        #sh-toggle:hover { background: #37475a; }
         #sh-panel {
           position: fixed;
           top: 0;
@@ -117,13 +101,7 @@
           align-items: center;
         }
         .sh-header h3 { margin: 0; font-size: 15px; }
-        .sh-close {
-          background: none;
-          border: none;
-          color: #aab7c4;
-          font-size: 18px;
-          cursor: pointer;
-        }
+        .sh-close { background: none; border: none; color: #aab7c4; font-size: 18px; cursor: pointer; }
         .sh-close:hover { color: white; }
         .sh-body { padding: 12px; overflow-y: auto; flex: 1; }
         .sh-card {
@@ -132,28 +110,48 @@
           padding: 12px;
           margin-bottom: 10px;
           background: #f8fafc;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
         }
+        .sh-card-info { flex: 1; padding-right: 10px; }
         .sh-card-title { font-weight: bold; color: #0f172a; margin-bottom: 4px; }
-        .sh-card-desc { font-size: 11px; color: #64748b; margin-bottom: 10px; line-height: 1.3; }
-        .sh-btn {
-          width: 100%;
-          background: #0066cc;
-          color: white;
-          border: none;
-          padding: 6px 10px;
-          border-radius: 4px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background 0.2s;
-        }
-        .sh-btn:hover { background: #0052a3; }
-      </style>
+        .sh-card-desc { font-size: 11px; color: #64748b; line-height: 1.3; }
 
-      <button id="sh-toggle" title="Toggle Script Panel">⚡ Scripts</button>
+        /* Toggle Switch Styling */
+        .sh-switch {
+          position: relative;
+          display: inline-block;
+          width: 38px;
+          height: 20px;
+          flex-shrink: 0;
+        }
+        .sh-switch input { opacity: 0; width: 0; height: 0; }
+        .sh-slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-color: #cbd5e1;
+          transition: .2s;
+          border-radius: 20px;
+        }
+        .sh-slider:before {
+          position: absolute;
+          content: "";
+          height: 14px; width: 14px;
+          left: 3px; bottom: 3px;
+          background-color: white;
+          transition: .2s;
+          border-radius: 50%;
+        }
+        input:checked + .sh-slider { background-color: #16a34a; }
+        input:checked + .sh-slider:before { transform: translateX(18px); }
+        input:disabled + .sh-slider { opacity: 0.5; cursor: wait; }
+      </style>
 
       <div id="sh-panel">
         <div class="sh-header">
-          <h3>⚡ Workstation Scripts</h3>
+          <h3>⚡ Workstation Tools</h3>
           <button class="sh-close" id="sh-close-btn">✕</button>
         </div>
         <div class="sh-body" id="sh-list"></div>
@@ -162,28 +160,42 @@
 
         document.body.appendChild(hub);
 
-        const toggleBtn = document.getElementById('sh-toggle');
         const closeBtn = document.getElementById('sh-close-btn');
         const panel = document.getElementById('sh-panel');
         const list = document.getElementById('sh-list');
 
         const togglePanel = () => panel.classList.toggle('sh-open');
-        toggleBtn.onclick = togglePanel;
         closeBtn.onclick = togglePanel;
 
-        // Render registered script cards
+        // Listen for F10 key globally
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F10') {
+                e.preventDefault(); // Prevents default browser shortcut handling
+                togglePanel();
+            }
+        });
+
+        // Render checkbox cards
         SCRIPTS.forEach(script => {
+            const handler = script.getHandler();
+            const isCurrentlyActive = handler ? handler.isActive() : false;
+
             const card = document.createElement('div');
             card.className = 'sh-card';
             card.innerHTML = `
-        <div class="sh-card-title">${script.name}</div>
-        <div class="sh-card-desc">${script.description}</div>
-        <button class="sh-btn" id="sh-run-${script.id}">Run Script</button>
+        <div class="sh-card-info">
+          <div class="sh-card-title">${script.name}</div>
+          <div class="sh-card-desc">${script.description}</div>
+        </div>
+        <label class="sh-switch">
+          <input type="checkbox" id="sh-chk-${script.id}" ${isCurrentlyActive ? 'checked' : ''}>
+          <span class="sh-slider"></span>
+        </label>
       `;
             list.appendChild(card);
 
-            const runBtn = card.querySelector(`#sh-run-${script.id}`);
-            runBtn.onclick = () => fetchAndRunScript(script, runBtn);
+            const chk = card.querySelector(`#sh-chk-${script.id}`);
+            chk.onchange = () => handleToggle(script, chk);
         });
     }
 
