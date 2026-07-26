@@ -16,7 +16,6 @@
         overlayOpacity: 0.35
     };
 
-    // Load saved settings if present
     try {
         const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
         if (savedSettings) {
@@ -26,7 +25,7 @@
         console.warn('Could not read settings from localStorage', e);
     }
 
-    // --- KEYWORDS FOR NOTIFICATION DETECTION ---
+    // --- KEYWORDS FOR NOTIFICATION DETECTION (EN, PL, UK) ---
     const SUCCESS_TEXTS = ['success', 'linked', 'pomyślnie', 'przypisano', 'успішно'];
     const ERROR_TEXTS = ['error', 'invalid', 'failed', 'błąd', 'nieprawidłow', 'помилка'];
 
@@ -44,7 +43,6 @@
     let active = false;
     let cooldownUntil = 0;
 
-    // Save count state
     function saveCount(count) {
         itemCounter = count;
         try {
@@ -54,7 +52,6 @@
         }
     }
 
-    // --- HELPER: MODAL DETECTION ---
     function isInsideModal(el) {
         if (el.closest('dialog[open]')) return true;
         const modal = el.closest('[role="dialog"],[role="alertdialog"],.modal,.popup,.overlay,.dialog');
@@ -65,7 +62,6 @@
         return false;
     }
 
-    // --- DISCREET OVERLAY ---
     function createOrGetOverlay() {
         let overlay = document.getElementById('sh-item-overlay');
         if (overlay) return overlay;
@@ -101,7 +97,6 @@
         overlay.addEventListener('mouseenter', () => { overlay.style.opacity = '0.9'; });
         overlay.addEventListener('mouseleave', () => { overlay.style.opacity = settings.overlayOpacity.toString(); });
 
-        // Draggable logic
         let isDragging = false, startX, startY, initialLeft, initialTop;
         overlay.addEventListener('mousedown', (e) => {
             isDragging = true;
@@ -128,12 +123,8 @@
         return overlay;
     }
 
-    // --- UI BADGE UPDATER ---
     function updateCounterUI(count) {
         saveCount(count);
-
-        const hubBadge = document.getElementById('sh-item-count');
-        if (hubBadge) hubBadge.textContent = count;
 
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count;
@@ -152,7 +143,6 @@
         }
     }
 
-    // --- OBSERVER ---
     function verifyAndCount(scannedBarcode) {
         let resolved = false;
 
@@ -195,7 +185,6 @@
         }, 2500);
     }
 
-    // --- SCAN EVENT HANDLER ---
     function handleScan(e) {
         if (!active) return;
         if (e.type === 'keydown' && e.key !== 'Enter') return;
@@ -207,7 +196,6 @@
         const rawValue = input.value?.trim();
         if (!rawValue) return;
 
-        // Dynamic Regex check based on settings
         const regex = new RegExp(settings.barcodeRegex, 'i');
         if (!regex.test(rawValue)) return;
 
@@ -223,7 +211,6 @@
 
     createOrGetOverlay();
 
-    // --- PUBLIC INTERFACE WITH SETTINGS ---
     window.__itemCounter = {
         enable: () => {
             active = true;
