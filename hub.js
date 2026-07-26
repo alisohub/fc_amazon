@@ -18,7 +18,7 @@
         {
             id: 'auto-lpn',
             name: 'Auto Reassign LPN',
-            file: 'autolpn.js',
+            file: 'auto_lpn.js',
             description: 'Auto-clicks LPN reassignment on scanner input.'
         },
         {
