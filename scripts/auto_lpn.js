@@ -28,6 +28,11 @@
         if (!active) return;
 
         const input = e.target;
+
+        // 1. IGNORE inputs coming from inside the Script Hub UI
+        if (input.closest('#sh-root')) return;
+
+        // 2. Ignore non-text inputs, hidden inputs, disabled inputs, or inputs inside modals
         if (!input.matches('input:not([type="hidden"]):not([disabled])') || isInsideModal(input)) return;
 
         const now = Date.now();
