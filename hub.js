@@ -23,7 +23,7 @@
         {
             id: 'item-counter',
             name: 'Item Counter',
-            file: 'scripts/counter.js',
+            file: 'counter.js',
             description: 'Tracks and counts linked items/totes with local persistence.',
             getHandler: () => window.__itemCounter,
 
