@@ -47,6 +47,7 @@
                             <div class="sh-opt-btn ${settings.counterOption === 4 ? 'active' : ''}" data-val="4">4</div>
                         </div>
 
+                        <span class="sh-emoji">✏️</span>
                         <input type="number" id="sh-cfg-count" class="sh-input sh-input-small" min="0" value="${currentCount === 0 ? '' : currentCount}" placeholder="666" />
                     </div>
 
@@ -228,10 +229,6 @@
                         <option value="PL" ${currentLang === 'PL' ? 'selected' : ''}>PL</option>
                         <option value="UA" ${currentLang === 'UA' ? 'selected' : ''}>UA</option>
                     </select>
-
-                    <div class="sh-title-wrapper">
-                        <h3>🛠️ Workstation</h3>
-                    </div>
 
                     <button class="sh-close" id="sh-close-btn" title="Close">✖</button>
                 </div>
