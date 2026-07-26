@@ -21,11 +21,45 @@
             getHandler: () => window.__autoLpn
         },
         {
-          id: 'counter',
-          name: 'Unit Counter',
-          file: 'counter.js',
-          description: 'Counts.',
-          getHandler: () => window.__counter
+            id: 'item-counter',
+            name: 'Item Counter',
+            file: 'scripts/counter.js',
+            description: 'Tracks and counts linked items/totes with local persistence.',
+            getHandler: () => window.__itemCounter,
+
+            // Render Settings UI inside the Hub Drawer
+            renderSettings: (container) => {
+                const handler = window.__itemCounter;
+                if (!handler) return;
+                const settings = handler.getSettings();
+
+                container.innerHTML = `
+      <div style="margin-top: 10px; font-size: 13px; color: #ccc;">
+        <label style="display:block; margin-bottom:4px;">Barcode Regex Pattern:</label>
+        <input type="text" id="sh-cfg-regex" value="${settings.barcodeRegex}" style="width:100%; padding:4px; margin-bottom:8px;" />
+
+        <label style="display:block; margin-bottom:4px;">Overlay Opacity (${settings.overlayOpacity}):</label>
+        <input type="range" id="sh-cfg-opacity" min="0.1" max="1" step="0.05" value="${settings.overlayOpacity}" style="width:100%;" />
+
+        <button id="sh-btn-reset-count" style="margin-top:10px; width:100%; background:#c40000; color:#fff; border:none; padding:6px; border-radius:4px; cursor:pointer;">Reset Counter to 0</button>
+      </div>
+    `;
+
+                // Attach Settings Handlers
+                container.querySelector('#sh-cfg-regex').addEventListener('change', (e) => {
+                    handler.updateSettings({ barcodeRegex: e.target.value.trim() });
+                });
+
+                container.querySelector('#sh-cfg-opacity').addEventListener('input', (e) => {
+                    handler.updateSettings({ overlayOpacity: parseFloat(e.target.value) });
+                });
+
+                container.querySelector('#sh-btn-reset-count').addEventListener('click', () => {
+                    if (confirm('Are you sure you want to reset the item counter?')) {
+                        handler.resetCount();
+                    }
+                });
+            }
         }
     ];
 
