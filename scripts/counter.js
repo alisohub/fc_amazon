@@ -20,8 +20,9 @@
     } catch (e) { console.warn('Could not read settings', e); }
 
     const TOTE_REGEX = /^ts[a-z0-9]+/i;
-    const SUCCESS_TEXTS = ['success', 'linked', 'pomyślnie', 'przypisano', 'успішно'];
-    const ERROR_TEXTS = ['error', 'invalid', 'failed', 'błąd', 'nieprawidłow', 'помилка', 'має довжину понад 14'];
+    
+    // The specific instructions we expect to disappear upon success
+    const TARGET_INSTRUCTION_TEXTS = ['сканування lpn', 'scan lpn', 'skanowanie lpn'];
 
     let itemCounter = 0;
     try {
@@ -45,7 +46,7 @@
 
         const now = new Date();
         const hours = now.getHours();
-
+        
         // Determine Shift (Night shift starts at 18:30, Day starts at 06:30)
         const isNight = hours >= 17 || hours < 6;
         let shiftStart = new Date(now);
@@ -130,7 +131,7 @@
             boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
             backdropFilter: 'blur(4px)',
             userSelect: 'none',
-            cursor: 'move',
+            cursor: 'move', // Still shows grab cursor for mouse users
             transition: 'opacity 0.2s ease',
             opacity: overlayVisible ? settings.overlayOpacity.toString() : '0',
             border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -146,39 +147,64 @@
             if (overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString(); 
         });
 
+        // --- MOUSE & TOUCH DRAGGING LOGIC ---
         let isDragging = false, startX, startY, initialLeft, initialTop;
-
-        overlay.addEventListener('mousedown', (e) => {
+        
+        function dragStart(e) {
             isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
+            
+            // Normalize touch vs mouse coordinates
+            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+
+            startX = clientX;
+            startY = clientY;
             const rect = overlay.getBoundingClientRect();
             initialLeft = rect.left;
             initialTop = rect.top;
-
+            
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
             overlay.style.left = `${initialLeft}px`;
             overlay.style.top = `${initialTop}px`;
-        });
+        }
 
-        document.addEventListener('mousemove', (e) => {
+        function dragMove(e) {
             if (!isDragging) return;
-
-            let newLeft = initialLeft + (e.clientX - startX);
-            let newTop = initialTop + (e.clientY - startY);
-
+            
+            // Prevent page scrolling while dragging on touchscreens
+            if (e.type === 'touchmove') e.preventDefault(); 
+            
+            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+            
+            let newLeft = initialLeft + (clientX - startX);
+            let newTop = initialTop + (clientY - startY);
+            
             const maxLeft = window.innerWidth - overlay.offsetWidth;
             const maxTop = window.innerHeight - overlay.offsetHeight;
-
+            
             newLeft = Math.max(0, Math.min(newLeft, maxLeft));
             newTop = Math.max(0, Math.min(newTop, maxTop));
-
+            
             overlay.style.left = `${newLeft}px`;
             overlay.style.top = `${newTop}px`;
-        });
+        }
 
-        document.addEventListener('mouseup', () => { isDragging = false; });
+        function dragEnd() {
+            isDragging = false;
+        }
+
+        // Attach Mouse Events
+        overlay.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', dragMove);
+        document.addEventListener('mouseup', dragEnd);
+
+        // Attach Touch Events (passive: false is needed so we can call e.preventDefault() during move)
+        overlay.addEventListener('touchstart', dragStart, { passive: true });
+        document.addEventListener('touchmove', dragMove, { passive: false });
+        document.addEventListener('touchend', dragEnd);
+
         window.addEventListener('resize', () => {
             if (!active) return;
             const rect = overlay.getBoundingClientRect();
@@ -194,7 +220,7 @@
 
     function updateCounterUI(count) {
         saveCount(count);
-
+        
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count;
 
@@ -209,41 +235,52 @@
     }
 
     function verifyAndCount(scannedBarcode) {
+        let targetEl = null;
+
+        // 1. Locate the specific element holding the "Сканування LPN" text
+        const candidates = document.querySelectorAll('div, section, p, span, h1, h2, h3, h4, h5');
+        for (const el of candidates) {
+            // Target the innermost element for precision
+            if (el.children.length > 0) continue; 
+            
+            const text = el.textContent.toLowerCase().trim();
+            if (TARGET_INSTRUCTION_TEXTS.some(keyword => text.includes(keyword))) {
+                targetEl = el;
+                break;
+            }
+        }
+
+        // If it isn't on the screen when we scan, we can't track its disappearance
+        if (!targetEl) {
+            console.warn(`⏳ [${scannedBarcode}] Trigger word not found on screen. Cannot track disappearance.`);
+            return;
+        }
+
         let resolved = false;
 
+        // 2. Watch for the exact moment that element is removed from the DOM
         const observer = new MutationObserver(() => {
             if (resolved) return;
 
-            const candidates = document.querySelectorAll('div, section, p, span, [role="alert"], [role="status"]');
-
-            for (const el of candidates) {
-                if (el.offsetParent === null || el.closest('#sh-root') || el.closest('#sh-item-overlay') || el.children.length > 0) continue;
-
-                const text = el.textContent.toLowerCase().replace(/\s+/g, ' ').trim();
-                if (!text || text.length > 200) continue;
-
-                const hasError = ERROR_TEXTS.some(keyword => text.includes(keyword));
-                if (hasError) {
-                    resolved = true;
-                    console.warn(`❌ Scan rejected [${scannedBarcode}]: "${text}"`);
-                    cooldownUntil = 0;
-                    observer.disconnect();
-                    return;
-                }
-
-                const hasSuccess = SUCCESS_TEXTS.some(keyword => text.includes(keyword));
-                if (hasSuccess) {
-                    resolved = true;
-                    saveCount(itemCounter + 1);
-                    updateCounterUI(itemCounter);
-                    observer.disconnect();
-                    return;
-                }
+            // Check if the element was deleted or hidden (display:none via CSS/React state)
+            if (!document.body.contains(targetEl) || targetEl.offsetParent === null) {
+                resolved = true;
+                saveCount(itemCounter + 1);
+                updateCounterUI(itemCounter);
+                console.log(`✅ Success: [${scannedBarcode}] | "Сканування LPN" disappeared. Total: ${itemCounter}`);
+                observer.disconnect();
             }
         });
 
-        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-        setTimeout(() => { if (!resolved) observer.disconnect(); }, 2500);
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // Timeout to prevent memory leaks if the scan fails but throws no error
+        setTimeout(() => { 
+            if (!resolved) {
+                console.warn(`❌ Timeout: [${scannedBarcode}] Instruction text never disappeared.`);
+                observer.disconnect(); 
+            }
+        }, 3500); 
     }
 
     function handleScan(e) {
@@ -277,7 +314,7 @@
         }
     });
 
-    // Update the UPH independently every 10 seconds so the rate stays accurate even if they aren't scanning
+    // Update the UPH independently every 10 seconds so the rate stays accurate
     setInterval(() => {
         if (active && overlayVisible) {
             const uphEl = document.getElementById('sh-overlay-uph');
@@ -308,7 +345,7 @@
         updateSettings: (newSettings) => {
             settings = { ...settings, ...newSettings };
             try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
-
+            
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay && overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString();
 
