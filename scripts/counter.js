@@ -20,7 +20,7 @@
     } catch (e) { console.warn('Could not read settings', e); }
 
     const TOTE_REGEX = /^ts[a-z0-9]+/i;
-    const SUCCESS_TEXTS = ['success', 'linked', 'pomyślnie', 'przypisano', 'успішно'];
+    // const SUCCESS_TEXTS = ['success', 'linked', 'pomyślnie', 'przypisano', 'успішно'];
     const ERROR_TEXTS = ['error', 'invalid', 'failed', 'błąd', 'nieprawidłow', 'помилка'];
 
     let itemCounter = 0;
@@ -231,8 +231,9 @@
                     return;
                 }
 
-                const hasSuccess = SUCCESS_TEXTS.some(keyword => text.includes(keyword));
-                if (hasSuccess) {
+                // const hasSuccess = SUCCESS_TEXTS.some(keyword => text.includes(keyword));
+                // if (hasSuccess) {
+                else {
                     resolved = true;
                     saveCount(itemCounter + 1);
                     updateCounterUI(itemCounter);
