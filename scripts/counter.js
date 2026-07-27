@@ -21,7 +21,7 @@
 
     const TOTE_REGEX = /^ts[a-z0-9]+/i;
     // const SUCCESS_TEXTS = ['success', 'linked', 'pomyślnie', 'przypisano', 'успішно'];
-    const ERROR_TEXTS = ['error', 'invalid', 'failed', 'błąd', 'nieprawidłow', 'помилка'];
+    const ERROR_TEXTS = ['error', 'invalid', 'failed', 'błąd', 'nieprawidłow', 'помилка', 'має довжину понад 14'];
 
     let itemCounter = 0;
     try {
