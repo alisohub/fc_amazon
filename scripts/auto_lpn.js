@@ -10,7 +10,7 @@
         'przypisz ponownie lpn'
     ];
 
-    const IGNORED_PREFIXES = new Set(['t', '1', '0', '2']);
+    const IGNORED_PREFIXES = new Set(['t']);
     let cooldownUntil = 0;
     let active = false;
 
@@ -48,7 +48,7 @@
         });
 
         if (!btn) return;
-        cooldownUntil = now + 15000;
+        cooldownUntil = now + 10000;
 
         if (!IGNORED_PREFIXES.has(cleanValue.charAt(0))) {
             btn.click();

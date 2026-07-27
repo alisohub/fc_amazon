@@ -277,13 +277,13 @@
         }
     });
 
-    // Update the UPH independently every 1 minute so the rate stays accurate even if they aren't scanning
+    // Update the UPH independently every 10 seconds so the rate stays accurate even if they aren't scanning
     setInterval(() => {
         if (active && overlayVisible) {
             const uphEl = document.getElementById('sh-overlay-uph');
             if (uphEl) uphEl.textContent = calculateUPH();
         }
-    }, 60000);
+    }, 10000);
 
     document.addEventListener('keydown', handleScan, true);
     document.addEventListener('change', handleScan, true);
