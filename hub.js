@@ -6,10 +6,8 @@
     }
     window.__scriptHubLoaded = true;
 
-    // const REPO_BASE_URL = 'https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/main/scripts';
-    // development
-    const REPO_BASE_URL = 'https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/development/scripts';
-
+    const REPO_BASE_URL = 'https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/main/scripts';
+ 
     // Global Language State
     let currentLang = localStorage.getItem('sh_hub_lang') || 'EN';
 
