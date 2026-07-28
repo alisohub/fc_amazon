@@ -1,6 +1,5 @@
 (() => {
     if (window.__autoLpnLoaded) {
-        console.log('⚡ Auto-LPN is already initialized in memory.');
         return;
     }
     window.__autoLpnLoaded = true;
@@ -58,8 +57,8 @@
     document.addEventListener('input', handleInput, true);
 
     window.__autoLpn = {
-        enable: () => { active = true; console.log('✅ Auto-LPN Enabled'); },
-        disable: () => { active = false; console.log('⏸️ Auto-LPN Disabled'); },
+        enable: () => { active = true; 
+        disable: () => { active = false;  
         isActive: () => active
     };
 
