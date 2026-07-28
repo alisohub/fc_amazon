@@ -118,12 +118,12 @@
             position: 'fixed',
             zIndex: '999999',
             // backgroundColor: 'rgba(35, 47, 62, 0.5)',
-            color: '#ffffff',
+            color: '#D3D3D3',
             // padding: '4px 12px',
             // borderRadius: '20px',
             fontFamily: 'monospace, sans-serif',
             fontSize: '13px',
-            // fontWeight: 'bold',
+            fontWeight: 'bold',
             // boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
             // backdropFilter: 'blur(4px)',
             userSelect: 'none',
@@ -147,7 +147,7 @@
             overlay.style.top = 'auto';
         }
 
-        overlay.innerHTML = `📦 <span id="sh-overlay-count">${itemCounter}</span> <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> ⚡ <span id="sh-overlay-uph">${calculateUPH()}</span>`;
+        overlay.innerHTML = `<span id="sh-overlay-count">${itemCounter}</span> <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>  <span id="sh-overlay-uph">${calculateUPH()}/h</span>`;
 
         overlay.addEventListener('mouseenter', () => { 
             if (overlayVisible) overlay.style.opacity = '1'; 
