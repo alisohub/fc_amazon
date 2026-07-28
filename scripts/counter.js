@@ -147,7 +147,7 @@
             overlay.style.top = 'auto';
         }
 
-        overlay.innerHTML = `<span id="sh-overlay-count">${itemCounter}</span> <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>  <span id="sh-overlay-uph">${calculateUPH()}/h</span>`;
+        overlay.innerHTML = `<span id="sh-overlay-count">${itemCounter}</span> <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>  <span id="sh-overlay-uph">${calculateUPH()}</span>/h`;
 
         overlay.addEventListener('mouseenter', () => { 
             if (overlayVisible) overlay.style.opacity = '1'; 
