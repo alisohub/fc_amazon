@@ -9,7 +9,7 @@
 
     // Default settings
     let settings = { 
-        overlayOpacity: 0.35,
+        overlayOpacity: 0.8,
         counterOption: 1,
         overlayLeft: null,
         overlayTop: null
@@ -23,7 +23,7 @@
     const TOTE_REGEX = /^ts[a-z0-9]+/i;
     
     // Only looking for this specific text to disappear
-    const TARGET_INSTRUCTION_TEXTS = ['сканування lpn', 'scan lpn', 'skanowanie lpn'];
+    const TARGET_INSTRUCTION_TEXTS = ['сканування lpn', 'skanowanie etykiety nlp'];
 
     let itemCounter = 0;
     try {
@@ -41,10 +41,8 @@
         catch (e) {}
     }
 
-    // --- RATE LOGIC (UPH) ---
-    function calculateUPH() {
-        if (itemCounter === 0) return 0;
-
+    // --- TIME & RATE LOGIC ---
+    function getEffectiveWorkTime() {
         const now = new Date();
         const hours = now.getHours();
         
@@ -60,7 +58,7 @@
         }
 
         const elapsedMs = now - shiftStart;
-        if (elapsedMs <= 0) return 0;
+        if (elapsedMs <= 0) return { ms: 0, formatted: '0h0m' };
 
         let breakStart = new Date(shiftStart);
         let breakEnd = new Date(shiftStart);
@@ -91,9 +89,23 @@
         const maxMs = 10 * 60 * 60 * 1000;
         if (effectiveMs > maxMs) effectiveMs = maxMs;
 
-        const hoursWorked = effectiveMs / (1000 * 60 * 60);
-        if (hoursWorked <= 0) return 0;
+        // Format to hours and minutes
+        const totalMinutes = Math.floor(effectiveMs / (1000 * 60));
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
 
+        return { 
+            ms: effectiveMs, 
+            formatted: `${h}h${m}m` 
+        };
+    }
+
+    function calculateUPH() {
+        if (itemCounter === 0) return 0;
+        const timeData = getEffectiveWorkTime();
+        if (timeData.ms <= 0) return 0;
+
+        const hoursWorked = timeData.ms / (1000 * 60 * 60);
         return Math.round(itemCounter / hoursWorked);
     }
 
@@ -117,20 +129,13 @@
         Object.assign(overlay.style, {
             position: 'fixed',
             zIndex: '999999',
-            backgroundColor: 'rgba(35, 47, 62, 0.5)',
-            color: '#ffffff',
-            padding: '4px 12px',
-            borderRadius: '20px',
+            color: '#D3D3D3',
             fontFamily: 'monospace, sans-serif',
             fontSize: '13px',
             fontWeight: 'bold',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-            backdropFilter: 'blur(4px)',
             userSelect: 'none',
             cursor: 'move',
-            transition: 'opacity 0.2s ease',
             opacity: overlayVisible ? settings.overlayOpacity.toString() : '0',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
             display: active ? 'block' : 'none'
         });
 
@@ -147,7 +152,8 @@
             overlay.style.top = 'auto';
         }
 
-        overlay.innerHTML = `📦 <span id="sh-overlay-count">${itemCounter}</span> <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> ⚡ <span id="sh-overlay-uph">${calculateUPH()}</span>`;
+        const timeData = getEffectiveWorkTime();
+        overlay.innerHTML = `<span id="sh-overlay-count">${itemCounter}</span> <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-uph">${calculateUPH()}</span>/h <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-time">${timeData.formatted}</span>`;
 
         overlay.addEventListener('mouseenter', () => { 
             if (overlayVisible) overlay.style.opacity = '1'; 
@@ -250,6 +256,9 @@
         const overlayUPH = document.getElementById('sh-overlay-uph');
         if (overlayUPH) overlayUPH.textContent = calculateUPH();
 
+        const overlayTime = document.getElementById('sh-overlay-time');
+        if (overlayTime) overlayTime.textContent = getEffectiveWorkTime().formatted;
+
         const hubInput = document.getElementById('sh-cfg-count');
         if (hubInput && document.activeElement !== hubInput) {
             hubInput.value = count === 0 ? '' : count;
@@ -333,6 +342,9 @@
         if (active && overlayVisible) {
             const uphEl = document.getElementById('sh-overlay-uph');
             if (uphEl) uphEl.textContent = calculateUPH();
+
+            const timeEl = document.getElementById('sh-overlay-time');
+            if (timeEl) timeEl.textContent = getEffectiveWorkTime().formatted;
         }
     }, 10000);
 
