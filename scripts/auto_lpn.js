@@ -57,8 +57,8 @@
     document.addEventListener('input', handleInput, true);
 
     window.__autoLpn = {
-        enable: () => { active = true; 
-        disable: () => { active = false;  
+        enable: () => { active = true; },
+        disable: () => { active = false; },
         isActive: () => active
     };
 
