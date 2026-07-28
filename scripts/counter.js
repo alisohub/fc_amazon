@@ -146,14 +146,14 @@
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
         } else {
-            overlay.style.bottom = '15px';
-            overlay.style.right = '15px';
-            overlay.style.left = 'auto';
-            overlay.style.top = 'auto';
+            overlay.style.bottom = 'auto';
+            overlay.style.right = 'auto';
+            overlay.style.left = '8px';
+            overlay.style.top = '294px';
         }
 
         const timeData = getEffectiveWorkTime();
-        overlay.innerHTML = `<span id="sh-overlay-count">${itemCounter}</span> <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-uph">${calculateUPH()}</span>/h <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-time">${timeData.formatted}</span> <span>${settings.overlayLeft}</span> <span>${settings.overlayTop}</span>`;
+        overlay.innerHTML = `<span id="sh-overlay-count">${itemCounter}</span> <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-uph">${calculateUPH()}</span>/h <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-time">${timeData.formatted}</span>`;
 
         overlay.addEventListener('mouseenter', () => { 
             if (overlayVisible) overlay.style.opacity = '1'; 
