@@ -123,7 +123,7 @@
             // borderRadius: '20px',
             fontFamily: 'monospace, sans-serif',
             fontSize: '13px',
-            fontWeight: 'bold',
+            // fontWeight: 'bold',
             // boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
             // backdropFilter: 'blur(4px)',
             userSelect: 'none',
