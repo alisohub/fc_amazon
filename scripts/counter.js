@@ -117,20 +117,20 @@
         Object.assign(overlay.style, {
             position: 'fixed',
             zIndex: '999999',
-            backgroundColor: 'rgba(35, 47, 62, 0.5)',
+            // backgroundColor: 'rgba(35, 47, 62, 0.5)',
             color: '#ffffff',
-            padding: '4px 12px',
-            borderRadius: '20px',
+            // padding: '4px 12px',
+            // borderRadius: '20px',
             fontFamily: 'monospace, sans-serif',
             fontSize: '13px',
             fontWeight: 'bold',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-            backdropFilter: 'blur(4px)',
+            // boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+            // backdropFilter: 'blur(4px)',
             userSelect: 'none',
             cursor: 'move',
-            transition: 'opacity 0.2s ease',
+            // transition: 'opacity 0.2s ease',
             opacity: overlayVisible ? settings.overlayOpacity.toString() : '0',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
+            // border: '1px solid rgba(255, 255, 255, 0.15)',
             display: active ? 'block' : 'none'
         });
 
