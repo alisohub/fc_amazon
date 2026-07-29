@@ -101,12 +101,12 @@
     }
 
     function calculateUPH() {
-        if (itemCounter === 0) return 0;
+        if (itemCounter === 0) return "0.0";
         const timeData = getEffectiveWorkTime();
-        if (timeData.ms <= 0) return 0;
-
+        if (timeData.ms <= 0) return "0.0";
         const hoursWorked = timeData.ms / (1000 * 60 * 60);
-        return Math.round(itemCounter / hoursWorked);
+        
+        return (itemCounter / hoursWorked).toFixed(1);
     }
 
     function isInsideModal(el) {
