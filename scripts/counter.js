@@ -9,7 +9,7 @@
 
     // Default settings
     let settings = { 
-        overlayOpacity: 0.35,
+        overlayOpacity: 0.8,
         counterOption: 1,
         overlayLeft: null,
         overlayTop: null
@@ -34,6 +34,7 @@
     let active = false;
     let overlayVisible = true;
     let cooldownUntil = 0;
+    let alertTimeout = null;
 
     function saveCount(count) {
         itemCounter = count;
@@ -117,6 +118,44 @@
             if (style.display !== 'none' && style.visibility !== 'hidden') return true;
         }
         return false;
+    }
+
+    // --- VISUAL NOTIFICATION LOGIC ---
+    function showCountAlert(count) {
+        let alertEl = document.getElementById('sh-count-alert');
+        if (!alertEl) {
+            alertEl = document.createElement('div');
+            alertEl.id = 'sh-count-alert';
+            Object.assign(alertEl.style, {
+                position: 'fixed',
+                top: '20px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                backgroundColor: 'rgba(46, 204, 113, 0.9)', // Subtle green
+                color: '#fff',
+                padding: '6px 16px',
+                borderRadius: '16px',
+                fontFamily: 'monospace, sans-serif',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                zIndex: '999999',
+                pointerEvents: 'none', // Allows clicking right through it
+                opacity: '0',
+                transition: 'opacity 0.2s ease-in-out',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+            });
+            document.body.appendChild(alertEl);
+        }
+
+        alertEl.textContent = `✓ Counted! (${count})`;
+        alertEl.style.opacity = '1';
+
+        if (alertTimeout) clearTimeout(alertTimeout);
+
+        // Auto-fade out after 2 seconds
+        alertTimeout = setTimeout(() => {
+            alertEl.style.opacity = '0';
+        }, 2000);
     }
 
     function createOrGetOverlay() {
@@ -257,6 +296,7 @@
                 resolved = true;
                 saveCount(itemCounter + 1);
                 updateCounterUI(itemCounter);
+                showCountAlert(itemCounter); // Fire the toast alert
                 observer.disconnect();
             }
         });
@@ -309,7 +349,7 @@
         }
     }
 
-    // F10 Hotkey for hiding/showing the overlay
+    // Keydown Listener: F10 Hotkey & Instant Alert Dismissal
     document.addEventListener('keydown', (e) => {
         if (e.key === 'F10' && active) {
             e.preventDefault();
@@ -318,6 +358,14 @@
             if (overlay) {
                 overlay.style.opacity = overlayVisible ? settings.overlayOpacity.toString() : '0';
                 overlay.style.display = overlayVisible ? 'block' : 'none'; 
+            }
+        }
+
+        // Hide the toast immediately if Enter is pressed
+        if (e.key === 'Enter') {
+            const alertEl = document.getElementById('sh-count-alert');
+            if (alertEl) {
+                alertEl.style.opacity = '0';
             }
         }
     });
@@ -349,6 +397,9 @@
             active = false;
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay) overlay.style.display = 'none';
+
+            const alertEl = document.getElementById('sh-count-alert');
+            if (alertEl) alertEl.style.opacity = '0';
         },
         isActive: () => active,
         getCount: () => itemCounter,
