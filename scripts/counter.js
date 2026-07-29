@@ -101,12 +101,12 @@
     }
 
     function calculateUPH() {
-        if (itemCounter === 0) return 0;
+        if (itemCounter === 0) return "0.0";
         const timeData = getEffectiveWorkTime();
-        if (timeData.ms <= 0) return 0;
-
+        if (timeData.ms <= 0) return "0.0";
         const hoursWorked = timeData.ms / (1000 * 60 * 60);
-        return Math.round(itemCounter / hoursWorked);
+        
+        return (itemCounter / hoursWorked).toFixed(1);
     }
 
     function isInsideModal(el) {
@@ -146,10 +146,10 @@
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
         } else {
-            overlay.style.bottom = '15px';
-            overlay.style.right = '15px';
-            overlay.style.left = 'auto';
-            overlay.style.top = 'auto';
+            overlay.style.bottom = 'auto';
+            overlay.style.right = 'auto';
+            overlay.style.left = '49px';
+            overlay.style.top = '862px';
         }
 
         const timeData = getEffectiveWorkTime();
