@@ -9,7 +9,7 @@
 
     // Default settings
     let settings = { 
-        overlayOpacity: 0.8,
+        overlayOpacity: 0.35,
         counterOption: 1,
         overlayLeft: null,
         overlayTop: null
@@ -21,7 +21,7 @@
     } catch (e) {}
 
     const TOTE_REGEX = /^ts[a-z0-9]+/i;
-    
+
     // Only looking for this specific text to disappear
     const TARGET_INSTRUCTION_TEXTS = ['сканування lpn', 'skanowanie etykiety nlp'];
 
@@ -45,7 +45,7 @@
     function getEffectiveWorkTime() {
         const now = new Date();
         const hours = now.getHours();
-        
+
         // Determine Shift (Night shift starts at 18:30, Day starts at 06:30)
         const isNight = hours >= 17 || hours < 6;
         let shiftStart = new Date(now);
@@ -105,7 +105,7 @@
         const timeData = getEffectiveWorkTime();
         if (timeData.ms <= 0) return "0.0";
         const hoursWorked = timeData.ms / (1000 * 60 * 60);
-        
+
         return (itemCounter / hoursWorked).toFixed(1);
     }
 
@@ -164,7 +164,7 @@
 
         // --- DRAGGING LOGIC (Mouse & Touch) ---
         let isDragging = false, startX, startY, initialLeft, initialTop;
-        
+
         function dragStart(e) {
             isDragging = true;
             const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
@@ -175,7 +175,7 @@
             const rect = overlay.getBoundingClientRect();
             initialLeft = rect.left;
             initialTop = rect.top;
-            
+
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
             overlay.style.left = `${initialLeft}px`;
@@ -185,19 +185,19 @@
         function dragMove(e) {
             if (!isDragging) return;
             if (e.type === 'touchmove') e.preventDefault(); 
-            
+
             const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
             const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-            
+
             let newLeft = initialLeft + (clientX - startX);
             let newTop = initialTop + (clientY - startY);
-            
+
             const maxLeft = window.innerWidth - overlay.offsetWidth;
             const maxTop = window.innerHeight - overlay.offsetHeight;
-            
+
             newLeft = Math.max(0, Math.min(newLeft, maxLeft));
             newTop = Math.max(0, Math.min(newTop, maxTop));
-            
+
             overlay.style.left = `${newLeft}px`;
             overlay.style.top = `${newTop}px`;
         }
@@ -205,7 +205,7 @@
         function dragEnd() {
             if (isDragging) {
                 isDragging = false;
-                
+
                 // Save coordinates when user finishes dragging
                 settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
                 settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
@@ -221,35 +221,13 @@
         document.addEventListener('touchmove', dragMove, { passive: false });
         document.addEventListener('touchend', dragEnd);
 
-        window.addEventListener('resize', () => {
-            if (!active) return;
-            const rect = overlay.getBoundingClientRect();
-            let changed = false;
-
-            if (rect.right > window.innerWidth) {
-                overlay.style.left = `${Math.max(0, window.innerWidth - rect.width - 15)}px`;
-                changed = true;
-            }
-            if (rect.bottom > window.innerHeight) {
-                overlay.style.top = `${Math.max(0, window.innerHeight - rect.height - 15)}px`;
-                changed = true;
-            }
-
-            // Save new adjusted coordinates if window size squished the overlay out of bounds
-            if (changed) {
-                settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
-                settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
-                try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
-            }
-        });
-
         document.body.appendChild(overlay);
         return overlay;
     }
 
     function updateCounterUI(count) {
         saveCount(count);
-        
+
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count;
 
@@ -266,24 +244,8 @@
     }
 
     // --- DOM OBSERVATION LOGIC ---
-    function verifyAndCount(scannedBarcode) {
-        let targetEl = null;
-
-        // Locate the specific element holding the "Сканування LPN" text
-        const candidates = document.querySelectorAll('div, section, p, span, h1, h2, h3, h4, h5');
-        for (const el of candidates) {
-            if (el.children.length > 0) continue; 
-            
-            const text = el.textContent.toLowerCase().trim();
-            if (TARGET_INSTRUCTION_TEXTS.some(keyword => text.includes(keyword))) {
-                targetEl = el;
-                break;
-            }
-        }
-
-        if (!targetEl) {
-            return;
-        }
+    function verifyAndCount(targetEl) {
+        if (!targetEl) return;
 
         let resolved = false;
 
@@ -301,31 +263,53 @@
 
         observer.observe(document.body, { childList: true, subtree: true });
 
+        // Increased to 6 seconds for network/system lag
         setTimeout(() => { 
             if (!resolved) {
                 observer.disconnect(); 
             }
-        }, 3500); 
+        }, 6000); 
     }
 
     function handleScan(e) {
         if (!active) return;
-        if (e.type === 'keydown' && e.key !== 'Enter') return;
 
         const input = e.target;
         if (input.closest('#sh-root')) return;
-        if (!input.matches('input:not([type="hidden"]):not([disabled])') || isInsideModal(input)) return;
+
+        // Removed the [disabled] check in case the UI auto-disables the input during loading
+        if (!input.matches('input:not([type="hidden"])') || isInsideModal(input)) return;
 
         const rawValue = input.value?.trim();
+
+        // Ensure it's a Tote
         if (!rawValue || !TOTE_REGEX.test(rawValue)) return;
 
         const now = Date.now();
         if (now < cooldownUntil) return;
-        cooldownUntil = now + 1500;
+        cooldownUntil = now + 800; // 800ms to prevent double-bounces
 
-        setTimeout(() => verifyAndCount(rawValue), 50);
+        // 1. FIND THE ELEMENT IMMEDIATELY (Before the system hides it)
+        let targetEl = null;
+        const candidates = document.querySelectorAll('div, section, p, span, h1, h2, h3, h4, h5');
+
+        for (const el of candidates) {
+            // Removed the children.length constraint to protect against Amazon UI updates
+            const text = el.textContent.toLowerCase().trim();
+            if (TARGET_INSTRUCTION_TEXTS.some(keyword => text.includes(keyword))) {
+                targetEl = el;
+                break;
+            }
+        }
+
+        // 2. PASS IT TO THE OBSERVER
+        if (targetEl) {
+            // Tiny timeout to let the event loop process the submit action
+            setTimeout(() => verifyAndCount(targetEl), 10);
+        }
     }
 
+    // F10 Hotkey for hiding/showing the overlay
     document.addEventListener('keydown', (e) => {
         if (e.key === 'F10' && active) {
             e.preventDefault();
@@ -338,6 +322,7 @@
         }
     });
 
+    // Update time and UPH every 10 seconds
     setInterval(() => {
         if (active && overlayVisible) {
             const uphEl = document.getElementById('sh-overlay-uph');
@@ -348,8 +333,9 @@
         }
     }, 10000);
 
-    document.addEventListener('keydown', handleScan, true);
+    // Using 'change' to natively catch scanner auto-blur or UI button clicks
     document.addEventListener('change', handleScan, true);
+
     createOrGetOverlay();
 
     window.__itemCounter = {
@@ -371,7 +357,7 @@
         updateSettings: (newSettings) => {
             settings = { ...settings, ...newSettings };
             try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
-            
+
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay && overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString();
 
