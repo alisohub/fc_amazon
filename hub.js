@@ -6,19 +6,10 @@
     }
     window.__scriptHubLoaded = true;
 
-    // 1. Set a default branch just in case
-    let currentBranch = 'main';
+    // Read the branch from the bookmarklet, but default to 'main' if it doesn't exist
+    const currentBranch = window.__SH_BRANCH || 'main';
 
-    // 2. Check if the script has a source URL (works if injected via a <script> tag)
-    if (document.currentScript && document.currentScript.src) {
-        // 3. Extract the branch name from the raw GitHub URL
-        const match = document.currentScript.src.match(/refs\/heads\/([^\/]+)/);
-        if (match && match[1]) {
-            currentBranch = match[1];
-        }
-    }
-
-    // 4. Dynamically build the base URL
+    // Dynamically build the base URL
     const REPO_BASE_URL = `https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/${currentBranch}/scripts`;
 
     // Global Language State
