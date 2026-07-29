@@ -300,4 +300,6 @@
         });
     }
     injectUI();
+    const panel = document.getElementById('sh-panel');
+    if (panel) panel.classList.toggle('sh-open');
 })();
