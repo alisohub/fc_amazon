@@ -4,20 +4,6 @@
     }
     window.__counterLoaded = true;
 
-    // Inject CSS rule targeting the entire overlay container to guarantee visibility
-    if (!document.getElementById('sh-counter-styles')) {
-        const styleSheet = document.createElement('style');
-        styleSheet.id = 'sh-counter-styles';
-        styleSheet.textContent = `
-            #sh-item-overlay.sh-count-flash,
-            #sh-item-overlay.sh-count-flash * {
-                color: #2ecc71 !important;
-                transition: color 0.15s ease-out;
-            }
-        `;
-        document.head.appendChild(styleSheet);
-    }
-
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';
     const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
 
@@ -45,7 +31,6 @@
     let active = false;
     let overlayVisible = true;
     let cooldownUntil = 0;
-    let highlightTimeout = null;
 
     function saveCount(count) {
         itemCounter = count;
@@ -82,7 +67,7 @@
         } else {
             if (opt === 1) { breakStart.setHours(11, 20, 0, 0); breakEnd.setHours(11, 50, 0, 0); }
             else if (opt === 2) { breakStart.setHours(11, 50, 0, 0); breakEnd.setHours(12, 20, 0, 0); }
-            else if (opt === 3) { breakStart.setHours(12, 20, 0, 0); breakEnd.setHours(12, 50, 0, 0); }
+            else if (opt === 3) { breakStart.setHours(12, 50, 0, 0); breakEnd.setHours(12, 50, 0, 0); }
             else if (opt === 4) { breakStart.setHours(12, 50, 0, 0); breakEnd.setHours(13, 20, 0, 0); }
         }
 
@@ -122,20 +107,6 @@
         return false;
     }
 
-    // --- PARENT CONTAINER HIGHLIGHT ---
-    function highlightCounter() {
-        const overlay = document.getElementById('sh-item-overlay');
-        if (overlay) {
-            overlay.classList.add('sh-count-flash');
-            
-            if (highlightTimeout) clearTimeout(highlightTimeout);
-            
-            highlightTimeout = setTimeout(() => {
-                overlay.classList.remove('sh-count-flash');
-            }, 1000);
-        }
-    }
-
     function createOrGetOverlay() {
         let overlay = document.getElementById('sh-item-overlay');
         if (overlay) return overlay;
@@ -146,13 +117,21 @@
         Object.assign(overlay.style, {
             position: 'fixed',
             zIndex: '999999',
-            color: '#D3D3D3',
-            fontFamily: 'monospace, sans-serif',
-            fontSize: '13px',
+            backgroundColor: 'rgba(35, 47, 62, 0.4)',
+            color: '#ffffff',
+            padding: '4px 10px',
+            borderRadius: '20px',
+            fontFamily: 'monospace, Arial, sans-serif',
+            fontSize: '12px',
             fontWeight: 'bold',
+            letterSpacing: '0.5px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+            backdropFilter: 'blur(3px)',
             userSelect: 'none',
             cursor: 'move',
+            transition: 'opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease',
             opacity: overlayVisible ? settings.overlayOpacity.toString() : '0',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
             display: active ? 'block' : 'none'
         });
 
@@ -204,14 +183,8 @@
             const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
             const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
                         
-            let newLeft = initialLeft + (clientX - startX);
-            let newTop = initialTop + (clientY - startY);
-                        
-            const maxLeft = window.innerWidth - overlay.offsetWidth;
-            const maxTop = window.innerHeight - overlay.offsetHeight;
-                        
-            newLeft = Math.max(0, Math.min(newLeft, maxLeft));
-            newTop = Math.max(0, Math.min(newTop, maxTop));
+            const newLeft = initialLeft + (clientX - startX);
+            const newTop = initialTop + (clientY - startY);
                         
             overlay.style.left = `${newLeft}px`;
             overlay.style.top = `${newTop}px`;
@@ -240,6 +213,9 @@
 
     function updateCounterUI(count) {
         saveCount(count);
+
+        const hubBadge = document.getElementById('sh-item-count');
+        if (hubBadge) hubBadge.textContent = count;
                 
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count;
@@ -253,6 +229,19 @@
         const hubInput = document.getElementById('sh-cfg-count');
         if (hubInput && document.activeElement !== hubInput) {
             hubInput.value = count === 0 ? '' : count;
+        }
+
+        const overlay = document.getElementById('sh-item-overlay');
+        if (overlay) {
+            overlay.style.opacity = '1';
+            overlay.style.transform = 'scale(1.15)';
+            overlay.style.backgroundColor = 'rgba(6, 125, 98, 0.8)';
+
+            setTimeout(() => {
+                overlay.style.transform = 'scale(1)';
+                overlay.style.backgroundColor = 'rgba(35, 47, 62, 0.4)';
+                overlay.style.opacity = settings.overlayOpacity.toString();
+            }, 400);
         }
     }
 
@@ -281,7 +270,6 @@
                 resolved = true;
                 saveCount(itemCounter + 1);
                 updateCounterUI(itemCounter);
-                highlightCounter();
                 observer.disconnect();
             }
         });
@@ -301,7 +289,6 @@
         const input = e.target;
         if (input.closest('#sh-root')) return;
         
-        // --- STEP 2D MODIFIED: Removed :not([disabled]) filter ---
         if (!input.matches('input:not([type="hidden"])') || isInsideModal(input)) return;
 
         const rawValue = input.value?.trim();
@@ -321,7 +308,7 @@
             overlayVisible = !overlayVisible;
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay) {
-                overlay.style.opacity = overlayVisible ? settings.opacity.toString() : '0';
+                overlay.style.opacity = overlayVisible ? settings.overlayOpacity.toString() : '0';
                 overlay.style.display = overlayVisible ? 'block' : 'none'; 
             }
         }
