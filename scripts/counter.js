@@ -19,8 +19,11 @@
         if (savedSettings) settings = { ...settings, ...JSON.parse(savedSettings) };
     } catch (e) {}
 
+    // Regex explicitly targets Totes
     const TOTE_REGEX = /^ts[a-z0-9]+/i;
-    const TARGET_INSTRUCTION_TEXTS = ['сканування lpn', 'skanowanie etykiety nlp'];
+    
+    // Keywords to validate we are on the Tote scanning step (labels or placeholders)
+    const TARGET_KEYWORDS = ['wprowadź pojemnik', 'сканування lpn', 'skanowanie etykiety nlp'];
 
     let itemCounter = 0;
     try {
@@ -30,7 +33,10 @@
 
     let active = false;
     let overlayVisible = true;
-    let cooldownUntil = 0;
+    
+    // State locks to prevent double-counting
+    let isProcessingScan = false;
+    let activeObserver = null;
 
     function saveCount(count) {
         itemCounter = count;
@@ -67,7 +73,7 @@
         } else {
             if (opt === 1) { breakStart.setHours(11, 20, 0, 0); breakEnd.setHours(11, 50, 0, 0); }
             else if (opt === 2) { breakStart.setHours(11, 50, 0, 0); breakEnd.setHours(12, 20, 0, 0); }
-            else if (opt === 3) { breakStart.setHours(12, 50, 0, 0); breakEnd.setHours(12, 50, 0, 0); }
+            else if (opt === 3) { breakStart.setHours(12, 20, 0, 0); breakEnd.setHours(12, 50, 0, 0); }
             else if (opt === 4) { breakStart.setHours(12, 50, 0, 0); breakEnd.setHours(13, 20, 0, 0); }
         }
 
@@ -129,7 +135,6 @@
             backdropFilter: 'blur(3px)',
             userSelect: 'none',
             cursor: 'move',
-            transition: 'opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease',
             opacity: overlayVisible ? settings.overlayOpacity.toString() : '0',
             border: '1px solid rgba(255, 255, 255, 0.15)',
             display: active ? 'block' : 'none'
@@ -230,76 +235,78 @@
         if (hubInput && document.activeElement !== hubInput) {
             hubInput.value = count === 0 ? '' : count;
         }
-
-        const overlay = document.getElementById('sh-item-overlay');
-        if (overlay) {
-            overlay.style.opacity = '1';
-            overlay.style.transform = 'scale(1.15)';
-            overlay.style.backgroundColor = 'rgba(6, 125, 98, 0.8)';
-
-            setTimeout(() => {
-                overlay.style.transform = 'scale(1)';
-                overlay.style.backgroundColor = 'rgba(35, 47, 62, 0.4)';
-                overlay.style.opacity = settings.overlayOpacity.toString();
-            }, 400);
-        }
     }
 
-    function verifyAndCount(scannedBarcode) {
-        let targetEl = null;
+    function startInputWatch(inputEl) {
+        if (activeObserver) activeObserver.disconnect();
 
-        const candidates = document.querySelectorAll('div, section, p, span, h1, h2, h3, h4, h5');
-        for (const el of candidates) {
-            if (el.children.length > 0) continue; 
-                        
-            const text = el.textContent.toLowerCase().trim();
-            if (TARGET_INSTRUCTION_TEXTS.some(keyword => text.includes(keyword))) {
-                targetEl = el;
-                break;
-            }
-        }
+        // Targeted Observer: ONLY watches the input field and its immediate parent
+        activeObserver = new MutationObserver(() => {
+            const isRemoved = !document.body.contains(inputEl);
+            const isHidden = inputEl.offsetParent === null;
+            const placeholderChanged = inputEl.placeholder && 
+                !TARGET_KEYWORDS.some(kw => inputEl.placeholder.toLowerCase().includes(kw));
 
-        if (!targetEl) return;
-
-        let resolved = false;
-
-        const observer = new MutationObserver(() => {
-            if (resolved) return;
-
-            if (!document.body.contains(targetEl) || targetEl.offsetParent === null) {
-                resolved = true;
+            // If the input is removed, hidden, or the placeholder moves to the next step, the scan succeeded
+            if (isRemoved || isHidden || placeholderChanged) {
+                activeObserver.disconnect();
+                activeObserver = null;
+                
                 saveCount(itemCounter + 1);
                 updateCounterUI(itemCounter);
-                observer.disconnect();
+                
+                isProcessingScan = false; // Unlock for the next Tote
             }
         });
 
-        observer.observe(document.body, { childList: true, subtree: true });
+        // Watch the input itself for placeholder or visibility changes
+        activeObserver.observe(inputEl, { attributes: true, attributeFilter: ['placeholder', 'style', 'class', 'disabled'] });
+        
+        // Watch the parent to see if the input gets destroyed/replaced
+        if (inputEl.parentElement) {
+            activeObserver.observe(inputEl.parentElement, { childList: true });
+        }
 
+        // Failsafe: Unlock after 10 seconds if the server rejects the scan or lags out
         setTimeout(() => { 
-            if (!resolved) {
-                observer.disconnect(); 
+            if (isProcessingScan) {
+                if (activeObserver) activeObserver.disconnect();
+                activeObserver = null;
+                isProcessingScan = false; 
             }
-        }, 6000); 
+        }, 10000); 
     }
 
     function handleScan(e) {
         if (!active) return;
 
+        // Strict Enter Key capture
+        if (e.type === 'keydown' && e.key !== 'Enter') return;
+
         const input = e.target;
-        if (input.closest('#sh-root')) return;
         
+        if (input.closest('#sh-root')) return;
         if (!input.matches('input:not([type="hidden"])') || isInsideModal(input)) return;
 
         const rawValue = input.value?.trim();
         if (!rawValue || !TOTE_REGEX.test(rawValue)) return;
 
-        const now = Date.now();
-        if (now < cooldownUntil) return;
-        
-        cooldownUntil = now + 800;
+        // INSTANT VALIDATION (O(1) Check)
+        const placeholder = (input.placeholder || '').toLowerCase();
+        const surroundingText = (input.parentElement ? input.parentElement.textContent : '').toLowerCase(); 
 
-        setTimeout(() => verifyAndCount(rawValue), 50);
+        const isValidState = TARGET_KEYWORDS.some(kw => 
+            placeholder.includes(kw) || surroundingText.includes(kw)
+        );
+
+        if (!isValidState) return;
+
+        // STATE LOCK
+        if (isProcessingScan) return;
+        isProcessingScan = true;
+        
+        // Directly observe the verified input field
+        startInputWatch(input); 
     }
 
     document.addEventListener('keydown', (e) => {
@@ -324,8 +331,8 @@
         }
     }, 10000);
 
+    // Using keydown for Enter key to intercept hardware scanner submissions reliably
     document.addEventListener('keydown', handleScan, true);
-    document.addEventListener('change', handleScan, true);
     
     createOrGetOverlay();
 
