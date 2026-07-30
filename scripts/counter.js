@@ -164,7 +164,7 @@
 
         const timeData = getEffectiveWorkTime();
         
-        // Added the manual counter here next to the main counter
+        // Includes the manual counter here next to the main counter
         overlay.innerHTML = `
             <span id="sh-overlay-count">${itemCounter}</span> 
             <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> 
@@ -264,13 +264,22 @@
     function isValidScanState(input) {
         const keywords = ['wprowadź pojemnik', 'сканування lpn', 'skanowanie etykiety nlp'];
         
-        // Only checks the actual attributes of the input field
+        // 1. Check EVERY attribute on the input (placeholder, aria-label, data-label, etc.)
         for (let attr of input.attributes) {
             const val = (attr.value || '').toLowerCase();
             if (keywords.some(kw => val.includes(kw))) {
                 return true;
             }
         }
+
+        // 2. Check the text of the immediate parent box (catches floating labels)
+        if (input.parentElement) {
+            const parentText = (input.parentElement.textContent || '').toLowerCase();
+            if (keywords.some(kw => parentText.includes(kw))) {
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -322,7 +331,7 @@
         
         if (!rawValue || !TOTE_REGEX.test(rawValue)) return;
 
-        // Validates using the input's attributes only
+        // Validates using the input's attributes and immediate parent
         if (!isValidScanState(input)) return; 
 
         if (isProcessingScan) return;
