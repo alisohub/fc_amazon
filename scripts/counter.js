@@ -7,7 +7,6 @@
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';
     const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
 
-    // Default settings
     let settings = { 
         overlayOpacity: 0.8,
         counterOption: 1,
@@ -20,9 +19,7 @@
         if (savedSettings) settings = { ...settings, ...JSON.parse(savedSettings) };
     } catch (e) {}
 
-    const TOTE_REGEX = /^ts[a-z0-9]+/i;
-    
-    // Only looking for this specific text to disappear
+    const TOTE_REGEX = /^ts[a-z0-9]+/i; // KEPT: LPN-to-Tote validation
     const TARGET_INSTRUCTION_TEXTS = ['сканування lpn', 'skanowanie etykiety nlp'];
 
     let itemCounter = 0;
@@ -34,6 +31,7 @@
     let active = false;
     let overlayVisible = true;
     let cooldownUntil = 0;
+    let highlightTimeout = null;
 
     function saveCount(count) {
         itemCounter = count;
@@ -41,12 +39,10 @@
         catch (e) {}
     }
 
-    // --- TIME & RATE LOGIC ---
     function getEffectiveWorkTime() {
         const now = new Date();
         const hours = now.getHours();
         
-        // Determine Shift (Night shift starts at 18:30, Day starts at 06:30)
         const isNight = hours >= 17 || hours < 6;
         let shiftStart = new Date(now);
 
@@ -64,7 +60,6 @@
         let breakEnd = new Date(shiftStart);
         const opt = settings.counterOption || 1;
 
-        // Break Timetables
         if (isNight) {
             if (opt === 1) { breakStart.setHours(23, 20, 0, 0); breakEnd.setHours(23, 50, 0, 0); }
             else if (opt === 2) { breakStart.setHours(23, 50, 0, 0); breakEnd.setDate(breakEnd.getDate()+1); breakEnd.setHours(0, 20, 0, 0); }
@@ -79,7 +74,6 @@
 
         let effectiveMs = elapsedMs;
 
-        // Break freezing logic
         if (now >= breakStart && now < breakEnd) {
             effectiveMs = breakStart - shiftStart;
         } else if (now >= breakEnd) {
@@ -89,15 +83,11 @@
         const maxMs = 10 * 60 * 60 * 1000;
         if (effectiveMs > maxMs) effectiveMs = maxMs;
 
-        // Format to hours and minutes
         const totalMinutes = Math.floor(effectiveMs / (1000 * 60));
         const h = Math.floor(totalMinutes / 60);
         const m = totalMinutes % 60;
 
-        return { 
-            ms: effectiveMs, 
-            formatted: `${h}h${m}m` 
-        };
+        return { ms: effectiveMs, formatted: `${h}h${m}m` };
     }
 
     function calculateUPH() {
@@ -105,7 +95,6 @@
         const timeData = getEffectiveWorkTime();
         if (timeData.ms <= 0) return "0.0";
         const hoursWorked = timeData.ms / (1000 * 60 * 60);
-        
         return (itemCounter / hoursWorked).toFixed(1);
     }
 
@@ -117,6 +106,20 @@
             if (style.display !== 'none' && style.visibility !== 'hidden') return true;
         }
         return false;
+    }
+
+    function highlightCounter() {
+        const overlayCount = document.getElementById('sh-overlay-count');
+        if (overlayCount) {
+            overlayCount.style.color = '#2ecc71';
+            overlayCount.style.transition = 'color 0.2s ease-out';
+            
+            if (highlightTimeout) clearTimeout(highlightTimeout);
+            
+            highlightTimeout = setTimeout(() => {
+                overlayCount.style.color = '';
+            }, 1000);
+        }
     }
 
     function createOrGetOverlay() {
@@ -139,7 +142,6 @@
             display: active ? 'block' : 'none'
         });
 
-        // Apply saved position or default to bottom-right
         if (settings.overlayLeft !== null && settings.overlayTop !== null) {
             overlay.style.left = `${settings.overlayLeft}px`;
             overlay.style.top = `${settings.overlayTop}px`;
@@ -162,9 +164,8 @@
             if (overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString(); 
         });
 
-        // --- DRAGGING LOGIC (Mouse & Touch) ---
         let isDragging = false, startX, startY, initialLeft, initialTop;
-        
+                
         function dragStart(e) {
             isDragging = true;
             const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
@@ -175,7 +176,7 @@
             const rect = overlay.getBoundingClientRect();
             initialLeft = rect.left;
             initialTop = rect.top;
-            
+                        
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
             overlay.style.left = `${initialLeft}px`;
@@ -185,19 +186,19 @@
         function dragMove(e) {
             if (!isDragging) return;
             if (e.type === 'touchmove') e.preventDefault(); 
-            
+                        
             const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
             const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-            
+                        
             let newLeft = initialLeft + (clientX - startX);
             let newTop = initialTop + (clientY - startY);
-            
+                        
             const maxLeft = window.innerWidth - overlay.offsetWidth;
             const maxTop = window.innerHeight - overlay.offsetHeight;
-            
+                        
             newLeft = Math.max(0, Math.min(newLeft, maxLeft));
             newTop = Math.max(0, Math.min(newTop, maxTop));
-            
+                        
             overlay.style.left = `${newLeft}px`;
             overlay.style.top = `${newTop}px`;
         }
@@ -205,8 +206,6 @@
         function dragEnd() {
             if (isDragging) {
                 isDragging = false;
-                
-                // Save coordinates when user finishes dragging
                 settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
                 settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
                 try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
@@ -221,35 +220,13 @@
         document.addEventListener('touchmove', dragMove, { passive: false });
         document.addEventListener('touchend', dragEnd);
 
-        window.addEventListener('resize', () => {
-            if (!active) return;
-            const rect = overlay.getBoundingClientRect();
-            let changed = false;
-
-            if (rect.right > window.innerWidth) {
-                overlay.style.left = `${Math.max(0, window.innerWidth - rect.width - 15)}px`;
-                changed = true;
-            }
-            if (rect.bottom > window.innerHeight) {
-                overlay.style.top = `${Math.max(0, window.innerHeight - rect.height - 15)}px`;
-                changed = true;
-            }
-
-            // Save new adjusted coordinates if window size squished the overlay out of bounds
-            if (changed) {
-                settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
-                settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
-                try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
-            }
-        });
-
         document.body.appendChild(overlay);
         return overlay;
     }
 
     function updateCounterUI(count) {
         saveCount(count);
-        
+                
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count;
 
@@ -265,36 +242,20 @@
         }
     }
 
-    // --- DOM OBSERVATION LOGIC ---
-    function verifyAndCount(scannedBarcode) {
-        let targetEl = null;
-
-        // Locate the specific element holding the "Сканування LPN" text
-        const candidates = document.querySelectorAll('div, section, p, span, h1, h2, h3, h4, h5');
-        for (const el of candidates) {
-            if (el.children.length > 0) continue; 
-            
-            const text = el.textContent.toLowerCase().trim();
-            if (TARGET_INSTRUCTION_TEXTS.some(keyword => text.includes(keyword))) {
-                targetEl = el;
-                break;
-            }
-        }
-
-        if (!targetEl) {
-            return;
-        }
+    // --- STEP 2A MODIFIED: Receives pre-found element directly ---
+    function verifyAndCount(targetEl) {
+        if (!targetEl) return;
 
         let resolved = false;
 
         const observer = new MutationObserver(() => {
             if (resolved) return;
 
-            // Target element is removed from DOM or hidden
             if (!document.body.contains(targetEl) || targetEl.offsetParent === null) {
                 resolved = true;
                 saveCount(itemCounter + 1);
                 updateCounterUI(itemCounter);
+                highlightCounter();
                 observer.disconnect();
             }
         });
@@ -310,10 +271,10 @@
 
     function handleScan(e) {
         if (!active) return;
-        if (e.type === 'keydown' && e.key !== 'Enter') return;
 
         const input = e.target;
         if (input.closest('#sh-root')) return;
+        
         if (!input.matches('input:not([type="hidden"]):not([disabled])') || isInsideModal(input)) return;
 
         const rawValue = input.value?.trim();
@@ -323,7 +284,22 @@
         if (now < cooldownUntil) return;
         cooldownUntil = now + 1500;
 
-        setTimeout(() => verifyAndCount(rawValue), 50);
+        // --- STEP 2A MODIFIED: Find target IMMEDIATELY on scan event ---
+        let targetEl = null;
+        const candidates = document.querySelectorAll('div, section, p, span, h1, h2, h3, h4, h5');
+        for (const el of candidates) {
+            if (el.children.length > 0) continue; // KEPT SAFE: Skip parent wrappers
+                        
+            const text = el.textContent.toLowerCase().trim();
+            if (TARGET_INSTRUCTION_TEXTS.some(keyword => text.includes(keyword))) {
+                targetEl = el;
+                break;
+            }
+        }
+
+        if (targetEl) {
+            verifyAndCount(targetEl);
+        }
     }
 
     document.addEventListener('keydown', (e) => {
@@ -348,8 +324,9 @@
         }
     }, 10000);
 
-    document.addEventListener('keydown', handleScan, true);
+    // Using change listener for submit-on-scan or button clicks
     document.addEventListener('change', handleScan, true);
+    
     createOrGetOverlay();
 
     window.__itemCounter = {
@@ -371,7 +348,7 @@
         updateSettings: (newSettings) => {
             settings = { ...settings, ...newSettings };
             try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
-            
+                        
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay && overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString();
 
