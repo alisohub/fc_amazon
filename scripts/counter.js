@@ -5,6 +5,7 @@
     window.__counterLoaded = true;
     
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';
+    const STORAGE_KEY_MANUAL_COUNT = 'sh_item_counter_manual_count';
     const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
     
     // Default settings
@@ -22,9 +23,13 @@
     const TOTE_REGEX = /^ts[a-z0-9]+/i;
         
     let itemCounter = 0;
+    let manualCounter = 0;
     try {
         const savedCount = localStorage.getItem(STORAGE_KEY_COUNT);
         if (savedCount !== null) itemCounter = parseInt(savedCount, 10) || 0;
+        
+        const savedManual = localStorage.getItem(STORAGE_KEY_MANUAL_COUNT);
+        if (savedManual !== null) manualCounter = parseInt(savedManual, 10) || 0;
     } catch (e) {}
     
     let active = false;
@@ -34,6 +39,12 @@
     function saveCount(count) {
         itemCounter = count;
         try { localStorage.setItem(STORAGE_KEY_COUNT, count.toString()); } 
+        catch (e) {}
+    }
+
+    function saveManualCount(count) {
+        manualCounter = count;
+        try { localStorage.setItem(STORAGE_KEY_MANUAL_COUNT, count.toString()); } 
         catch (e) {}
     }
     
@@ -145,7 +156,15 @@
         }
         
         const timeData = getEffectiveWorkTime();
-        overlay.innerHTML = `<span id="sh-overlay-count">${itemCounter}</span> <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-uph">${calculateUPH()}</span>/h <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-time">${timeData.formatted}</span>`;
+        overlay.innerHTML = `
+            <span id="sh-overlay-count">${itemCounter}</span> 
+            <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> 
+            <span id="sh-overlay-manual-count" style="color:#f39c12;">${manualCounter}</span> 
+            <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> 
+            <span id="sh-overlay-uph">${calculateUPH()}</span>/h 
+            <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> 
+            <span id="sh-overlay-time">${timeData.formatted}</span>
+        `;
         
         overlay.addEventListener('mouseenter', () => { 
             if (overlayVisible) overlay.style.opacity = '1'; 
@@ -235,11 +254,15 @@
         return overlay;
     }
     
-    function updateCounterUI(count) {
+    function updateCounterUI(count, manualCount = manualCounter) {
         saveCount(count);
+        saveManualCount(manualCount);
                 
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count;
+        
+        const overlayManual = document.getElementById('sh-overlay-manual-count');
+        if (overlayManual) overlayManual.textContent = manualCount;
         
         const overlayUPH = document.getElementById('sh-overlay-uph');
         if (overlayUPH) overlayUPH.textContent = calculateUPH();
@@ -277,7 +300,7 @@
                 resolved = true;
                 clearInterval(watchInterval);
                 saveCount(itemCounter + 1);
-                updateCounterUI(itemCounter);
+                updateCounterUI(itemCounter, manualCounter);
             }
         }, 50);
 
@@ -309,7 +332,9 @@
     }
     
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'F10' && active) {
+        if (!active) return;
+
+        if (e.key === 'F10') {
             e.preventDefault();
             overlayVisible = !overlayVisible;
             const overlay = document.getElementById('sh-item-overlay');
@@ -317,6 +342,10 @@
                 overlay.style.opacity = overlayVisible ? settings.overlayOpacity.toString() : '0';
                 overlay.style.display = overlayVisible ? 'block' : 'none'; 
             }
+        } else if (e.key === 'F9') {
+            e.preventDefault();
+            manualCounter++;
+            updateCounterUI(itemCounter, manualCounter);
         }
     });
     
@@ -338,7 +367,7 @@
             active = true;
             const overlay = createOrGetOverlay();
             if (overlay) overlay.style.display = overlayVisible ? 'block' : 'none';
-            updateCounterUI(itemCounter);
+            updateCounterUI(itemCounter, manualCounter);
         },
         disable: () => {
             active = false;
@@ -347,7 +376,9 @@
         },
         isActive: () => active,
         getCount: () => itemCounter,
-        setCount: (newCount) => updateCounterUI(newCount),
+        getManualCount: () => manualCounter,
+        setCount: (newCount) => updateCounterUI(newCount, manualCounter),
+        setManualCount: (newManualCount) => updateCounterUI(itemCounter, newManualCount),
         getSettings: () => settings,
         updateSettings: (newSettings) => {
             settings = { ...settings, ...newSettings };
@@ -355,7 +386,7 @@
                         
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay && overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString();
-            updateCounterUI(itemCounter);
+            updateCounterUI(itemCounter, manualCounter);
         }
     };
     
