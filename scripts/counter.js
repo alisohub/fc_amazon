@@ -164,7 +164,6 @@
 
         const timeData = getEffectiveWorkTime();
         
-        // Includes the manual counter here next to the main counter
         overlay.innerHTML = `
             <span id="sh-overlay-count">${itemCounter}</span> 
             <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> 
@@ -264,19 +263,27 @@
     function isValidScanState(input) {
         const keywords = ['wprowadź pojemnik', 'сканування lpn', 'skanowanie etykiety nlp'];
         
-        // 1. Check EVERY attribute on the input (placeholder, aria-label, data-label, etc.)
+        // 1. Check EVERY attribute on the input
         for (let attr of input.attributes) {
             const val = (attr.value || '').toLowerCase();
-            if (keywords.some(kw => val.includes(kw))) {
-                return true;
+            for (let kw of keywords) {
+                if (val.includes(kw)) {
+                    // ALERTS EXACTLY WHICH ATTRIBUTE HELD THE TEXT
+                    alert(`Keyword found: "${kw}"\nLocation: Input attribute [${attr.name}]\nValue: ${attr.value}`);
+                    return true;
+                }
             }
         }
 
-        // 2. Check the text of the immediate parent box (catches floating labels)
+        // 2. Check the text of the immediate parent box
         if (input.parentElement) {
             const parentText = (input.parentElement.textContent || '').toLowerCase();
-            if (keywords.some(kw => parentText.includes(kw))) {
-                return true;
+            for (let kw of keywords) {
+                if (parentText.includes(kw)) {
+                    // ALERTS IF IT WAS FOUND IN THE PARENT ELEMENT
+                    alert(`Keyword found: "${kw}"\nLocation: Parent element text\nText content: ${input.parentElement.textContent.trim()}`);
+                    return true;
+                }
             }
         }
 
