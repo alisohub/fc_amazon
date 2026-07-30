@@ -4,14 +4,15 @@
     }
     window.__counterLoaded = true;
 
-    // Inject CSS rule for the green flash to override inline styles
+    // Inject CSS rule targeting the entire overlay container to guarantee visibility
     if (!document.getElementById('sh-counter-styles')) {
         const styleSheet = document.createElement('style');
         styleSheet.id = 'sh-counter-styles';
         styleSheet.textContent = `
-            .sh-count-flash {
+            #sh-item-overlay.sh-count-flash,
+            #sh-item-overlay.sh-count-flash * {
                 color: #2ecc71 !important;
-                transition: color 0.2s ease-out;
+                transition: color 0.15s ease-out;
             }
         `;
         document.head.appendChild(styleSheet);
@@ -121,16 +122,16 @@
         return false;
     }
 
-    // --- REFINED CLASS-BASED HIGHLIGHT LOGIC ---
+    // --- PARENT CONTAINER HIGHLIGHT ---
     function highlightCounter() {
-        const overlayCount = document.getElementById('sh-overlay-count');
-        if (overlayCount) {
-            overlayCount.classList.add('sh-count-flash');
+        const overlay = document.getElementById('sh-item-overlay');
+        if (overlay) {
+            overlay.classList.add('sh-count-flash');
             
             if (highlightTimeout) clearTimeout(highlightTimeout);
             
             highlightTimeout = setTimeout(() => {
-                overlayCount.classList.remove('sh-count-flash');
+                overlay.classList.remove('sh-count-flash');
             }, 1000);
         }
     }
@@ -300,7 +301,8 @@
         const input = e.target;
         if (input.closest('#sh-root')) return;
         
-        if (!input.matches('input:not([type="hidden"]):not([disabled])') || isInsideModal(input)) return;
+        // --- STEP 2D MODIFIED: Removed :not([disabled]) filter ---
+        if (!input.matches('input:not([type="hidden"])') || isInsideModal(input)) return;
 
         const rawValue = input.value?.trim();
         if (!rawValue || !TOTE_REGEX.test(rawValue)) return;
@@ -319,7 +321,7 @@
             overlayVisible = !overlayVisible;
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay) {
-                overlay.style.opacity = overlayVisible ? settings.overlayOpacity.toString() : '0';
+                overlay.style.opacity = overlayVisible ? settings.opacity.toString() : '0';
                 overlay.style.display = overlayVisible ? 'block' : 'none'; 
             }
         }
