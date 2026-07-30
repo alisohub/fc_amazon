@@ -34,6 +34,8 @@
     let active = false;
     let overlayVisible = true;
     let cooldownUntil = 0;
+    let alertTimeout = null;
+    let activeObserver = null; // NEW: Tracks the current observer to prevent double-counting
 
     function saveCount(count) {
         itemCounter = count;
@@ -119,6 +121,43 @@
         return false;
     }
 
+    // --- VISUAL NOTIFICATION LOGIC ---
+    function showCountAlert(count) {
+        let alertEl = document.getElementById('sh-count-alert');
+        if (!alertEl) {
+            alertEl = document.createElement('div');
+            alertEl.id = 'sh-count-alert';
+            Object.assign(alertEl.style, {
+                position: 'fixed',
+                top: '20px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                backgroundColor: 'rgba(46, 204, 113, 0.9)', 
+                color: '#fff',
+                padding: '6px 16px',
+                borderRadius: '16px',
+                fontFamily: 'monospace, sans-serif',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                zIndex: '999999',
+                pointerEvents: 'none', 
+                opacity: '0',
+                transition: 'opacity 0.2s ease-in-out',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+            });
+            document.body.appendChild(alertEl);
+        }
+
+        alertEl.textContent = `✓ Counted! (${count})`;
+        alertEl.style.opacity = '1';
+
+        if (alertTimeout) clearTimeout(alertTimeout);
+        
+        alertTimeout = setTimeout(() => {
+            if (alertEl) alertEl.style.opacity = '0';
+        }, 2000);
+    }
+
     function createOrGetOverlay() {
         let overlay = document.getElementById('sh-item-overlay');
         if (overlay) return overlay;
@@ -139,7 +178,6 @@
             display: active ? 'block' : 'none'
         });
 
-        // Apply saved position or default to bottom-right
         if (settings.overlayLeft !== null && settings.overlayTop !== null) {
             overlay.style.left = `${settings.overlayLeft}px`;
             overlay.style.top = `${settings.overlayTop}px`;
@@ -205,8 +243,6 @@
         function dragEnd() {
             if (isDragging) {
                 isDragging = false;
-                
-                // Save coordinates when user finishes dragging
                 settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
                 settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
                 try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
@@ -247,9 +283,15 @@
     function verifyAndCount(targetEl) {
         if (!targetEl) return;
 
+        // If a previous scan is still waiting on lag, cancel it so they don't stack up
+        if (activeObserver) {
+            activeObserver.disconnect();
+            activeObserver = null;
+        }
+
         let resolved = false;
 
-        const observer = new MutationObserver(() => {
+        activeObserver = new MutationObserver(() => {
             if (resolved) return;
 
             // Target element is removed from DOM or hidden
@@ -257,16 +299,23 @@
                 resolved = true;
                 saveCount(itemCounter + 1);
                 updateCounterUI(itemCounter);
-                observer.disconnect();
+                showCountAlert(itemCounter); 
+                
+                // Cleanup
+                if (activeObserver) {
+                    activeObserver.disconnect();
+                    activeObserver = null;
+                }
             }
         });
 
-        observer.observe(document.body, { childList: true, subtree: true });
+        activeObserver.observe(document.body, { childList: true, subtree: true });
 
-        // Increased to 6 seconds for network/system lag
+        // Timeout safety
         setTimeout(() => { 
-            if (!resolved) {
-                observer.disconnect(); 
+            if (!resolved && activeObserver) {
+                activeObserver.disconnect();
+                activeObserver = null;
             }
         }, 6000); 
     }
@@ -277,24 +326,24 @@
         const input = e.target;
         if (input.closest('#sh-root')) return;
         
-        // Removed the [disabled] check in case the UI auto-disables the input during loading
         if (!input.matches('input:not([type="hidden"])') || isInsideModal(input)) return;
 
         const rawValue = input.value?.trim();
         
-        // Ensure it's a Tote
         if (!rawValue || !TOTE_REGEX.test(rawValue)) return;
 
         const now = Date.now();
         if (now < cooldownUntil) return;
-        cooldownUntil = now + 800; // 800ms to prevent double-bounces
+        cooldownUntil = now + 800; 
 
-        // 1. FIND THE ELEMENT IMMEDIATELY (Before the system hides it)
+        // 1. FIND THE ELEMENT IMMEDIATELY 
         let targetEl = null;
         const candidates = document.querySelectorAll('div, section, p, span, h1, h2, h3, h4, h5');
         
         for (const el of candidates) {
-            // Removed the children.length constraint to protect against Amazon UI updates
+            // We must skip parent elements to avoid accidentally targeting the entire page body
+            if (el.children.length > 0) continue;
+            
             const text = el.textContent.toLowerCase().trim();
             if (TARGET_INSTRUCTION_TEXTS.some(keyword => text.includes(keyword))) {
                 targetEl = el;
@@ -304,12 +353,11 @@
 
         // 2. PASS IT TO THE OBSERVER
         if (targetEl) {
-            // Tiny timeout to let the event loop process the submit action
             setTimeout(() => verifyAndCount(targetEl), 10);
         }
     }
 
-    // F10 Hotkey for hiding/showing the overlay
+    // Keydown Listener: F10 Hotkey & Instant Alert Dismissal
     document.addEventListener('keydown', (e) => {
         if (e.key === 'F10' && active) {
             e.preventDefault();
@@ -320,9 +368,16 @@
                 overlay.style.display = overlayVisible ? 'block' : 'none'; 
             }
         }
+        
+        // Hide the toast immediately if Enter is pressed
+        if (e.key === 'Enter') {
+            const alertEl = document.getElementById('sh-count-alert');
+            if (alertEl && alertEl.style.opacity !== '0') {
+                alertEl.style.opacity = '0';
+            }
+        }
     });
 
-    // Update time and UPH every 10 seconds
     setInterval(() => {
         if (active && overlayVisible) {
             const uphEl = document.getElementById('sh-overlay-uph');
@@ -333,7 +388,6 @@
         }
     }, 10000);
 
-    // Using 'change' to natively catch scanner auto-blur or UI button clicks
     document.addEventListener('change', handleScan, true);
     
     createOrGetOverlay();
@@ -349,6 +403,9 @@
             active = false;
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay) overlay.style.display = 'none';
+            
+            const alertEl = document.getElementById('sh-count-alert');
+            if (alertEl) alertEl.style.opacity = '0';
         },
         isActive: () => active,
         getCount: () => itemCounter,
