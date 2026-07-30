@@ -261,9 +261,8 @@
     }
 
     function isValidScanState(input) {
-        const keywords = ['wprowadź pojemnik', 'сканування lpn', 'skanowanie etykiety nlp'];
+        const keywords = ['wprowadź pojemnik'];
         
-        // Targeted check: We now know for a fact it's in the aria-label
         const ariaLabel = (input.getAttribute('aria-label') || '').toLowerCase();
         const placeholder = (input.getAttribute('placeholder') || '').toLowerCase();
         
@@ -285,8 +284,12 @@
             const isRemoved = !document.body.contains(inputEl);
             const isHidden = inputEl.offsetParent === null;
             const isDisabled = inputEl.disabled === true;
+            
+            // MAGIC FIX: If the aria-label changed to something else, it is no longer valid!
+            // This means the system moved to the next step but reused the same input box.
+            const labelChanged = !isValidScanState(inputEl);
 
-            if (isRemoved || isHidden || isDisabled) {
+            if (isRemoved || isHidden || isDisabled || labelChanged) {
                 activeObserver.disconnect();
                 activeObserver = null;
                 
@@ -297,7 +300,11 @@
             }
         });
 
-        activeObserver.observe(inputEl, { attributes: true, attributeFilter: ['style', 'class', 'disabled'] });
+        // We explicitly tell the observer to watch 'aria-label' for changes
+        activeObserver.observe(inputEl, { 
+            attributes: true, 
+            attributeFilter: ['style', 'class', 'disabled', 'aria-label', 'placeholder'] 
+        });
         
         if (inputEl.parentElement) {
             activeObserver.observe(inputEl.parentElement, { childList: true });
@@ -326,7 +333,6 @@
         
         if (!rawValue || !TOTE_REGEX.test(rawValue)) return;
 
-        // Validates using the targeted aria-label check
         if (!isValidScanState(input)) return; 
 
         if (isProcessingScan) return;
@@ -335,7 +341,6 @@
         startInputWatch(input); 
     }
 
-    // Global Key Listener for toggles and manual increments
     document.addEventListener('keydown', (e) => {
         if (!active) return;
         
