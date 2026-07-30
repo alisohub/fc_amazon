@@ -263,27 +263,15 @@
     function isValidScanState(input) {
         const keywords = ['wprowadź pojemnik', 'сканування lpn', 'skanowanie etykiety nlp'];
         
-        // 1. Check EVERY attribute on the input
-        for (let attr of input.attributes) {
-            const val = (attr.value || '').toLowerCase();
-            for (let kw of keywords) {
-                if (val.includes(kw)) {
-                    // ALERTS EXACTLY WHICH ATTRIBUTE HELD THE TEXT
-                    alert(`Keyword found: "${kw}"\nLocation: Input attribute [${attr.name}]\nValue: ${attr.value}`);
-                    return true;
-                }
-            }
-        }
+        // Targeted check: We now know for a fact it's in the aria-label
+        const ariaLabel = (input.getAttribute('aria-label') || '').toLowerCase();
+        const placeholder = (input.getAttribute('placeholder') || '').toLowerCase();
+        
+        const textToCheck = ariaLabel + " " + placeholder;
 
-        // 2. Check the text of the immediate parent box
-        if (input.parentElement) {
-            const parentText = (input.parentElement.textContent || '').toLowerCase();
-            for (let kw of keywords) {
-                if (parentText.includes(kw)) {
-                    // ALERTS IF IT WAS FOUND IN THE PARENT ELEMENT
-                    alert(`Keyword found: "${kw}"\nLocation: Parent element text\nText content: ${input.parentElement.textContent.trim()}`);
-                    return true;
-                }
+        for (let kw of keywords) {
+            if (textToCheck.includes(kw)) {
+                return true;
             }
         }
 
@@ -338,7 +326,7 @@
         
         if (!rawValue || !TOTE_REGEX.test(rawValue)) return;
 
-        // Validates using the input's attributes and immediate parent
+        // Validates using the targeted aria-label check
         if (!isValidScanState(input)) return; 
 
         if (isProcessingScan) return;
