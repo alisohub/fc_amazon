@@ -117,7 +117,7 @@
             if (highlightTimeout) clearTimeout(highlightTimeout);
             
             highlightTimeout = setTimeout(() => {
-                overlayCount.style.color = '';
+                overlayCount.style.color = '#D3D3D3';
             }, 1000);
         }
     }
@@ -155,7 +155,7 @@
         }
 
         const timeData = getEffectiveWorkTime();
-        overlay.innerHTML = `<span id="sh-overlay-count">${itemCounter}</span> <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-uph">${calculateUPH()}</span>/h <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-time">${timeData.formatted}</span>`;
+        overlay.innerHTML = `<span id="sh-overlay-count" style="color:#D3D3D3;">${itemCounter}</span> <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-uph">${calculateUPH()}</span>/h <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-time">${timeData.formatted}</span>`;
 
         overlay.addEventListener('mouseenter', () => { 
             if (overlayVisible) overlay.style.opacity = '1'; 
@@ -242,7 +242,6 @@
         }
     }
 
-    // --- WORKING BASELINE SEARCH LOGIC ---
     function verifyAndCount(scannedBarcode) {
         let targetEl = null;
 
@@ -275,11 +274,12 @@
 
         observer.observe(document.body, { childList: true, subtree: true });
 
+        // --- STEP 2C MODIFIED: Increased timeout to 6000ms (6 seconds) for network lag safety ---
         setTimeout(() => { 
             if (!resolved) {
                 observer.disconnect(); 
             }
-        }, 3500); 
+        }, 6000); 
     }
 
     function handleScan(e) {
@@ -296,7 +296,6 @@
         const now = Date.now();
         if (now < cooldownUntil) return;
         
-        // --- STEP 2B MODIFIED: Reduced cooldown to 800ms ---
         cooldownUntil = now + 800;
 
         setTimeout(() => verifyAndCount(rawValue), 50);
