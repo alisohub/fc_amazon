@@ -4,6 +4,19 @@
     }
     window.__counterLoaded = true;
 
+    // Inject CSS rule for the green flash to override inline styles
+    if (!document.getElementById('sh-counter-styles')) {
+        const styleSheet = document.createElement('style');
+        styleSheet.id = 'sh-counter-styles';
+        styleSheet.textContent = `
+            .sh-count-flash {
+                color: #2ecc71 !important;
+                transition: color 0.2s ease-out;
+            }
+        `;
+        document.head.appendChild(styleSheet);
+    }
+
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';
     const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
 
@@ -108,16 +121,16 @@
         return false;
     }
 
+    // --- REFINED CLASS-BASED HIGHLIGHT LOGIC ---
     function highlightCounter() {
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) {
-            overlayCount.style.color = '#2ecc71';
-            overlayCount.style.transition = 'color 0.2s ease-out';
+            overlayCount.classList.add('sh-count-flash');
             
             if (highlightTimeout) clearTimeout(highlightTimeout);
             
             highlightTimeout = setTimeout(() => {
-                overlayCount.style.color = '#D3D3D3';
+                overlayCount.classList.remove('sh-count-flash');
             }, 1000);
         }
     }
@@ -155,7 +168,7 @@
         }
 
         const timeData = getEffectiveWorkTime();
-        overlay.innerHTML = `<span id="sh-overlay-count" style="color:#D3D3D3;">${itemCounter}</span> <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-uph">${calculateUPH()}</span>/h <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-time">${timeData.formatted}</span>`;
+        overlay.innerHTML = `<span id="sh-overlay-count">${itemCounter}</span> <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-uph">${calculateUPH()}</span>/h <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> <span id="sh-overlay-time">${timeData.formatted}</span>`;
 
         overlay.addEventListener('mouseenter', () => { 
             if (overlayVisible) overlay.style.opacity = '1'; 
@@ -274,7 +287,6 @@
 
         observer.observe(document.body, { childList: true, subtree: true });
 
-        // --- STEP 2C MODIFIED: Increased timeout to 6000ms (6 seconds) for network lag safety ---
         setTimeout(() => { 
             if (!resolved) {
                 observer.disconnect(); 
