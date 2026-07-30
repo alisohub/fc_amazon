@@ -19,7 +19,7 @@
         if (savedSettings) settings = { ...settings, ...JSON.parse(savedSettings) };
     } catch (e) {}
 
-    const TOTE_REGEX = /^ts[a-z0-9]+/i; // KEPT: LPN-to-Tote validation
+    const TOTE_REGEX = /^ts[a-z0-9]+/i;
     const TARGET_INSTRUCTION_TEXTS = ['сканування lpn', 'skanowanie etykiety nlp'];
 
     let itemCounter = 0;
@@ -242,8 +242,21 @@
         }
     }
 
-    // --- STEP 2A MODIFIED: Receives pre-found element directly ---
-    function verifyAndCount(targetEl) {
+    // --- WORKING BASELINE SEARCH LOGIC ---
+    function verifyAndCount(scannedBarcode) {
+        let targetEl = null;
+
+        const candidates = document.querySelectorAll('div, section, p, span, h1, h2, h3, h4, h5');
+        for (const el of candidates) {
+            if (el.children.length > 0) continue; 
+                        
+            const text = el.textContent.toLowerCase().trim();
+            if (TARGET_INSTRUCTION_TEXTS.some(keyword => text.includes(keyword))) {
+                targetEl = el;
+                break;
+            }
+        }
+
         if (!targetEl) return;
 
         let resolved = false;
@@ -282,24 +295,11 @@
 
         const now = Date.now();
         if (now < cooldownUntil) return;
-        cooldownUntil = now + 1500;
+        
+        // --- STEP 2B MODIFIED: Reduced cooldown to 800ms ---
+        cooldownUntil = now + 800;
 
-        // --- STEP 2A MODIFIED: Find target IMMEDIATELY on scan event ---
-        let targetEl = null;
-        const candidates = document.querySelectorAll('div, section, p, span, h1, h2, h3, h4, h5');
-        for (const el of candidates) {
-            if (el.children.length > 0) continue; // KEPT SAFE: Skip parent wrappers
-                        
-            const text = el.textContent.toLowerCase().trim();
-            if (TARGET_INSTRUCTION_TEXTS.some(keyword => text.includes(keyword))) {
-                targetEl = el;
-                break;
-            }
-        }
-
-        if (targetEl) {
-            verifyAndCount(targetEl);
-        }
+        setTimeout(() => verifyAndCount(rawValue), 50);
     }
 
     document.addEventListener('keydown', (e) => {
@@ -324,7 +324,7 @@
         }
     }, 10000);
 
-    // Using change listener for submit-on-scan or button clicks
+    document.addEventListener('keydown', handleScan, true);
     document.addEventListener('change', handleScan, true);
     
     createOrGetOverlay();
