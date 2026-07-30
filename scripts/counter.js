@@ -253,27 +253,27 @@
         }
     }
     
-    // --- UPDATED OBSERVATION LOGIC (Aria-Label specific) ---
+    // --- OBSERVATION LOGIC: Count ONLY when the aria-label changes away from the trigger ---
     function verifyAndCount(input) {
-        // Look explicitly for "wprowadź pojemnik" in the aria-label
-        const ariaLabel = (input.getAttribute('aria-label') || '').toLowerCase();
-        if (!ariaLabel.includes('wprowadź pojemnik')) {
+        const initialLabel = (input.getAttribute('aria-label') || '').toLowerCase();
+        if (!initialLabel.includes('wprowadź pojemnik')) {
             return;
         }
 
         let resolved = false;
 
-        // High-speed polling checks if the input is cleared, changed, or removed
+        // Polls every 50ms to catch the exact moment the aria-label text changes/disappears or input is destroyed
         const watchInterval = setInterval(() => {
             if (resolved) return;
 
             const isRemoved = !document.body.contains(input);
             const isHidden = input.offsetParent === null;
-            const isDisabled = input.disabled === true;
-            const labelChanged = !(input.getAttribute('aria-label') || '').toLowerCase().includes('wprowadź pojemnik');
-            const valueCleared = input.value === '';
+            const currentLabel = (input.getAttribute('aria-label') || '').toLowerCase();
+            
+            // Counts when the aria-label no longer contains "wprowadź pojemnik" (meaning it transitioned to the next screen)
+            const labelChanged = !currentLabel.includes('wprowadź pojemnik');
 
-            if (isRemoved || isHidden || isDisabled || labelChanged || valueCleared) {
+            if (isRemoved || isHidden || labelChanged) {
                 resolved = true;
                 clearInterval(watchInterval);
                 saveCount(itemCounter + 1);
@@ -305,7 +305,6 @@
         if (now < cooldownUntil) return;
         cooldownUntil = now + 1500;
         
-        // Pass the actual input element instead of the raw text
         setTimeout(() => verifyAndCount(input), 50);
     }
     
