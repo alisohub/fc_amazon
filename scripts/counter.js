@@ -10,15 +10,15 @@
     ];
 
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';
-    const STORAGE_KEY_MANUAL_COUNT = 'sh_item_counter_manual_count';
     const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
 
-    let settings = { 
+    let settings = {
         overlayOpacity: 0.35,
         counterOption: 1,
         overlayLeft: null,
         overlayTop: null
     };
+
     try {
         const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
         if (savedSettings) settings = { ...settings, ...JSON.parse(savedSettings) };
@@ -27,13 +27,10 @@
     const TOTE_REGEX = /^ts[a-z0-9]+/i;
 
     let itemCounter = 0;
-    let manualCounter = 0;
+
     try {
         const savedCount = localStorage.getItem(STORAGE_KEY_COUNT);
         if (savedCount !== null) itemCounter = parseInt(savedCount, 10) || 0;
-
-        const savedManual = localStorage.getItem(STORAGE_KEY_MANUAL_COUNT);
-        if (savedManual !== null) manualCounter = parseInt(savedManual, 10) || 0;
     } catch (e) {}
 
     let active = false;
@@ -42,21 +39,15 @@
 
     function saveCount(count) {
         itemCounter = count;
-        try { localStorage.setItem(STORAGE_KEY_COUNT, count.toString()); } 
-        catch (e) {}
-    }
-
-    function saveManualCount(count) {
-        manualCounter = count;
-        try { localStorage.setItem(STORAGE_KEY_MANUAL_COUNT, count.toString()); } 
+        try { localStorage.setItem(STORAGE_KEY_COUNT, count.toString()); }
         catch (e) {}
     }
 
     function getEffectiveWorkTime() {
         const now = new Date();
         const hours = now.getHours();
-
         const isNight = hours >= 17 || hours < 6;
+
         let shiftStart = new Date(now);
         if (isNight) {
             if (hours < 6) shiftStart.setDate(shiftStart.getDate() - 1);
@@ -122,8 +113,10 @@
     function createOrGetOverlay() {
         let overlay = document.getElementById('sh-item-overlay');
         if (overlay) return overlay;
+
         overlay = document.createElement('div');
         overlay.id = 'sh-item-overlay';
+
         Object.assign(overlay.style, {
             position: 'fixed',
             zIndex: '999999',
@@ -146,13 +139,13 @@
         }
 
         const timeData = getEffectiveWorkTime();
+        
+        // Manual counter completely removed from the overlay layout
         overlay.innerHTML = `
-            <span id="sh-overlay-count">${itemCounter}</span> 
-            <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> 
-            <span id="sh-overlay-manual-count" style="color:#f39c12;">${manualCounter}</span> 
-            <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> 
-            <span id="sh-overlay-uph">${calculateUPH()}</span>/h 
-            <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span> 
+            <span id="sh-overlay-count">${itemCounter}</span>
+            <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
+            <span id="sh-overlay-uph">${calculateUPH()}</span>/h
+            <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
             <span id="sh-overlay-time">${timeData.formatted}</span>
         `;
 
@@ -165,7 +158,6 @@
             isDragging = true;
             const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
             const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-
             startX = clientX;
             startY = clientY;
             const rect = overlay.getBoundingClientRect();
@@ -175,11 +167,9 @@
 
         function dragMove(e) {
             if (!isDragging) return;
-            if (e.type === 'touchmove') e.preventDefault(); 
-
+            if (e.type === 'touchmove') e.preventDefault();
             const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
             const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-
             overlay.style.left = `${initialLeft + (clientX - startX)}px`;
             overlay.style.top = `${initialTop + (clientY - startY)}px`;
         }
@@ -205,16 +195,15 @@
         return overlay;
     }
 
-    function updateCounterUI(count, manualCount = manualCounter) {
+    function updateCounterUI(count) {
         saveCount(count);
-        saveManualCount(manualCount);
-
+        
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count;
-        const overlayManual = document.getElementById('sh-overlay-manual-count');
-        if (overlayManual) overlayManual.textContent = manualCount;
+        
         const overlayUPH = document.getElementById('sh-overlay-uph');
         if (overlayUPH) overlayUPH.textContent = calculateUPH();
+        
         const overlayTime = document.getElementById('sh-overlay-time');
         if (overlayTime) overlayTime.textContent = getEffectiveWorkTime().formatted;
     }
@@ -236,7 +225,6 @@
 
         const observer = new MutationObserver(() => {
             if (resolved) return;
-
             const isRemoved = !document.body.contains(input);
             const isHidden = input.offsetParent === null;
             const currentLabel = input.getAttribute('aria-label');
@@ -245,11 +233,13 @@
             if (isRemoved || isHidden || labelChanged) {
                 resolved = true;
                 observer.disconnect();
-
-                saveCount(itemCounter + 1);
-                updateCounterUI(itemCounter, manualCounter);
-
-                setTimeout(() => { isProcessingScan = false; }, 300);
+                
+                // 4-second strict lock applied here
+                setTimeout(() => {
+                    saveCount(itemCounter + 1);
+                    updateCounterUI(itemCounter);
+                    isProcessingScan = false;
+                }, 4000);
             }
         });
 
@@ -258,19 +248,18 @@
             attributeFilter: ['aria-label', 'disabled', 'class', 'style']
         });
 
+        // Fallback in case observer misses the event
         setTimeout(() => {
             if (!resolved) {
                 resolved = true;
                 observer.disconnect();
-
                 if (!document.body.contains(input)) {
                     saveCount(itemCounter + 1);
-                    updateCounterUI(itemCounter, manualCounter);
+                    updateCounterUI(itemCounter);
                 }
-
                 isProcessingScan = false;
             }
-        }, 4000); 
+        }, 4000);
     }
 
     function handleScan(e) {
@@ -291,38 +280,35 @@
 
     document.addEventListener('keydown', (e) => {
         if (!active) return;
-
+        
         if (e.key === 'F10') {
             e.preventDefault();
             overlayVisible = !overlayVisible;
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay) {
                 overlay.style.opacity = overlayVisible ? settings.overlayOpacity.toString() : '0';
-                overlay.style.display = overlayVisible ? 'block' : 'none'; 
-
+                overlay.style.display = overlayVisible ? 'block' : 'none';
+                
                 // Force an instant refresh of UPH and time when bringing it back on screen
                 if (overlayVisible) {
-                    updateCounterUI(itemCounter, manualCounter);
+                    updateCounterUI(itemCounter);
                 }
             }
-        } else if (e.key === 'F9') {
-            e.preventDefault();
-            manualCounter++;
-            updateCounterUI(itemCounter, manualCounter);
         }
+        // F9 manual increment has been removed entirely
     });
 
     setInterval(() => {
         if (active && overlayVisible) {
             const uphEl = document.getElementById('sh-overlay-uph');
             if (uphEl) uphEl.textContent = calculateUPH();
+            
             const timeEl = document.getElementById('sh-overlay-time');
             if (timeEl) timeEl.textContent = getEffectiveWorkTime().formatted;
         }
     }, 60000);
 
     document.addEventListener('keydown', handleScan, true);
-
     createOrGetOverlay();
 
     window.__itemCounter = {
@@ -330,7 +316,7 @@
             active = true;
             const overlay = createOrGetOverlay();
             if (overlay) overlay.style.display = overlayVisible ? 'block' : 'none';
-            updateCounterUI(itemCounter, manualCounter);
+            updateCounterUI(itemCounter);
         },
         disable: () => {
             active = false;
@@ -339,16 +325,14 @@
         },
         isActive: () => active,
         getCount: () => itemCounter,
-        getManualCount: () => manualCounter,
-        setCount: (newCount) => updateCounterUI(newCount, manualCounter),
-        setManualCount: (newManualCount) => updateCounterUI(itemCounter, newManualCount),
+        setCount: (newCount) => updateCounterUI(newCount),
         getSettings: () => settings,
         updateSettings: (newSettings) => {
             settings = { ...settings, ...newSettings };
             try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay && overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString();
-            updateCounterUI(itemCounter, manualCounter);
+            updateCounterUI(itemCounter);
         }
     };
 
