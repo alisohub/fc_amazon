@@ -206,6 +206,12 @@
         
         const overlayTime = document.getElementById('sh-overlay-time');
         if (overlayTime) overlayTime.textContent = getEffectiveWorkTime().formatted;
+
+        // --- RESTORED SYNC LOGIC ---
+        const hubInput = document.getElementById('sh-cfg-count');
+        if (hubInput && document.activeElement !== hubInput) {
+            hubInput.value = count === 0 ? '' : count;
+        }
     }
 
     // Helper function to check against all valid labels
