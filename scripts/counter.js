@@ -270,7 +270,7 @@
 
                 isProcessingScan = false;
             }
-        }, 6000); 
+        }, 4000); 
     }
 
     function handleScan(e) {
