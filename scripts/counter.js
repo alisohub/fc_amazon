@@ -23,7 +23,7 @@
     const TOTE_REGEX = /^ts[a-z0-9]+/i;
     
     // Only looking for this specific text to disappear
-    const TARGET_INSTRUCTION_TEXTS = ['сканування lpn', 'skanowanie etykiety nlp'];
+    const TARGET_INSTRUCTION_TEXTS = ['сканування lpn', 'skanowanie etykiety nlp', 'назначить новый номер lp'];
 
     let itemCounter = 0;
     try {
