@@ -63,6 +63,7 @@
 
         let breakStart = new Date(shiftStart);
         let breakEnd = new Date(shiftStart);
+
         const opt = settings.counterOption || 1;
 
         if (isNight) {
@@ -118,7 +119,6 @@
 
         overlay = document.createElement('div');
         overlay.id = 'sh-item-overlay';
-
         Object.assign(overlay.style, {
             position: 'fixed',
             zIndex: '999999',
@@ -132,20 +132,29 @@
             display: active ? 'block' : 'none'
         });
 
+        // Apply saved position or default to bottom-left (relative to screen)
+        let targetLeft, targetTop;
+
         if (settings.overlayLeft !== null && settings.overlayTop !== null) {
-            overlay.style.left = `${settings.overlayLeft}px`;
-            overlay.style.top = `${settings.overlayTop}px`;
-            overlay.style.right = 'auto';
-            overlay.style.bottom = 'auto';
+            targetLeft = settings.overlayLeft;
+            targetTop = settings.overlayTop;
         } else {
-            overlay.style.left = '49px';
-            overlay.style.top = '862px';
-            overlay.style.right = 'auto';
-            overlay.style.bottom = 'auto';
+            // Default: 20px from left, 50px from bottom (safe on all screens)
+            targetLeft = 20;
+            targetTop = window.innerHeight - 50; 
         }
 
+        // Clamp to screen bounds so it never renders off-screen
+        targetLeft = Math.max(0, Math.min(targetLeft, window.innerWidth - 100)); // 100px estimated width
+        targetTop = Math.max(0, Math.min(targetTop, window.innerHeight - 30));   // 30px estimated height
+
+        overlay.style.left = `${targetLeft}px`;
+        overlay.style.top = `${targetTop}px`;
+        overlay.style.right = 'auto';
+        overlay.style.bottom = 'auto';
+
         const timeData = getEffectiveWorkTime();
-        
+
         // Manual counter completely removed from the overlay layout
         overlay.innerHTML = `
             <span id="sh-overlay-count">${itemCounter}</span>
@@ -153,7 +162,7 @@
             <span id="sh-overlay-uph">${calculateUPH()}</span>/h
             <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
             <span id="sh-overlay-time">${timeData.formatted}</span>
-        `;
+            `;
 
         overlay.addEventListener('mouseenter', () => { if (overlayVisible) overlay.style.opacity = '1'; });
         overlay.addEventListener('mouseleave', () => { if (overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString(); });
@@ -197,19 +206,26 @@
         document.addEventListener('touchmove', dragMove, { passive: false });
         document.addEventListener('touchend', dragEnd);
 
+        window.addEventListener('resize', () => {
+            if (!active) return;
+            const rect = overlay.getBoundingClientRect();
+            if (rect.right > window.innerWidth) overlay.style.left = `${Math.max(0, window.innerWidth - rect.width)}px`;
+            if (rect.bottom > window.innerHeight) overlay.style.top = `${Math.max(0, window.innerHeight - rect.height)}px`;
+        });
+
         document.body.appendChild(overlay);
         return overlay;
     }
 
     function updateCounterUI(count) {
         saveCount(count);
-        
+
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count;
-        
+
         const overlayUPH = document.getElementById('sh-overlay-uph');
         if (overlayUPH) overlayUPH.textContent = calculateUPH();
-        
+
         const overlayTime = document.getElementById('sh-overlay-time');
         if (overlayTime) overlayTime.textContent = getEffectiveWorkTime().formatted;
 
@@ -245,7 +261,7 @@
             if (isRemoved || isHidden || labelChanged) {
                 resolved = true;
                 observer.disconnect();
-                
+
                 // 4-second strict lock applied here
                 setTimeout(() => {
                     saveCount(itemCounter + 1);
@@ -292,7 +308,7 @@
 
     document.addEventListener('keydown', (e) => {
         if (!active) return;
-        
+
         if (e.key === 'F10') {
             e.preventDefault();
             overlayVisible = !overlayVisible;
@@ -300,7 +316,7 @@
             if (overlay) {
                 overlay.style.opacity = overlayVisible ? settings.overlayOpacity.toString() : '0';
                 overlay.style.display = overlayVisible ? 'block' : 'none';
-                
+
                 // Force an instant refresh of UPH and time when bringing it back on screen
                 if (overlayVisible) {
                     updateCounterUI(itemCounter);
@@ -314,7 +330,7 @@
         if (active && overlayVisible) {
             const uphEl = document.getElementById('sh-overlay-uph');
             if (uphEl) uphEl.textContent = calculateUPH();
-            
+
             const timeEl = document.getElementById('sh-overlay-time');
             if (timeEl) timeEl.textContent = getEffectiveWorkTime().formatted;
         }
