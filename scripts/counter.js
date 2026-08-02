@@ -100,10 +100,6 @@
         const timeData = getEffectiveWorkTime();
         if (timeData.ms <= 0) return "0.0";
         const hoursWorked = timeData.ms / (1000 * 60 * 60);
-<<<<<<< HEAD
-        
-=======
->>>>>>> development
         return (itemCounter / hoursWorked).toFixed(1);
     }
 
@@ -140,11 +136,6 @@
             overlay.style.left = `${settings.overlayLeft}px`;
             overlay.style.top = `${settings.overlayTop}px`;
         } else {
-<<<<<<< HEAD
-            overlay.style.bottom = 'auto';
-            overlay.style.right = 'auto';
-=======
->>>>>>> development
             overlay.style.left = '49px';
             overlay.style.top = '862px';
         }
@@ -202,29 +193,6 @@
         document.addEventListener('touchmove', dragMove, { passive: false });
         document.addEventListener('touchend', dragEnd);
 
-<<<<<<< HEAD
-        window.addEventListener('resize', () => {
-            if (!active) return;
-            const rect = overlay.getBoundingClientRect();
-            let changed = false;
-            if (rect.right > window.innerWidth) {
-                overlay.style.left = `${Math.max(0, window.innerWidth - rect.width - 15)}px`;
-                changed = true;
-            }
-            if (rect.bottom > window.innerHeight) {
-                overlay.style.top = `${Math.max(0, window.innerHeight - rect.height - 15)}px`;
-                changed = true;
-            }
-            // Save new adjusted coordinates if window size squished the overlay out of bounds
-            if (changed) {
-                settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
-                settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
-                try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
-            }
-        });
-
-=======
->>>>>>> development
         document.body.appendChild(overlay);
         return overlay;
     }
@@ -288,14 +256,6 @@
             attributeFilter: ['aria-label', 'disabled', 'class', 'style']
         });
 
-<<<<<<< HEAD
-        setTimeout(() => {
-             if (!resolved) {
-                observer.disconnect();
-             }
-        }, 3500);
-     }
-=======
         // Fallback in case observer misses the event
         setTimeout(() => {
             if (!resolved) {
@@ -309,7 +269,6 @@
             }
         }, 4000);
     }
->>>>>>> development
 
     function handleScan(e) {
         if (!active) return;
@@ -358,11 +317,6 @@
     }, 60000);
 
     document.addEventListener('keydown', handleScan, true);
-<<<<<<< HEAD
-    document.addEventListener('change', handleScan, true);
-
-=======
->>>>>>> development
     createOrGetOverlay();
 
     window.__itemCounter = {
