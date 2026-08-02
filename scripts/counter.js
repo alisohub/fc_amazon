@@ -14,8 +14,9 @@
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';
     const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
 
+    // Removed hardcoded targetRate so the Hub controls it 100%
     let settings = {
-        overlayOpacity: 0.35,
+        overlayOpacity: 0.3,
         counterOption: 1,
         overlayLeft: null,
         overlayTop: null
@@ -23,7 +24,12 @@
 
     try {
         const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
-        if (savedSettings) settings = { ...settings, ...JSON.parse(savedSettings) };
+        if (savedSettings) {
+            const parsed = JSON.parse(savedSettings);
+            // We strip out targetRate from local storage just in case an old hardcoded value was saved
+            delete parsed.targetRate; 
+            settings = { ...settings, ...parsed };
+        }
     } catch (e) {}
 
     const TOTE_REGEX = /^ts[a-z0-9]+/i;
@@ -102,6 +108,13 @@
         const hoursWorked = timeData.ms / (1000 * 60 * 60);
         return (itemCounter / hoursWorked).toFixed(1);
     }
+    
+    function calculatePercentageStr(uphString) {
+        // Safe fallback to 47 just in case the counter loads a split second before the Hub configures it
+        const target = settings.targetRate || 47; 
+        if (target <= 0) return "---%";
+        return ((parseFloat(uphString) / target) * 100).toFixed(1) + "%";
+    }
 
     function isInsideModal(el) {
         if (el.closest('dialog[open]')) return true;
@@ -129,24 +142,32 @@
             userSelect: 'none',
             cursor: 'move',
             opacity: overlayVisible ? settings.overlayOpacity.toString() : '0',
-            display: active ? 'block' : 'none'
+            display: active ? 'block' : 'none',
+            whiteSpace: 'nowrap'
         });
 
+        // Apply saved position or default to bottom-left 
         if (settings.overlayLeft !== null && settings.overlayTop !== null) {
             overlay.style.left = `${settings.overlayLeft}px`;
             overlay.style.top = `${settings.overlayTop}px`;
+            overlay.style.right = 'auto';
+            overlay.style.bottom = 'auto';
         } else {
             overlay.style.left = '49px';
             overlay.style.top = '862px';
+            overlay.style.right = 'auto';
+            overlay.style.bottom = 'auto';
         }
 
         const timeData = getEffectiveWorkTime();
+        const currentUPH = calculateUPH();
+        const currentPct = calculatePercentageStr(currentUPH);
         
-        // Manual counter completely removed from the overlay layout
         overlay.innerHTML = `
             <span id="sh-overlay-count">${itemCounter}</span>
             <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
-            <span id="sh-overlay-uph">${calculateUPH()}</span>/h
+            <span id="sh-overlay-uph">${currentUPH}/h</span> 
+            <span id="sh-overlay-pct" style="margin-left:2px;">(${currentPct})</span>
             <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
             <span id="sh-overlay-time">${timeData.formatted}</span>
         `;
@@ -193,6 +214,28 @@
         document.addEventListener('touchmove', dragMove, { passive: false });
         document.addEventListener('touchend', dragEnd);
 
+        // Integrated resize logic from the first snippet
+        window.addEventListener('resize', () => {
+            if (!active) return;
+            const rect = overlay.getBoundingClientRect();
+            let changed = false;
+
+            if (rect.right > window.innerWidth) {
+                overlay.style.left = `${Math.max(0, window.innerWidth - rect.width - 15)}px`;
+                changed = true;
+            }
+            if (rect.bottom > window.innerHeight) {
+                overlay.style.top = `${Math.max(0, window.innerHeight - rect.height - 15)}px`;
+                changed = true;
+            }
+
+            if (changed) {
+                settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
+                settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
+                try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
+            }
+        });
+
         document.body.appendChild(overlay);
         return overlay;
     }
@@ -203,20 +246,23 @@
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count;
         
+        const currentUPH = calculateUPH();
+        
         const overlayUPH = document.getElementById('sh-overlay-uph');
-        if (overlayUPH) overlayUPH.textContent = calculateUPH();
+        if (overlayUPH) overlayUPH.textContent = `${currentUPH}/h`;
+        
+        const overlayPct = document.getElementById('sh-overlay-pct');
+        if (overlayPct) overlayPct.textContent = `(${calculatePercentageStr(currentUPH)})`;
         
         const overlayTime = document.getElementById('sh-overlay-time');
         if (overlayTime) overlayTime.textContent = getEffectiveWorkTime().formatted;
 
-        // --- RESTORED SYNC LOGIC ---
         const hubInput = document.getElementById('sh-cfg-count');
         if (hubInput && document.activeElement !== hubInput) {
             hubInput.value = count === 0 ? '' : count;
         }
     }
 
-    // Helper function to check against all valid labels
     function hasTargetLabel(labelString) {
         const lowerLabel = (labelString || '').toLowerCase();
         return TARGET_LABELS.some(target => lowerLabel.includes(target));
@@ -242,7 +288,6 @@
                 resolved = true;
                 observer.disconnect();
                 
-                // 4-second strict lock applied here
                 setTimeout(() => {
                     saveCount(itemCounter + 1);
                     updateCounterUI(itemCounter);
@@ -256,7 +301,6 @@
             attributeFilter: ['aria-label', 'disabled', 'class', 'style']
         });
 
-        // Fallback in case observer misses the event
         setTimeout(() => {
             if (!resolved) {
                 resolved = true;
@@ -297,19 +341,22 @@
                 overlay.style.opacity = overlayVisible ? settings.overlayOpacity.toString() : '0';
                 overlay.style.display = overlayVisible ? 'block' : 'none';
                 
-                // Force an instant refresh of UPH and time when bringing it back on screen
                 if (overlayVisible) {
                     updateCounterUI(itemCounter);
                 }
             }
         }
-        // F9 manual increment has been removed entirely
     });
 
     setInterval(() => {
         if (active && overlayVisible) {
+            const currentUPH = calculateUPH();
+            
             const uphEl = document.getElementById('sh-overlay-uph');
-            if (uphEl) uphEl.textContent = calculateUPH();
+            if (uphEl) uphEl.textContent = `${currentUPH}/h`;
+            
+            const pctEl = document.getElementById('sh-overlay-pct');
+            if (pctEl) pctEl.textContent = `(${calculatePercentageStr(currentUPH)})`;
             
             const timeEl = document.getElementById('sh-overlay-time');
             if (timeEl) timeEl.textContent = getEffectiveWorkTime().formatted;
