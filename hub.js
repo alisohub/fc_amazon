@@ -12,8 +12,16 @@
     // Dynamically build the base URL
     const REPO_BASE_URL = `https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/${currentBranch}/scripts`;
 
-    // Global Language State
-    let currentLang = localStorage.getItem('sh_hub_lang') || 'EN';
+    const DEPARTAMENT_OPTIONS = [
+        "CRET",
+        "FAST",
+        //"UG",
+        //"WHD",
+        //"REFURB" 
+    ];
+
+    let currentDep = localStorage.getItem('sh_hub_dep') || DEPARTAMENT_OPTIONS[0];
+
 
     // ==========================================
     //   SCRIPT REGISTRY
@@ -21,16 +29,16 @@
     const SCRIPTS = [
         {
             id: 'auto-lpn',
-            name: 'Auto Reassign LPN',
+            name: 'Авто-LPN',
             file: 'auto_lpn.js',
-            description: 'Auto-clicks LPN reassignment on scanner input.',
+            description: 'Автоматично відкриває "перепризначити LPN" при скануванні LPN або будь-чого іншого, окрім тота',
             getHandler: () => window.__autoLpn
         },
         {
             id: 'item-counter',
-            name: 'Item Counter',
+            name: 'Рахувальник',
             file: 'counter.js',
-            description: 'Tracks and counts linked items with local persistence.',
+            description: 'Рахує пачки, можете сховати з екрану за допомогою F10. Виставте перерву.',
             getHandler: () => window.__itemCounter,
             renderSettings: (container) => {
                 const handler = window.__itemCounter;
@@ -151,14 +159,14 @@
                     justify-content: space-between; align-items: center;
                     border-bottom: 1px solid #e0e0e0; gap: 8px;
                 }
-                /* Language Dropdown */
-                .sh-lang-dropdown {
+                /* Depchoosing Dropdown */
+                .sh-dep-dropdown {
                     background: #f1f3f4; border: 1px solid transparent; border-radius: 6px;
                     padding: 4px 6px; font-size: 12px; color: #444746; font-weight: 600;
                     cursor: pointer; outline: none; transition: background 0.2s, border 0.2s;
                 }
-                .sh-lang-dropdown:hover { background: #e8eaed; }
-                .sh-lang-dropdown:focus { border-color: #1a73e8; background: #ffffff; }
+                .sh-dep-dropdown:hover { background: #e8eaed; }
+                .sh-dep-dropdown:focus { border-color: #1a73e8; background: #ffffff; }
                 .sh-title-wrapper { flex: 1; display: flex; justify-content: center; overflow: hidden; }
                 .sh-header h3 { margin: 0; font-size: 15px; font-weight: 500; color: #202124; white-space: nowrap; }
                 .sh-close {
@@ -215,10 +223,10 @@
             </style>
             <div id="sh-panel">
                 <div class="sh-header">
-                    <select id="sh-lang-select" class="sh-lang-dropdown">
-                        <option value="EN" ${currentLang === 'EN' ? 'selected' : ''}>EN</option>
-                        <option value="PL" ${currentLang === 'PL' ? 'selected' : ''}>PL</option>
-                        <option value="UA" ${currentLang === 'UA' ? 'selected' : ''}>UA</option>
+                    <select id="sh-subdep-select" class="sh-dep-dropdown">
+                        ${DEPARTAMENT_OPTIONS.map(dep => 
+                            `<option value="${dep}" ${currentDep === dep ? 'selected' : ''}>${dep}</option>`)
+                            .join('\n        ')}
                     </select>
                     <button class="sh-close" id="sh-close-btn" title="Close">✖</button>
                 </div>
@@ -230,12 +238,11 @@
         const panel = document.getElementById('sh-panel');
         document.getElementById('sh-close-btn').onclick = () => panel.classList.toggle('sh-open');
 
-        // Language Selector Logic
-        const langSelect = document.getElementById('sh-lang-select');
-        langSelect.addEventListener('change', (e) => {
-            currentLang = e.target.value;
-            localStorage.setItem('sh_hub_lang', currentLang);
-            console.log(`🌍 Hub language set to: ${currentLang}`);
+        // Fast or CRet
+        const subDepSelect = document.getElementById('sh-subdep-select');
+        subDepSelect.addEventListener('change', (e) => {
+            currentDep = e.target.value;
+            localStorage.setItem('sh_hub_dep', currentDep);
         });
 
         // Render Cards
