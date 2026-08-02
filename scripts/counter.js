@@ -7,7 +7,8 @@
     // Add your Ukrainian (and any other) translations here in lowercase
     const TARGET_LABELS = [
         'wprowadź pojemnik',
-        'вкажіть транспортну тару'
+        'вкажіть транспортну тару',
+        'введите тару'
     ];
 
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';

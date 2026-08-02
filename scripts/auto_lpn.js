@@ -6,7 +6,8 @@
 
     const TARGET_TEXTS = [
         'перепризначте lpn', 
-        'przypisz ponownie lpn'
+        'przypisz ponownie lpn',
+        'назначить новый номер lp'
     ];
 
     const IGNORED_PREFIXES = new Set(['t']);
