@@ -135,9 +135,13 @@
         if (settings.overlayLeft !== null && settings.overlayTop !== null) {
             overlay.style.left = `${settings.overlayLeft}px`;
             overlay.style.top = `${settings.overlayTop}px`;
+            overlay.style.right = 'auto';
+            overlay.style.bottom = 'auto';
         } else {
             overlay.style.left = '49px';
             overlay.style.top = '862px';
+            overlay.style.right = 'auto';
+            overlay.style.bottom = 'auto';
         }
 
         const timeData = getEffectiveWorkTime();
