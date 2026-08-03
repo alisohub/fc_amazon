@@ -18,7 +18,8 @@
         overlayOpacity: 0.35,
         counterOption: 1,
         overlayLeft: null,
-        overlayTop: null
+        overlayTop: null,
+        targetRate: 47 // Hardcoded default
     };
 
     try {
@@ -102,6 +103,12 @@
         const hoursWorked = timeData.ms / (1000 * 60 * 60);
         return (itemCounter / hoursWorked).toFixed(1);
     }
+    
+    function calculatePercentageStr(uphString) {
+        const target = settings.targetRate || 0;
+        if (target <= 0) return "---%";
+        return ((parseFloat(uphString) / target) * 100).toFixed(1) + "%";
+    }
 
     function isInsideModal(el) {
         if (el.closest('dialog[open]')) return true;
@@ -129,7 +136,8 @@
             userSelect: 'none',
             cursor: 'move',
             opacity: overlayVisible ? settings.overlayOpacity.toString() : '0',
-            display: active ? 'block' : 'none'
+            display: active ? 'block' : 'none',
+            whiteSpace: 'nowrap'
         });
 
         // Apply saved position or default to bottom-left (relative to screen)
@@ -154,15 +162,18 @@
         overlay.style.bottom = 'auto';
 
         const timeData = getEffectiveWorkTime();
-
+        const currentUPH = calculateUPH();
+        const currentPct = calculatePercentageStr(currentUPH);
+        
         // Manual counter completely removed from the overlay layout
         overlay.innerHTML = `
             <span id="sh-overlay-count">${itemCounter}</span>
             <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
-            <span id="sh-overlay-uph">${calculateUPH()}</span>/h
+            <span id="sh-overlay-uph">${currentUPH}/h</span> 
+            <span id="sh-overlay-pct" style="margin-left:2px;">(${currentPct})</span>
             <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
             <span id="sh-overlay-time">${timeData.formatted}</span>
-            `;
+        `;
 
         overlay.addEventListener('mouseenter', () => { if (overlayVisible) overlay.style.opacity = '1'; });
         overlay.addEventListener('mouseleave', () => { if (overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString(); });
@@ -219,13 +230,18 @@
 
     function updateCounterUI(count) {
         saveCount(count);
-
+        
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count;
-
+        
+        const currentUPH = calculateUPH();
+        
         const overlayUPH = document.getElementById('sh-overlay-uph');
-        if (overlayUPH) overlayUPH.textContent = calculateUPH();
-
+        if (overlayUPH) overlayUPH.textContent = `${currentUPH}/h`;
+        
+        const overlayPct = document.getElementById('sh-overlay-pct');
+        if (overlayPct) overlayPct.textContent = `(${calculatePercentageStr(currentUPH)})`;
+        
         const overlayTime = document.getElementById('sh-overlay-time');
         if (overlayTime) overlayTime.textContent = getEffectiveWorkTime().formatted;
 
@@ -261,7 +277,7 @@
             if (isRemoved || isHidden || labelChanged) {
                 resolved = true;
                 observer.disconnect();
-
+                
                 // 4-second strict lock applied here
                 setTimeout(() => {
                     saveCount(itemCounter + 1);
@@ -308,7 +324,7 @@
 
     document.addEventListener('keydown', (e) => {
         if (!active) return;
-
+        
         if (e.key === 'F10') {
             e.preventDefault();
             overlayVisible = !overlayVisible;
@@ -316,21 +332,25 @@
             if (overlay) {
                 overlay.style.opacity = overlayVisible ? settings.overlayOpacity.toString() : '0';
                 overlay.style.display = overlayVisible ? 'block' : 'none';
-
+                
                 // Force an instant refresh of UPH and time when bringing it back on screen
                 if (overlayVisible) {
                     updateCounterUI(itemCounter);
                 }
             }
         }
-        // F9 manual increment has been removed entirely
     });
 
     setInterval(() => {
         if (active && overlayVisible) {
+            const currentUPH = calculateUPH();
+            
             const uphEl = document.getElementById('sh-overlay-uph');
-            if (uphEl) uphEl.textContent = calculateUPH();
-
+            if (uphEl) uphEl.textContent = `${currentUPH}/h`;
+            
+            const pctEl = document.getElementById('sh-overlay-pct');
+            if (pctEl) pctEl.textContent = `(${calculatePercentageStr(currentUPH)})`;
+            
             const timeEl = document.getElementById('sh-overlay-time');
             if (timeEl) timeEl.textContent = getEffectiveWorkTime().formatted;
         }
