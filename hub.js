@@ -240,8 +240,8 @@
                                 `<option value="${dep}" ${currentDep === dep ? 'selected' : ''}>${dep}</option>`)
                                 .join('\n                            ')}
                         </select>
-                        <a href="https://example.com" target="_blank" rel="noopener noreferrer" class="sh-url-btn">Link 1</a>
-                        <a href="https://example.com" target="_blank" rel="noopener noreferrer" class="sh-url-btn">Link 2</a>
+                        <a href="https://eu-cretfc-dub.dub.proxy.amazon.com/gravis" target="_blank" rel="noopener noreferrer" class="sh-url-btn">GRAVIS</a>
+                        <a href="https://w.amazon.com/bin/view/Wikipedia_LCJ4/" target="_blank" rel="noopener noreferrer" class="sh-url-btn">WIKI</a>
                     </div>
                     <button class="sh-close" id="sh-close-btn" title="Close">✖</button>
                 </div>
