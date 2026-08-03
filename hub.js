@@ -1,7 +1,16 @@
 (() => {
+    // If the hub is already loaded, toggle its visibility and reset advanced settings
     if (window.__scriptHubLoaded) {
         const panel = document.getElementById('sh-panel');
-        if (panel) panel.classList.toggle('sh-open');
+        if (panel) {
+            if (panel.classList.contains('sh-open')) {
+                panel.classList.remove('sh-open');
+                const advContainer = document.getElementById('sh-adv-container');
+                if (advContainer) advContainer.style.display = 'none';
+            } else {
+                panel.classList.add('sh-open');
+            }
+        }
         return;
     }
     window.__scriptHubLoaded = true;
@@ -62,6 +71,16 @@
                         <span class="sh-emoji">👻</span>
                         <input type="range" id="sh-cfg-opacity" class="sh-range" min="0" max="1" step="0.05" value="${settings.overlayOpacity}" />
                     </div>
+                    
+                    <!-- Advanced Settings Container (Hidden by default) -->
+                    <div id="sh-adv-container" style="display: none; padding-top: 8px; margin-top: 8px; border-top: 1px dashed #e0e0e0;">
+                        <!-- FUTURE ADVANCED SETTINGS GO HERE -->
+                    </div>
+                    
+                    <!-- Advanced Settings Toggle Button -->
+                    <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+                        <span id="sh-adv-btn" class="sh-adv-text">Розширені</span>
+                    </div>
                 `;
                 
                 // Handle Options Selection
@@ -89,6 +108,17 @@
                 container.querySelector('#sh-cfg-opacity').addEventListener('input', (e) => {
                     const val = parseFloat(e.target.value);
                     handler.updateSettings({ overlayOpacity: val });
+                });
+
+                // Handle Advanced Settings Toggle
+                const advBtn = container.querySelector('#sh-adv-btn');
+                const advContainer = container.querySelector('#sh-adv-container');
+                advBtn.addEventListener('click', () => {
+                    if (advContainer.style.display === 'none') {
+                        advContainer.style.display = 'block';
+                    } else {
+                        advContainer.style.display = 'none';
+                    }
                 });
             }
         }
@@ -198,6 +228,12 @@
                 .sh-setting-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
                 .sh-emoji { font-size: 16px; line-height: 1; opacity: 0.8; }
                 
+                /* Advanced Button styling */
+                .sh-adv-text { 
+                    font-size: 11px; color: #9aa0a6; cursor: pointer; user-select: none; transition: color 0.2s; 
+                }
+                .sh-adv-text:hover { color: #5f6368; }
+
                 /* Option Buttons */
                 .sh-opt-group { display: flex; gap: 4px; flex: 1; }
                 .sh-opt-btn {
@@ -255,7 +291,23 @@
         document.body.appendChild(hub);
         
         const panel = document.getElementById('sh-panel');
-        document.getElementById('sh-close-btn').onclick = () => panel.classList.toggle('sh-open');
+        
+        // Extracted panel closing logic so we can reuse it
+        function closePanel() {
+            panel.classList.remove('sh-open');
+            const advContainer = document.getElementById('sh-adv-container');
+            if (advContainer) advContainer.style.display = 'none';
+        }
+        
+        // Click X to close
+        document.getElementById('sh-close-btn').onclick = closePanel;
+        
+        // Click anywhere outside the panel to close
+        document.addEventListener('mousedown', (e) => {
+            if (panel.classList.contains('sh-open') && !panel.contains(e.target)) {
+                closePanel();
+            }
+        });
         
         // Fast or CRet
         const subDepSelect = document.getElementById('sh-subdep-select');
