@@ -53,6 +53,7 @@
                 
                 const settings = handler.getSettings();
                 const currentCount = handler.getCount();
+                const targetRate = settings.targetRate || 47; // Default fallback for UI
                 
                 container.innerHTML = `
                     <div class="sh-settings-divider"></div>
@@ -74,7 +75,10 @@
                     
                     <!-- Advanced Settings Container (Hidden by default) -->
                     <div id="sh-adv-container" style="display: none; padding-top: 8px; margin-top: 8px; border-top: 1px dashed #e0e0e0;">
-                        <!-- FUTURE ADVANCED SETTINGS GO HERE -->
+                        <div class="sh-setting-row" title="Target Rate">
+                            <span class="sh-emoji">🎯</span>
+                            <input type="number" id="sh-cfg-target" class="sh-input" min="0" value="${targetRate}" placeholder="Необхідна норма" style="flex: 1;" />
+                        </div>
                     </div>
                     
                     <!-- Advanced Settings Toggle Button -->
@@ -93,13 +97,13 @@
                     });
                 });
                 
-                // Handle Manual Count Update (Prevent negative numbers)
+                // Handle Manual Count Update
                 container.querySelector('#sh-cfg-count').addEventListener('input', (e) => {
                     let val = parseInt(e.target.value, 10);
                     if (isNaN(val)) val = 0;
                     if (val < 0) {
                         val = 0;
-                        e.target.value = 0; // Revert visually in input
+                        e.target.value = 0;
                     }
                     handler.setCount(val);
                 });
@@ -108,6 +112,13 @@
                 container.querySelector('#sh-cfg-opacity').addEventListener('input', (e) => {
                     const val = parseFloat(e.target.value);
                     handler.updateSettings({ overlayOpacity: val });
+                });
+
+                // Handle Target Rate Input
+                container.querySelector('#sh-cfg-target').addEventListener('input', (e) => {
+                    let val = parseFloat(e.target.value);
+                    if (isNaN(val) || val < 0) val = 0;
+                    handler.updateSettings({ targetRate: val });
                 });
 
                 // Handle Advanced Settings Toggle
@@ -292,40 +303,33 @@
         
         const panel = document.getElementById('sh-panel');
         
-        // Extracted panel closing logic so we can reuse it
         function closePanel() {
             panel.classList.remove('sh-open');
             const advContainer = document.getElementById('sh-adv-container');
             if (advContainer) advContainer.style.display = 'none';
         }
         
-        // Click X to close
         document.getElementById('sh-close-btn').onclick = closePanel;
         
-        // Click anywhere outside the panel to close
         document.addEventListener('mousedown', (e) => {
             if (panel.classList.contains('sh-open') && !panel.contains(e.target)) {
                 closePanel();
             }
         });
         
-        // Fast or CRet
         const subDepSelect = document.getElementById('sh-subdep-select');
         subDepSelect.addEventListener('change', (e) => {
             currentDep = e.target.value;
             localStorage.setItem('sh_hub_dep', currentDep);
         });
         
-        // Helper to check if all individual script toggles are on
         const updateMasterToggleState = () => {
             const chkAll = document.getElementById('sh-chk-all');
             if (!chkAll) return;
             const checkBoxes = SCRIPTS.map(s => document.getElementById(`sh-chk-${s.id}`));
-            // If all checkboxes exist and are checked, master switch turns on
             chkAll.checked = checkBoxes.length > 0 && checkBoxes.every(chk => chk && chk.checked);
         };
         
-        // Render Cards
         SCRIPTS.forEach(script => {
             const handler = script.getHandler();
             const isCurrentlyActive = handler ? handler.isActive() : false;
@@ -356,21 +360,18 @@
                 script.renderSettings(settingsContainer);
             }
             
-            // Add 'await' to ensure UI updates after handleToggle completes its fetch
             chk.onchange = async () => {
                 await handleToggle(script, chk, settingsContainer);
-                updateMasterToggleState(); // Sync the top switch
+                updateMasterToggleState();
             };
         });
         
-        // Handle Master Toggle Logic
         const chkAll = document.getElementById('sh-chk-all');
         if (chkAll) {
             chkAll.addEventListener('change', async (e) => {
                 const turnOn = e.target.checked;
                 const togglePromises = [];
                 
-                // Find all scripts that don't match the new master state and flip them
                 SCRIPTS.forEach(script => {
                     const chk = document.getElementById(`sh-chk-${script.id}`);
                     const settingsContainer = document.getElementById(`sh-settings-${script.id}`);
@@ -381,16 +382,13 @@
                     }
                 });
                 
-                // Wait for any network requests to finish
                 await Promise.all(togglePromises);
                 updateMasterToggleState(); 
             });
         }
         
-        // Set initial state of the Master Toggle on load
         updateMasterToggleState();
         
-        // Auto-open panel on first load with a slight delay for smooth animation
         setTimeout(() => {
             if (panel) panel.classList.add('sh-open');
         }, 100);
