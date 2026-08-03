@@ -5,13 +5,13 @@
         return;
     }
     window.__scriptHubLoaded = true;
-
+    
     // Read the branch from the bookmarklet, but default to 'main' if it doesn't exist
     const currentBranch = window.__SH_BRANCH || 'main';
-
+    
     // Dynamically build the base URL
     const REPO_BASE_URL = `https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/${currentBranch}/scripts`;
-
+    
     const DEPARTAMENT_OPTIONS = [
         "CRET",
         "FAST",
@@ -19,10 +19,8 @@
         //"WHD",
         //"REFURB" 
     ];
-
     let currentDep = localStorage.getItem('sh_hub_dep') || DEPARTAMENT_OPTIONS[0];
-
-
+    
     // ==========================================
     //   SCRIPT REGISTRY
     // ==========================================
@@ -46,7 +44,7 @@
                 
                 const settings = handler.getSettings();
                 const currentCount = handler.getCount();
-
+                
                 container.innerHTML = `
                     <div class="sh-settings-divider"></div>
                     <div class="sh-setting-row" title="Options & Manual Edit">
@@ -65,7 +63,7 @@
                         <input type="range" id="sh-cfg-opacity" class="sh-range" min="0" max="1" step="0.05" value="${settings.overlayOpacity}" />
                     </div>
                 `;
-
+                
                 // Handle Options Selection
                 container.querySelectorAll('.sh-opt-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
@@ -75,7 +73,7 @@
                         handler.updateSettings({ counterOption: val });
                     });
                 });
-
+                
                 // Handle Manual Count Update (Prevent negative numbers)
                 container.querySelector('#sh-cfg-count').addEventListener('input', (e) => {
                     let val = parseInt(e.target.value, 10);
@@ -86,7 +84,7 @@
                     }
                     handler.setCount(val);
                 });
-
+                
                 // Handle Opacity Slider
                 container.querySelector('#sh-cfg-opacity').addEventListener('input', (e) => {
                     const val = parseFloat(e.target.value);
@@ -99,7 +97,7 @@
     async function handleToggle(scriptObj, checkbox, settingsContainer) {
         const isChecked = checkbox.checked;
         let handler = scriptObj.getHandler();
-
+        
         if (isChecked && !handler) {
             checkbox.disabled = true;
             const fullUrl = `${REPO_BASE_URL}/${scriptObj.file}?cb=${Date.now()}`;
@@ -111,7 +109,7 @@
                 const scriptEl = document.createElement('script');
                 scriptEl.textContent = jsCode;
                 document.head.appendChild(scriptEl);
-
+                
                 handler = scriptObj.getHandler();
                 checkbox.disabled = false;
             } catch (err) {
@@ -121,7 +119,7 @@
                 return;
             }
         }
-
+        
         if (handler) {
             if (isChecked) {
                 handler.enable();
@@ -145,6 +143,7 @@
         hub.innerHTML = `
             <style>
                 #sh-root { font-family: 'Roboto', -apple-system, sans-serif; z-index: 999999; }
+                
                 /* Right-Side Panel */
                 #sh-panel {
                     position: fixed; top: 0; right: -340px; width: 320px; height: 100vh;
@@ -153,28 +152,35 @@
                     display: flex; flex-direction: column;
                 }
                 #sh-panel.sh-open { right: 0; }
+                
                 /* Header */
                 .sh-header {
                     background: #ffffff; padding: 14px 16px; display: flex;
                     justify-content: space-between; align-items: center;
-                    border-bottom: 1px solid #e0e0e0; gap: 8px;
+                    border-bottom: 1px solid #e0e0e0;
                 }
-                /* Depchoosing Dropdown */
-                .sh-dep-dropdown {
+                .sh-header-group {
+                    display: flex; gap: 8px; align-items: center;
+                }
+                
+                /* Depchoosing Dropdown & URL Buttons */
+                .sh-dep-dropdown, .sh-url-btn {
                     background: #f1f3f4; border: 1px solid transparent; border-radius: 6px;
-                    padding: 4px 6px; font-size: 12px; color: #444746; font-weight: 600;
-                    cursor: pointer; outline: none; transition: background 0.2s, border 0.2s;
+                    padding: 4px 8px; font-size: 12px; color: #444746; font-weight: 600;
+                    cursor: pointer; outline: none; transition: background 0.2s, border 0.2s, color 0.2s;
+                    text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
+                    height: 24px; box-sizing: border-box;
                 }
-                .sh-dep-dropdown:hover { background: #e8eaed; }
-                .sh-dep-dropdown:focus { border-color: #1a73e8; background: #ffffff; }
-                .sh-title-wrapper { flex: 1; display: flex; justify-content: center; overflow: hidden; }
-                .sh-header h3 { margin: 0; font-size: 15px; font-weight: 500; color: #202124; white-space: nowrap; }
+                .sh-dep-dropdown:hover, .sh-url-btn:hover { background: #e8eaed; color: #202124; text-decoration: none; }
+                .sh-dep-dropdown:focus, .sh-url-btn:focus { border-color: #1a73e8; background: #ffffff; }
+                
                 .sh-close {
                     background: none; border: none; color: #5f6368; font-size: 20px;
                     cursor: pointer; display: flex; align-items: center; justify-content: center;
                     width: 28px; height: 28px; border-radius: 50%; padding: 0; line-height: 1;
                 }
                 .sh-close:hover { background: rgba(0,0,0,0.05); color: #202124; }
+                
                 /* Cards */
                 .sh-body { padding: 16px; overflow-y: auto; flex: 1; }
                 .sh-card {
@@ -185,11 +191,13 @@
                 .sh-card-info { flex: 1; padding-right: 12px; }
                 .sh-card-title { font-weight: 500; font-size: 14px; color: #202124; margin-bottom: 4px; }
                 .sh-card-desc { font-size: 12px; color: #5f6368; line-height: 1.3; }
+                
                 /* Settings UI */
                 .sh-card-settings { display: none; margin-top: 10px; }
                 .sh-settings-divider { height: 1px; background: #f1f3f4; margin: 10px 0; }
                 .sh-setting-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
                 .sh-emoji { font-size: 16px; line-height: 1; opacity: 0.8; }
+                
                 /* Option Buttons */
                 .sh-opt-group { display: flex; gap: 4px; flex: 1; }
                 .sh-opt-btn {
@@ -199,6 +207,7 @@
                 }
                 .sh-opt-btn:hover:not(.active) { background: #f1f3f4; }
                 .sh-opt-btn.active { background: #1a73e8; border-color: #1a73e8; color: #ffffff; }
+                
                 /* Inputs */
                 .sh-input {
                     padding: 6px 10px; font-size: 13px; border: 1px solid #dadce0;
@@ -207,6 +216,7 @@
                 .sh-input:focus { border-color: #1a73e8; }
                 .sh-input-small { width: 35%; flex: 0 0 35%; }
                 .sh-range { flex: 1; accent-color: #1a73e8; cursor: pointer; }
+                
                 /* Switch */
                 .sh-switch { position: relative; width: 34px; height: 20px; flex-shrink: 0; margin-top: 2px;}
                 .sh-switch input { opacity: 0; width: 0; height: 0; }
@@ -221,35 +231,40 @@
                 input:checked + .sh-slider { background-color: #1a73e8; }
                 input:checked + .sh-slider:before { transform: translateX(14px); }
             </style>
+            
             <div id="sh-panel">
                 <div class="sh-header">
-                    <select id="sh-subdep-select" class="sh-dep-dropdown">
-                        ${DEPARTAMENT_OPTIONS.map(dep => 
-                            `<option value="${dep}" ${currentDep === dep ? 'selected' : ''}>${dep}</option>`)
-                            .join('\n        ')}
-                    </select>
+                    <div class="sh-header-group">
+                        <select id="sh-subdep-select" class="sh-dep-dropdown">
+                            ${DEPARTAMENT_OPTIONS.map(dep => 
+                                `<option value="${dep}" ${currentDep === dep ? 'selected' : ''}>${dep}</option>`)
+                                .join('\n                            ')}
+                        </select>
+                        <a href="https://eu-cretfc-tools-dub.dub.proxy.amazon.com/gravis" target="_blank" rel="noopener noreferrer" class="sh-url-btn">GRAVIS</a>
+                        <a href="https://w.amazon.com/bin/view/Wikipedia_LCJ4/" target="_blank" rel="noopener noreferrer" class="sh-url-btn">WIKI</a>
+                    </div>
                     <button class="sh-close" id="sh-close-btn" title="Close">✖</button>
                 </div>
                 <div class="sh-body" id="sh-list"></div>
             </div>
         `;
         document.body.appendChild(hub);
-
+        
         const panel = document.getElementById('sh-panel');
         document.getElementById('sh-close-btn').onclick = () => panel.classList.toggle('sh-open');
-
+        
         // Fast or CRet
         const subDepSelect = document.getElementById('sh-subdep-select');
         subDepSelect.addEventListener('change', (e) => {
             currentDep = e.target.value;
             localStorage.setItem('sh_hub_dep', currentDep);
         });
-
+        
         // Render Cards
         SCRIPTS.forEach(script => {
             const handler = script.getHandler();
             const isCurrentlyActive = handler ? handler.isActive() : false;
-
+            
             const card = document.createElement('div');
             card.className = 'sh-card';
             card.innerHTML = `
@@ -267,23 +282,23 @@
             `;
             
             document.getElementById('sh-list').appendChild(card);
-
+            
             const chk = card.querySelector(`#sh-chk-${script.id}`);
             const settingsContainer = card.querySelector(`#sh-settings-${script.id}`);
-
+            
             if (isCurrentlyActive && script.renderSettings) {
                 settingsContainer.style.display = 'block';
                 script.renderSettings(settingsContainer);
             }
-
+            
             chk.onchange = () => handleToggle(script, chk, settingsContainer);
         });
-
+        
         // Auto-open panel on first load with a slight delay for smooth animation
         setTimeout(() => {
             if (panel) panel.classList.add('sh-open');
         }, 100);
     }
-
+    
     injectUI();
 })();
