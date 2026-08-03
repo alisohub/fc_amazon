@@ -240,6 +240,10 @@
                                 `<option value="${dep}" ${currentDep === dep ? 'selected' : ''}>${dep}</option>`)
                                 .join('\n                            ')}
                         </select>
+                        <label class="sh-switch" title="Toggle all scripts" style="margin: 0;">
+                            <input type="checkbox" id="sh-chk-all">
+                            <span class="sh-slider"></span>
+                        </label>
                         <a href="https://eu-cretfc-tools-dub.dub.proxy.amazon.com/gravis" target="_blank" rel="noopener noreferrer" class="sh-url-btn">GRAVIS</a>
                         <a href="https://w.amazon.com/bin/view/Wikipedia_LCJ4/" target="_blank" rel="noopener noreferrer" class="sh-url-btn">WIKI</a>
                     </div>
@@ -259,6 +263,15 @@
             currentDep = e.target.value;
             localStorage.setItem('sh_hub_dep', currentDep);
         });
+        
+        // Helper to check if all individual script toggles are on
+        const updateMasterToggleState = () => {
+            const chkAll = document.getElementById('sh-chk-all');
+            if (!chkAll) return;
+            const checkBoxes = SCRIPTS.map(s => document.getElementById(`sh-chk-${s.id}`));
+            // If all checkboxes exist and are checked, master switch turns on
+            chkAll.checked = checkBoxes.length > 0 && checkBoxes.every(chk => chk && chk.checked);
+        };
         
         // Render Cards
         SCRIPTS.forEach(script => {
@@ -291,8 +304,39 @@
                 script.renderSettings(settingsContainer);
             }
             
-            chk.onchange = () => handleToggle(script, chk, settingsContainer);
+            // Add 'await' to ensure UI updates after handleToggle completes its fetch
+            chk.onchange = async () => {
+                await handleToggle(script, chk, settingsContainer);
+                updateMasterToggleState(); // Sync the top switch
+            };
         });
+        
+        // Handle Master Toggle Logic
+        const chkAll = document.getElementById('sh-chk-all');
+        if (chkAll) {
+            chkAll.addEventListener('change', async (e) => {
+                const turnOn = e.target.checked;
+                const togglePromises = [];
+                
+                // Find all scripts that don't match the new master state and flip them
+                SCRIPTS.forEach(script => {
+                    const chk = document.getElementById(`sh-chk-${script.id}`);
+                    const settingsContainer = document.getElementById(`sh-settings-${script.id}`);
+                    
+                    if (chk && chk.checked !== turnOn && !chk.disabled) {
+                        chk.checked = turnOn;
+                        togglePromises.push(handleToggle(script, chk, settingsContainer));
+                    }
+                });
+                
+                // Wait for any network requests to finish
+                await Promise.all(togglePromises);
+                updateMasterToggleState(); 
+            });
+        }
+        
+        // Set initial state of the Master Toggle on load
+        updateMasterToggleState();
         
         // Auto-open panel on first load with a slight delay for smooth animation
         setTimeout(() => {
