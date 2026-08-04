@@ -21,14 +21,38 @@
     // Dynamically build the base URL
     const REPO_BASE_URL = `https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/${currentBranch}/scripts`;
     
-    const DEPARTAMENT_OPTIONS = [
-        "CRET",
-        "FAST",
-        //"UG",
-        //"WHD",
-        //"REFURB" 
-    ];
-    let currentDep = localStorage.getItem('sh_hub_dep') || DEPARTAMENT_OPTIONS[0];
+    // ==========================================
+    //   MASTER DEPARTMENT CONFIG
+    // ==========================================
+    // This is the single source of truth. Add new departments or rules here.
+    const DEPARTMENT_CONFIG = {
+        "CRET": { targetRate: 49 },
+        "FAST": { targetRate: 100 },
+        "UG":   { targetRate: 47 }
+    };
+
+    // ==========================================
+    //   ENVIRONMENT DETECTION (ROUTING)
+    // ==========================================
+    const urlParams = new URLSearchParams(window.location.search);
+    const gradingMode = urlParams.get('gradingMode');
+    
+    let DEPARTAMENT_OPTIONS = [];
+    if (gradingMode === 'CRETURN_PRIMARY_GRADING') {
+        DEPARTAMENT_OPTIONS = ["UG"];
+    } else if (gradingMode === 'CRETURN') {
+        DEPARTAMENT_OPTIONS = ["CRET", "FAST"];
+    } else {
+        // Fallback just in case the hub is opened on an unknown page
+        DEPARTAMENT_OPTIONS = ["CRET", "FAST", "UG"]; 
+    }
+    
+    // Load saved department, but verify it belongs to the current page
+    let currentDep = localStorage.getItem('sh_hub_dep');
+    if (!currentDep || !DEPARTAMENT_OPTIONS.includes(currentDep)) {
+        currentDep = DEPARTAMENT_OPTIONS[0]; // Reset to the first valid option for this page
+        try { localStorage.setItem('sh_hub_dep', currentDep); } catch (e) {}
+    }
     
     // ==========================================
     //   SCRIPT REGISTRY
@@ -53,7 +77,10 @@
                 
                 const settings = handler.getSettings();
                 const currentCount = handler.getCount();
-                const targetRate = settings.targetRate || 47; // Default fallback for UI
+                
+                // Smart default: use saved setting, OR the config default, OR 47 as a last resort
+                const configRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
+                const targetRate = settings.targetRate || configRate; 
                 
                 container.innerHTML = `
                     <div class="sh-settings-divider"></div>
@@ -73,7 +100,7 @@
                         <input type="range" id="sh-cfg-opacity" class="sh-range" min="0" max="1" step="0.05" value="${settings.overlayOpacity}" />
                     </div>
                     
-                    <!-- Advanced Settings Container (Hidden by default) -->
+                    <!-- Advanced Settings Container -->
                     <div id="sh-adv-container" style="display: none; padding-top: 8px; margin-top: 8px; border-top: 1px dashed #e0e0e0;">
                         <div class="sh-setting-row" title="Target Rate">
                             <span class="sh-emoji">🎯</span>
@@ -317,10 +344,23 @@
             }
         });
         
+        // --- NEW: Handle Department Change & Broadcast Config ---
         const subDepSelect = document.getElementById('sh-subdep-select');
         subDepSelect.addEventListener('change', (e) => {
             currentDep = e.target.value;
             localStorage.setItem('sh_hub_dep', currentDep);
+            
+            // Push the new config rules to the Counter
+            if (window.__itemCounter) {
+                const newConfig = DEPARTMENT_CONFIG[currentDep];
+                if (newConfig) {
+                    window.__itemCounter.updateSettings({ targetRate: newConfig.targetRate });
+                    
+                    // Update the UI Input if it's currently rendered
+                    const targetInput = document.getElementById('sh-cfg-target');
+                    if (targetInput) targetInput.value = newConfig.targetRate;
+                }
+            }
         });
         
         const updateMasterToggleState = () => {
