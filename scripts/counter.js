@@ -153,8 +153,8 @@
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
         } else {
-            overlay.style.left = '20px';
-            overlay.style.top = `${window.innerHeight - 50}px`;
+            overlay.style.left = '49px';
+            overlay.style.top = '862px';
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
         }
