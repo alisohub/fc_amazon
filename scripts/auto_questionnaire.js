@@ -8,6 +8,7 @@
     let isRunning = false;
     let changeObserver = null;
     let fallbackTimer = null;
+    let enterTimer = null; // New timer for the Enter keypress
 
     // 1. The Hit List & Kill Switch
     // Note: "brak plomby" is placed before "brak" to ensure exact matches prioritize the longer phrase.
@@ -68,6 +69,7 @@
     function waitForDustToSettle() {
         if (changeObserver) changeObserver.disconnect();
         clearTimeout(fallbackTimer);
+        clearTimeout(enterTimer);
 
         let domChanged = false;
 
@@ -77,6 +79,7 @@
             domChanged = true;
             changeObserver.disconnect();
             clearTimeout(fallbackTimer);
+            clearTimeout(enterTimer);
             
             // Wait an extra 150ms after the DOM changes so React can finish rendering the new buttons
             setTimeout(() => {
@@ -91,8 +94,22 @@
             attributeFilter: ['disabled', 'class'] 
         });
 
-        // 4. Deadlock Protection
-        // If we clicked a button but the DOM didn't change within 3 seconds, assume an error occurred and stop.
+        // 4a. The "Stuck UI" Fix: Press Enter if nothing happens after 1 second
+        enterTimer = setTimeout(() => {
+            if (!domChanged) {
+                // Fire an Enter key event on the currently focused element (or the body)
+                const targetEl = document.activeElement || document.body;
+                
+                targetEl.dispatchEvent(new KeyboardEvent('keydown', {
+                    key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
+                }));
+                targetEl.dispatchEvent(new KeyboardEvent('keyup', {
+                    key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
+                }));
+            }
+        }, 500);
+
+        // 4b. Deadlock Protection: Stop entirely if 3 seconds pass
         fallbackTimer = setTimeout(() => {
             if (!domChanged) {
                 changeObserver.disconnect();
@@ -116,6 +133,7 @@
                 isRunning = false;
                 if (changeObserver) changeObserver.disconnect();
                 clearTimeout(fallbackTimer);
+                clearTimeout(enterTimer);
             }
         }
     });
@@ -130,6 +148,7 @@
             isRunning = false;
             if (changeObserver) changeObserver.disconnect();
             clearTimeout(fallbackTimer);
+            clearTimeout(enterTimer);
         },
         isActive: () => active
     };
