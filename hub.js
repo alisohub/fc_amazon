@@ -162,7 +162,14 @@
                     }
                 });
             }
-        }
+        },
+        {
+           id: 'auto-questionnaire',
+           name: 'Бінди',
+           file: 'auto_questionnaire.js',
+           description: 'Натисніть F1, щоб автоматично проклікати brak всього, polybag',
+           getHandler: () => window.__autoQuestionnaire
+       }
     ];
 
     async function handleToggle(scriptObj, checkbox, settingsContainer) {
