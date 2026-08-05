@@ -7,33 +7,31 @@
     // Add your Ukrainian (and any other) translations here in lowercase
     const TARGET_LABELS = [
         'wprowadź pojemnik',
-        'вкажіть транспортну тару',
-        'введите тару'
+        'введіть тару'
     ];
 
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';
     const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
 
-    // Removed hardcoded targetRate so the Hub controls it 100%
+    // Settings config
     let settings = {
         overlayOpacity: 0.3,
         counterOption: 1,
         overlayLeft: null,
-        overlayTop: null
+        overlayTop: null,
+        customStartTime: null // NEW: Stores custom start time (e.g., "14:30")
     };
 
     try {
         const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
         if (savedSettings) {
             const parsed = JSON.parse(savedSettings);
-            // We strip out targetRate from local storage just in case an old hardcoded value was saved
-            delete parsed.targetRate; 
+            delete parsed.targetRate; // Strip hardcoded values to let the Hub control it
             settings = { ...settings, ...parsed };
         }
     } catch (e) {}
 
     const TOTE_REGEX = /^ts[a-z0-9]+/i;
-
     let itemCounter = 0;
 
     try {
@@ -55,23 +53,35 @@
         const now = new Date();
         const hours = now.getHours();
         const isNight = hours >= 17 || hours < 6;
-
         let shiftStart = new Date(now);
-        if (isNight) {
-            if (hours < 6) shiftStart.setDate(shiftStart.getDate() - 1);
-            shiftStart.setHours(18, 30, 0, 0);
+
+        // --- Apply custom start time if one is set ---
+        if (settings.customStartTime) {
+            const [cHours, cMins] = settings.customStartTime.split(':').map(Number);
+            shiftStart.setHours(cHours, cMins, 0, 0);
+            
+            // Fix edge case: If it's 2 AM and the custom time is 18:00, 
+            // the custom time belongs to yesterday's shift.
+            if (isNight && hours < 6 && cHours >= 17) {
+                shiftStart.setDate(shiftStart.getDate() - 1);
+            }
         } else {
-            shiftStart.setHours(6, 30, 0, 0);
+            // --- Original Default Logic ---
+            if (isNight) {
+                if (hours < 6) shiftStart.setDate(shiftStart.getDate() - 1);
+                shiftStart.setHours(18, 30, 0, 0);
+            } else {
+                shiftStart.setHours(6, 30, 0, 0);
+            }
         }
 
         const elapsedMs = now - shiftStart;
         if (elapsedMs <= 0) return { ms: 0, formatted: '0h0m' };
-
+        
         let breakStart = new Date(shiftStart);
         let breakEnd = new Date(shiftStart);
-
         const opt = settings.counterOption || 1;
-
+        
         if (isNight) {
             if (opt === 1) { breakStart.setHours(23, 20, 0, 0); breakEnd.setHours(23, 50, 0, 0); }
             else if (opt === 2) { breakStart.setHours(23, 50, 0, 0); breakEnd.setDate(breakEnd.getDate()+1); breakEnd.setHours(0, 20, 0, 0); }
@@ -83,21 +93,23 @@
             else if (opt === 3) { breakStart.setHours(12, 20, 0, 0); breakEnd.setHours(12, 50, 0, 0); }
             else if (opt === 4) { breakStart.setHours(12, 50, 0, 0); breakEnd.setHours(13, 20, 0, 0); }
         }
-
+        
         let effectiveMs = elapsedMs;
+        
+        // Break logic remains completely unchanged and respects the scheduled break window
         if (now >= breakStart && now < breakEnd) {
             effectiveMs = breakStart - shiftStart;
         } else if (now >= breakEnd) {
             effectiveMs = elapsedMs - (30 * 60 * 1000);
         }
-
+        
         const maxMs = 10 * 60 * 60 * 1000;
         if (effectiveMs > maxMs) effectiveMs = maxMs;
-
+        
         const totalMinutes = Math.floor(effectiveMs / (1000 * 60));
         const h = Math.floor(totalMinutes / 60);
         const m = totalMinutes % 60;
-
+        
         return { ms: effectiveMs, formatted: `${h}h${m}m` };
     }
 
@@ -110,7 +122,6 @@
     }
     
     function calculatePercentageStr(uphString) {
-        // Safe fallback to 47 just in case the counter loads a split second before the Hub configures it
         const target = settings.targetRate || 47; 
         if (target <= 0) return "---%";
         return ((parseFloat(uphString) / target) * 100).toFixed(1) + "%";
@@ -146,7 +157,6 @@
             whiteSpace: 'nowrap'
         });
 
-        // Apply saved position or default to bottom-left 
         if (settings.overlayLeft !== null && settings.overlayTop !== null) {
             overlay.style.left = `${settings.overlayLeft}px`;
             overlay.style.top = `${settings.overlayTop}px`;
@@ -176,7 +186,6 @@
         overlay.addEventListener('mouseleave', () => { if (overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString(); });
 
         let isDragging = false, startX, startY, initialLeft, initialTop;
-
         function dragStart(e) {
             isDragging = true;
             const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
@@ -209,17 +218,14 @@
         overlay.addEventListener('mousedown', dragStart);
         document.addEventListener('mousemove', dragMove);
         document.addEventListener('mouseup', dragEnd);
-
         overlay.addEventListener('touchstart', dragStart, { passive: false });
         document.addEventListener('touchmove', dragMove, { passive: false });
         document.addEventListener('touchend', dragEnd);
 
-        // Integrated resize logic from the first snippet
         window.addEventListener('resize', () => {
             if (!active) return;
             const rect = overlay.getBoundingClientRect();
             let changed = false;
-
             if (rect.right > window.innerWidth) {
                 overlay.style.left = `${Math.max(0, window.innerWidth - rect.width - 15)}px`;
                 changed = true;
@@ -228,7 +234,6 @@
                 overlay.style.top = `${Math.max(0, window.innerHeight - rect.height - 15)}px`;
                 changed = true;
             }
-
             if (changed) {
                 settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
                 settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
@@ -276,7 +281,6 @@
         }
 
         let resolved = false;
-
         const observer = new MutationObserver(() => {
             if (resolved) return;
             const isRemoved = !document.body.contains(input);
@@ -390,6 +394,5 @@
             updateCounterUI(itemCounter);
         }
     };
-
     window.__itemCounter.enable();
 })();

@@ -85,6 +85,8 @@
                 const configRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
                 const targetRate = settings.targetRate || configRate; 
                 
+                handler.updateSettings({ targetRate: targetRate });
+                
                 container.innerHTML = `
                     <div class="sh-settings-divider"></div>
                     <div class="sh-setting-row" title="Options & Manual Edit">
@@ -162,7 +164,14 @@
                     }
                 });
             }
-        }
+        },
+        {
+           id: 'auto-questionnaire',
+           name: 'Бінди',
+           file: 'auto_questionnaire.js',
+           description: 'Натисніть F1, щоб автоматично проклікати brak всього, polybag',
+           getHandler: () => window.__autoQuestionnaire
+       }
     ];
 
     async function handleToggle(scriptObj, checkbox, settingsContainer) {
