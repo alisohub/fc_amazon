@@ -26,9 +26,10 @@
     // ==========================================
     // This is the single source of truth. Add new departments or rules here.
     const DEPARTMENT_CONFIG = {
-        "CRET": { targetRate: 49 },
+        "CRET": { targetRate: 47 },
         "FAST": { targetRate: 100 },
-        "UG":   { targetRate: 47 }
+        "UG":   { targetRate: 47 },
+        "REFURB": { targetRate: 30 }
     };
 
     // ==========================================
@@ -42,9 +43,11 @@
         DEPARTAMENT_OPTIONS = ["UG"];
     } else if (gradingMode === 'CRETURN') {
         DEPARTAMENT_OPTIONS = ["CRET", "FAST"];
+    } else if (gradingMode === 'CRETURN_REFURB') {
+        DEPARTAMENT_OPTIONS = ["REFURB"];
     } else {
         // Fallback just in case the hub is opened on an unknown page
-        DEPARTAMENT_OPTIONS = ["CRET", "FAST", "UG"]; 
+        DEPARTAMENT_OPTIONS = ["CRET", "FAST", "UG", "REFURB"]; 
     }
     
     // Load saved department, but verify it belongs to the current page
