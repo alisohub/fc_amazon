@@ -24,7 +24,6 @@
     // ==========================================
     //   MASTER DEPARTMENT CONFIG
     // ==========================================
-    // This is the single source of truth. Add new departments or rules here.
     const DEPARTMENT_CONFIG = {
         "CRET": { targetRate: 47 },
         "FAST": { targetRate: 100 },
@@ -53,7 +52,7 @@
     // Load saved department, but verify it belongs to the current page
     let currentDep = localStorage.getItem('sh_hub_dep');
     if (!currentDep || !DEPARTAMENT_OPTIONS.includes(currentDep)) {
-        currentDep = DEPARTAMENT_OPTIONS[0]; // Reset to the first valid option for this page
+        currentDep = DEPARTAMENT_OPTIONS[0]; 
         try { localStorage.setItem('sh_hub_dep', currentDep); } catch (e) {}
     }
     
@@ -112,6 +111,16 @@
                             <span class="sh-emoji">🎯</span>
                             <input type="number" id="sh-cfg-target" class="sh-input" min="0" value="${targetRate}" placeholder="Необхідна норма" style="flex: 1;" />
                         </div>
+                        
+                        <!-- EXPERIMENTAL TIME OVERRIDE (Only visible on development branch) -->
+                        ${currentBranch === 'development' ? `
+                        <div class="sh-setting-row" title="Власний час початку зміни" style="margin-top: 6px;">
+                            <span class="sh-emoji">⏱️</span>
+                            <input type="time" id="sh-cfg-start-time" class="sh-input" value="${settings.customStartTime || ''}" style="flex: 1;" />
+                            <button id="sh-btn-start-now" class="sh-opt-btn" style="flex: 0 0 auto; padding: 4px 8px; margin-left: 4px;">Зараз</button>
+                            <button id="sh-btn-start-reset" class="sh-opt-btn" style="flex: 0 0 auto; padding: 4px 8px;">Скинути</button>
+                        </div>
+                        ` : ''}
                     </div>
                     
                     <!-- Advanced Settings Toggle Button -->
@@ -153,6 +162,33 @@
                     if (isNaN(val) || val < 0) val = 0;
                     handler.updateSettings({ targetRate: val });
                 });
+
+                // Handle Experimental Time Override Interactions
+                if (currentBranch === 'development') {
+                    const timeInput = container.querySelector('#sh-cfg-start-time');
+                    const btnNow = container.querySelector('#sh-btn-start-now');
+                    const btnReset = container.querySelector('#sh-btn-start-reset');
+
+                    if (timeInput && btnNow && btnReset) {
+                        timeInput.addEventListener('input', (e) => {
+                            handler.updateSettings({ customStartTime: e.target.value });
+                        });
+
+                        btnNow.addEventListener('click', () => {
+                            const now = new Date();
+                            const hh = String(now.getHours()).padStart(2, '0');
+                            const mm = String(now.getMinutes()).padStart(2, '0');
+                            const timeStr = `${hh}:${mm}`;
+                            timeInput.value = timeStr;
+                            handler.updateSettings({ customStartTime: timeStr });
+                        });
+
+                        btnReset.addEventListener('click', () => {
+                            timeInput.value = '';
+                            handler.updateSettings({ customStartTime: null });
+                        });
+                    }
+                }
 
                 // Handle Advanced Settings Toggle
                 const advBtn = container.querySelector('#sh-adv-btn');
