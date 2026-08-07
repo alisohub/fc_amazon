@@ -4,7 +4,6 @@
     }
     window.__counterLoaded = true;
 
-    // Add your Ukrainian (and any other) translations here in lowercase
     const TARGET_LABELS = [
         'wprowadź pojemnik',
         'вкажіть транспортну тару',
@@ -14,20 +13,18 @@
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';
     const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
     
-    // Removed hardcoded targetRate so the Hub controls it 100%
     let settings = {
         overlayOpacity: 0.3,
         counterOption: 1,
         overlayLeft: null,
         overlayTop: null,
-        customStartTime: null // NEW: Stores custom start time (e.g., "14:30")
+        customStartTime: null 
     };
     
     try {
         const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
         if (savedSettings) {
             const parsed = JSON.parse(savedSettings);
-            // We strip out targetRate from local storage just in case an old hardcoded value was saved
             delete parsed.targetRate; 
             settings = { ...settings, ...parsed };
         }
@@ -57,18 +54,25 @@
         const isNight = hours >= 17 || hours < 6;
         let shiftStart = new Date(now);
 
-        // --- NEW: Apply custom start time if one is set ---
-        if (settings.customStartTime) {
-            const [cHours, cMins] = settings.customStartTime.split(':').map(Number);
-            shiftStart.setHours(cHours, cMins, 0, 0);
+        // Safely parse the manual HH:MM text input
+        let appliedCustomTime = false;
+        if (settings.customStartTime && settings.customStartTime.includes(':')) {
+            const parts = settings.customStartTime.split(':');
+            const cHours = parseInt(parts[0], 10);
+            const cMins = parseInt(parts[1], 10);
             
-            // Fix edge case: If it's 2 AM and the custom time is 18:00, 
-            // the custom time belongs to yesterday's shift.
-            if (isNight && hours < 6 && cHours >= 17) {
-                shiftStart.setDate(shiftStart.getDate() - 1);
+            // Only apply if the numbers are valid times
+            if (!isNaN(cHours) && !isNaN(cMins) && cHours >= 0 && cHours <= 23 && cMins >= 0 && cMins <= 59) {
+                shiftStart.setHours(cHours, cMins, 0, 0);
+                if (isNight && hours < 6 && cHours >= 17) {
+                    shiftStart.setDate(shiftStart.getDate() - 1);
+                }
+                appliedCustomTime = true;
             }
-        } else {
-            // --- Original Default Logic ---
+        } 
+        
+        // Default Logic if no custom time is set (or if it was invalid)
+        if (!appliedCustomTime) {
             if (isNight) {
                 if (hours < 6) shiftStart.setDate(shiftStart.getDate() - 1);
                 shiftStart.setHours(18, 30, 0, 0);
@@ -122,7 +126,6 @@
     }
         
     function calculatePercentageStr(uphString) {
-        // Safe fallback to 47 just in case the counter loads a split second before the Hub configures it
         const target = settings.targetRate || 47; 
         if (target <= 0) return "---%";
         return ((parseFloat(uphString) / target) * 100).toFixed(1) + "%";
@@ -158,14 +161,13 @@
             whiteSpace: 'nowrap'
         });
         
-        // Apply saved position or default to bottom-left 
         if (settings.overlayLeft !== null && settings.overlayTop !== null) {
             overlay.style.left = `${settings.overlayLeft}px`;
             overlay.style.top = `${settings.overlayTop}px`;
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
         } else {
-            overlay.style.left = '49px';
+            overlay.style.left = '45px';
             overlay.style.top = '862px';
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
@@ -225,7 +227,6 @@
         document.addEventListener('touchmove', dragMove, { passive: false });
         document.addEventListener('touchend', dragEnd);
         
-        // Integrated resize logic from the first snippet
         window.addEventListener('resize', () => {
             if (!active) return;
             const rect = overlay.getBoundingClientRect();
