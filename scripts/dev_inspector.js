@@ -9,21 +9,21 @@
     function handleInspectClick(event) {
         if (!active) return;
         
-        // Stop the click from triggering links, buttons, or form submissions
-        event.preventDefault();
-        event.stopPropagation();
-        
         // Get the exact element you clicked on
         const clickedElement = event.target;
+        
+        // 🚨 Ignore clicks on the Script Hub UI so you can still turn it off!
+        if (clickedElement.closest('#sh-root')) return;
+        
+        // Stop the click from triggering links, buttons, or form submissions on the main page
+        event.preventDefault();
+        event.stopPropagation();
         
         // Get the HTML of that element
         const elementHTML = clickedElement.outerHTML;
         
         // Show it in an alert
         alert(elementHTML);
-        
-        // Also print it to the console (if you ever do open DevTools)
-        console.log(elementHTML);
     }
 
     // Hub Integration Handlers
