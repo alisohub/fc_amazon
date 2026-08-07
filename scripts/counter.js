@@ -1,395 +1,171 @@
 (() => {
-    if (window.__counterLoaded) {
+    if (window.__autoQuestionnaireLoaded) {
         return;
     }
-    window.__counterLoaded = true;
+    window.__autoQuestionnaireLoaded = true;
 
-    // Add your Ukrainian (and any other) translations here in lowercase
-    const TARGET_LABELS = [
-        'wprowadź pojemnik',
-        'вкажіть транспортну тару',
-        'введите тару'
-    ];
+    // ==========================================
+    // 1. CONFIGURATION (Easy to expand)
+    // ==========================================
+    
+    // The universal kill switch for all shortcuts
+    const KILL_WORDS = ["tak, kontynuuj", "да, продолжить"]; 
 
-    const STORAGE_KEY_COUNT = 'sh_item_counter_count';
-    const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
+    // Add new keyboard shortcuts and their target word lists here
+    const SHORTCUTS = {
+        'F1': {
+            targets: ["opinia", "мнение", "brak plomby", "не запечатано", "brak", "нет", "polybag", "полиэтиленовый мешок", "nie"]
+        },
 
-    // Removed hardcoded targetRate so the Hub controls it 100%
-    let settings = {
-        overlayOpacity: 0.3,
-        counterOption: 1,
-        overlayLeft: null,
-        overlayTop: null
     };
 
-    try {
-        const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
-        if (savedSettings) {
-            const parsed = JSON.parse(savedSettings);
-            // We strip out targetRate from local storage just in case an old hardcoded value was saved
-            delete parsed.targetRate; 
-            settings = { ...settings, ...parsed };
-        }
-    } catch (e) {}
-
-    const TOTE_REGEX = /^ts[a-z0-9]+/i;
-
-    let itemCounter = 0;
-
-    try {
-        const savedCount = localStorage.getItem(STORAGE_KEY_COUNT);
-        if (savedCount !== null) itemCounter = parseInt(savedCount, 10) || 0;
-    } catch (e) {}
-
-    let active = false;
-    let overlayVisible = true;
-    let isProcessingScan = false;
-
-    function saveCount(count) {
-        itemCounter = count;
-        try { localStorage.setItem(STORAGE_KEY_COUNT, count.toString()); }
-        catch (e) {}
-    }
-
-    function getEffectiveWorkTime() {
-        const now = new Date();
-        const hours = now.getHours();
-        const isNight = hours >= 17 || hours < 6;
-
-        let shiftStart = new Date(now);
-        if (isNight) {
-            if (hours < 6) shiftStart.setDate(shiftStart.getDate() - 1);
-            shiftStart.setHours(18, 30, 0, 0);
-        } else {
-            shiftStart.setHours(6, 30, 0, 0);
-        }
-
-        const elapsedMs = now - shiftStart;
-        if (elapsedMs <= 0) return { ms: 0, formatted: '0h0m' };
-
-        let breakStart = new Date(shiftStart);
-        let breakEnd = new Date(shiftStart);
-
-        const opt = settings.counterOption || 1;
-
-        if (isNight) {
-            if (opt === 1) { breakStart.setHours(23, 20, 0, 0); breakEnd.setHours(23, 50, 0, 0); }
-            else if (opt === 2) { breakStart.setHours(23, 50, 0, 0); breakEnd.setDate(breakEnd.getDate()+1); breakEnd.setHours(0, 20, 0, 0); }
-            else if (opt === 3) { breakStart.setDate(breakStart.getDate()+1); breakStart.setHours(0, 20, 0, 0); breakEnd.setDate(breakEnd.getDate()+1); breakEnd.setHours(0, 50, 0, 0); }
-            else if (opt === 4) { breakStart.setDate(breakStart.getDate()+1); breakStart.setHours(0, 50, 0, 0); breakEnd.setDate(breakEnd.getDate()+1); breakEnd.setHours(1, 20, 0, 0); }
-        } else {
-            if (opt === 1) { breakStart.setHours(11, 20, 0, 0); breakEnd.setHours(11, 50, 0, 0); }
-            else if (opt === 2) { breakStart.setHours(11, 50, 0, 0); breakEnd.setHours(12, 20, 0, 0); }
-            else if (opt === 3) { breakStart.setHours(12, 20, 0, 0); breakEnd.setHours(12, 50, 0, 0); }
-            else if (opt === 4) { breakStart.setHours(12, 50, 0, 0); breakEnd.setHours(13, 20, 0, 0); }
-        }
-
-        let effectiveMs = elapsedMs;
-        if (now >= breakStart && now < breakEnd) {
-            effectiveMs = breakStart - shiftStart;
-        } else if (now >= breakEnd) {
-            effectiveMs = elapsedMs - (30 * 60 * 1000);
-        }
-
-        const maxMs = 10 * 60 * 60 * 1000;
-        if (effectiveMs > maxMs) effectiveMs = maxMs;
-
-        const totalMinutes = Math.floor(effectiveMs / (1000 * 60));
-        const h = Math.floor(totalMinutes / 60);
-        const m = totalMinutes % 60;
-
-        return { ms: effectiveMs, formatted: `${h}h${m}m` };
-    }
-
-    function calculateUPH() {
-        if (itemCounter === 0) return "0.0";
-        const timeData = getEffectiveWorkTime();
-        if (timeData.ms <= 0) return "0.0";
-        const hoursWorked = timeData.ms / (1000 * 60 * 60);
-        return (itemCounter / hoursWorked).toFixed(1);
-    }
+    // ==========================================
+    // 2. STATE MANAGEMENT
+    // ==========================================
+    let active = false;        // Is the script enabled in the Hub?
+    let isRunning = false;     // Is a sequence currently executing?
+    let activeConfig = null;   // Which shortcut's config is currently running
     
-    function calculatePercentageStr(uphString) {
-        // Safe fallback to 47 just in case the counter loads a split second before the Hub configures it
-        const target = settings.targetRate || 47; 
-        if (target <= 0) return "---%";
-        return ((parseFloat(uphString) / target) * 100).toFixed(1) + "%";
+    let changeObserver = null;
+    let fallbackTimer = null;
+    let enterTimer = null;
+
+    // Helper: Safely completely stops the loop and resets state
+    function stopScript() {
+        isRunning = false;
+        activeConfig = null;
+        if (changeObserver) changeObserver.disconnect();
+        clearTimeout(fallbackTimer);
+        clearTimeout(enterTimer);
     }
 
-    function isInsideModal(el) {
-        if (el.closest('dialog[open]')) return true;
-        const modal = el.closest('[role="dialog"],[role="alertdialog"],.modal,.popup,.overlay,.dialog');
-        if (modal) {
-            const style = window.getComputedStyle(modal);
-            if (style.display !== 'none' && style.visibility !== 'hidden') return true;
-        }
-        return false;
+    // ==========================================
+    // 3. CORE LOGIC (The Engine)
+    // ==========================================
+    function normalizeText(txt) {
+        return (txt || '').replace(/\s+/g, ' ').trim().toLowerCase();
     }
 
-    function createOrGetOverlay() {
-        let overlay = document.getElementById('sh-item-overlay');
-        if (overlay) return overlay;
-
-        overlay = document.createElement('div');
-        overlay.id = 'sh-item-overlay';
-        Object.assign(overlay.style, {
-            position: 'fixed',
-            zIndex: '999999',
-            color: '#D3D3D3',
-            fontFamily: 'monospace, sans-serif',
-            fontSize: '13px',
-            fontWeight: 'bold',
-            userSelect: 'none',
-            cursor: 'move',
-            opacity: overlayVisible ? settings.overlayOpacity.toString() : '0',
-            display: active ? 'block' : 'none',
-            whiteSpace: 'nowrap'
-        });
-
-        // Apply saved position or default to bottom-left 
-        if (settings.overlayLeft !== null && settings.overlayTop !== null) {
-            overlay.style.left = `${settings.overlayLeft}px`;
-            overlay.style.top = `${settings.overlayTop}px`;
-            overlay.style.right = 'auto';
-            overlay.style.bottom = 'auto';
-        } else {
-            overlay.style.left = '49px';
-            overlay.style.top = '862px';
-            overlay.style.right = 'auto';
-            overlay.style.bottom = 'auto';
-        }
-
-        const timeData = getEffectiveWorkTime();
-        const currentUPH = calculateUPH();
-        const currentPct = calculatePercentageStr(currentUPH);
-        
-        overlay.innerHTML = `
-            <span id="sh-overlay-count">${itemCounter}</span>
-            <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
-            <span id="sh-overlay-uph">${currentUPH}/h</span> 
-            <span id="sh-overlay-pct" style="margin-left:2px;">(${currentPct})</span>
-            <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
-            <span id="sh-overlay-time">${timeData.formatted}</span>
-        `;
-
-        overlay.addEventListener('mouseenter', () => { if (overlayVisible) overlay.style.opacity = '1'; });
-        overlay.addEventListener('mouseleave', () => { if (overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString(); });
-
-        let isDragging = false, startX, startY, initialLeft, initialTop;
-
-        function dragStart(e) {
-            isDragging = true;
-            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-            startX = clientX;
-            startY = clientY;
-            const rect = overlay.getBoundingClientRect();
-            initialLeft = rect.left;
-            initialTop = rect.top;
-        }
-
-        function dragMove(e) {
-            if (!isDragging) return;
-            if (e.type === 'touchmove') e.preventDefault();
-            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-            overlay.style.left = `${initialLeft + (clientX - startX)}px`;
-            overlay.style.top = `${initialTop + (clientY - startY)}px`;
-        }
-
-        function dragEnd() {
-            if (isDragging) {
-                isDragging = false;
-                settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
-                settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
-                try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
+    function findButton(textList) {
+        // Step 1: Search inside .answer-card specifically for a nested <p>
+        const answerCards = document.querySelectorAll('div.answer-card');
+        for (let card of answerCards) {
+            const paragraphs = card.querySelectorAll('p');
+            for (let p of paragraphs) {
+                if (p.offsetWidth === 0 || p.offsetHeight === 0) continue;
+                
+                const pText = normalizeText(p.textContent);
+                for (let target of textList) {
+                    if (pText === target || (target === 'opinia' && pText.includes(target))) {
+                        return p; 
+                    }
+                }
             }
         }
 
-        overlay.addEventListener('mousedown', dragStart);
-        document.addEventListener('mousemove', dragMove);
-        document.addEventListener('mouseup', dragEnd);
-
-        overlay.addEventListener('touchstart', dragStart, { passive: false });
-        document.addEventListener('touchmove', dragMove, { passive: false });
-        document.addEventListener('touchend', dragEnd);
-
-        // Integrated resize logic from the first snippet
-        window.addEventListener('resize', () => {
-            if (!active) return;
-            const rect = overlay.getBoundingClientRect();
-            let changed = false;
-
-            if (rect.right > window.innerWidth) {
-                overlay.style.left = `${Math.max(0, window.innerWidth - rect.width - 15)}px`;
-                changed = true;
+        // Step 2: Fallback for standard buttons 
+        const standardButtons = document.querySelectorAll('button, [role="button"], .awsui-button');
+        for (let btn of standardButtons) {
+            if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
+            
+            const btnText = normalizeText(btn.textContent);
+            for (let target of textList) {
+                if (btnText === target || btnText.includes(target)) {
+                    const innerSpan = btn.querySelector('span');
+                    return innerSpan ? innerSpan : btn;
+                }
             }
-            if (rect.bottom > window.innerHeight) {
-                overlay.style.top = `${Math.max(0, window.innerHeight - rect.height - 15)}px`;
-                changed = true;
-            }
-
-            if (changed) {
-                settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
-                settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
-                try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
-            }
-        });
-
-        document.body.appendChild(overlay);
-        return overlay;
-    }
-
-    function updateCounterUI(count) {
-        saveCount(count);
-        
-        const overlayCount = document.getElementById('sh-overlay-count');
-        if (overlayCount) overlayCount.textContent = count;
-        
-        const currentUPH = calculateUPH();
-        
-        const overlayUPH = document.getElementById('sh-overlay-uph');
-        if (overlayUPH) overlayUPH.textContent = `${currentUPH}/h`;
-        
-        const overlayPct = document.getElementById('sh-overlay-pct');
-        if (overlayPct) overlayPct.textContent = `(${calculatePercentageStr(currentUPH)})`;
-        
-        const overlayTime = document.getElementById('sh-overlay-time');
-        if (overlayTime) overlayTime.textContent = getEffectiveWorkTime().formatted;
-
-        const hubInput = document.getElementById('sh-cfg-count');
-        if (hubInput && document.activeElement !== hubInput) {
-            hubInput.value = count === 0 ? '' : count;
         }
+        return null;
     }
 
-    function hasTargetLabel(labelString) {
-        const lowerLabel = (labelString || '').toLowerCase();
-        return TARGET_LABELS.some(target => lowerLabel.includes(target));
-    }
+    function processNext() {
+        if (!isRunning || !active || !activeConfig) return;
 
-    function verifyAndCount(input) {
-        const initialLabel = input.getAttribute('aria-label');
-        if (!hasTargetLabel(initialLabel)) {
-            isProcessingScan = false;
+        // Check for universal Kill Switch FIRST
+        const killBtn = findButton(KILL_WORDS);
+        if (killBtn) {
+            stopScript(); // Job done, leave it on the kill screen
+            return; 
+        }
+
+        // Check for Hit List for the active shortcut
+        const actionBtn = findButton(activeConfig.targets);
+        if (actionBtn) {
+            actionBtn.click();
+            waitForDustToSettle(); 
             return;
         }
 
-        let resolved = false;
-
-        const observer = new MutationObserver(() => {
-            if (resolved) return;
-            const isRemoved = !document.body.contains(input);
-            const isHidden = input.offsetParent === null;
-            const currentLabel = input.getAttribute('aria-label');
-            const labelChanged = !hasTargetLabel(currentLabel);
-
-            if (isRemoved || isHidden || labelChanged) {
-                resolved = true;
-                observer.disconnect();
-                
-                setTimeout(() => {
-                    saveCount(itemCounter + 1);
-                    updateCounterUI(itemCounter);
-                    isProcessingScan = false;
-                }, 4000);
-            }
-        });
-
-        observer.observe(input, {
-            attributes: true,
-            attributeFilter: ['aria-label', 'disabled', 'class', 'style']
-        });
-
-        setTimeout(() => {
-            if (!resolved) {
-                resolved = true;
-                observer.disconnect();
-                if (!document.body.contains(input)) {
-                    saveCount(itemCounter + 1);
-                    updateCounterUI(itemCounter);
-                }
-                isProcessingScan = false;
-            }
-        }, 4000);
+        // Bailout if no buttons are found (unfamiliar screen)
+        stopScript();
     }
 
-    function handleScan(e) {
-        if (!active) return;
-        if (e.key !== 'Enter') return;
-        if (isProcessingScan) return; 
+    function waitForDustToSettle() {
+        if (changeObserver) changeObserver.disconnect();
+        clearTimeout(fallbackTimer);
+        clearTimeout(enterTimer);
 
-        const input = e.target;
-        if (input.closest('#sh-root')) return;
-        if (!input.matches('input:not([type="hidden"]):not([disabled])') || isInsideModal(input)) return;
+        let domChanged = false;
 
-        const rawValue = input.value?.trim();
-        if (!rawValue || !TOTE_REGEX.test(rawValue)) return;
+        changeObserver = new MutationObserver(() => {
+            if (domChanged) return;
+            domChanged = true;
+            changeObserver.disconnect();
+            clearTimeout(fallbackTimer);
+            clearTimeout(enterTimer);
+            
+            setTimeout(() => {
+                if (isRunning) processNext();
+            }, 150);
+        });
 
-        isProcessingScan = true;
-        verifyAndCount(input);
+        changeObserver.observe(document.body, { 
+            childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'class'] 
+        });
+
+        // "Stuck UI" Fix
+        enterTimer = setTimeout(() => {
+            if (!domChanged) {
+                const targetEl = document.activeElement || document.body;
+                targetEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+                targetEl.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+            }
+        }, 500);
+
+        // Deadlock Protection
+        fallbackTimer = setTimeout(() => {
+            if (!domChanged) stopScript();
+        }, 3000);
     }
 
+    // ==========================================
+    // 4. TRIGGERS & INTEGRATION
+    // ==========================================
     document.addEventListener('keydown', (e) => {
         if (!active) return;
         
-        if (e.key === 'F10') {
-            e.preventDefault();
-            overlayVisible = !overlayVisible;
-            const overlay = document.getElementById('sh-item-overlay');
-            if (overlay) {
-                overlay.style.opacity = overlayVisible ? settings.overlayOpacity.toString() : '0';
-                overlay.style.display = overlayVisible ? 'block' : 'none';
-                
-                if (overlayVisible) {
-                    updateCounterUI(itemCounter);
-                }
+        // Check if the pressed key exists in our SHORTCUTS dictionary
+        if (SHORTCUTS[e.key]) {
+            e.preventDefault(); 
+            
+            if (!isRunning) {
+                isRunning = true;
+                activeConfig = SHORTCUTS[e.key]; // Load the specific target list for this key
+                processNext();
+            } else {
+                // Emergency Stop: Pressing the key while running cancels it
+                stopScript();
             }
         }
     });
 
-    setInterval(() => {
-        if (active && overlayVisible) {
-            const currentUPH = calculateUPH();
-            
-            const uphEl = document.getElementById('sh-overlay-uph');
-            if (uphEl) uphEl.textContent = `${currentUPH}/h`;
-            
-            const pctEl = document.getElementById('sh-overlay-pct');
-            if (pctEl) pctEl.textContent = `(${calculatePercentageStr(currentUPH)})`;
-            
-            const timeEl = document.getElementById('sh-overlay-time');
-            if (timeEl) timeEl.textContent = getEffectiveWorkTime().formatted;
-        }
-    }, 60000);
-
-    document.addEventListener('keydown', handleScan, true);
-    createOrGetOverlay();
-
-    window.__itemCounter = {
-        enable: () => {
-            active = true;
-            const overlay = createOrGetOverlay();
-            if (overlay) overlay.style.display = overlayVisible ? 'block' : 'none';
-            updateCounterUI(itemCounter);
+    window.__autoQuestionnaire = {
+        enable: () => { active = true; },
+        disable: () => { 
+            active = false; 
+            stopScript();
         },
-        disable: () => {
-            active = false;
-            const overlay = document.getElementById('sh-item-overlay');
-            if (overlay) overlay.style.display = 'none';
-        },
-        isActive: () => active,
-        getCount: () => itemCounter,
-        setCount: (newCount) => updateCounterUI(newCount),
-        getSettings: () => settings,
-        updateSettings: (newSettings) => {
-            settings = { ...settings, ...newSettings };
-            try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
-            const overlay = document.getElementById('sh-item-overlay');
-            if (overlay && overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString();
-            updateCounterUI(itemCounter);
-        }
+        isActive: () => active
     };
-
-    window.__itemCounter.enable();
 })();
