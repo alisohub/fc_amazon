@@ -4,69 +4,75 @@
     }
     window.__counterLoaded = true;
 
-    // Add your Ukrainian (and any other) translations here in lowercase
     const TARGET_LABELS = [
         'wprowadź pojemnik',
-        'введіть тару'
+        'вкажіть транспортну тару',
+        'введите тару'
     ];
-
+    
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';
     const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
-
-    // Settings config
+    
     let settings = {
         overlayOpacity: 0.3,
         counterOption: 1,
         overlayLeft: null,
         overlayTop: null,
-        customStartTime: null // NEW: Stores custom start time (e.g., "14:30")
+        customStartTime: null 
     };
-
+    
     try {
         const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
         if (savedSettings) {
             const parsed = JSON.parse(savedSettings);
-            delete parsed.targetRate; // Strip hardcoded values to let the Hub control it
+            delete parsed.targetRate; 
             settings = { ...settings, ...parsed };
         }
     } catch (e) {}
-
+    
     const TOTE_REGEX = /^ts[a-z0-9]+/i;
     let itemCounter = 0;
-
+    
     try {
         const savedCount = localStorage.getItem(STORAGE_KEY_COUNT);
         if (savedCount !== null) itemCounter = parseInt(savedCount, 10) || 0;
     } catch (e) {}
-
+    
     let active = false;
     let overlayVisible = true;
     let isProcessingScan = false;
-
+    
     function saveCount(count) {
         itemCounter = count;
         try { localStorage.setItem(STORAGE_KEY_COUNT, count.toString()); }
         catch (e) {}
     }
-
+    
     function getEffectiveWorkTime() {
         const now = new Date();
         const hours = now.getHours();
         const isNight = hours >= 17 || hours < 6;
         let shiftStart = new Date(now);
 
-        // --- Apply custom start time if one is set ---
-        if (settings.customStartTime) {
-            const [cHours, cMins] = settings.customStartTime.split(':').map(Number);
-            shiftStart.setHours(cHours, cMins, 0, 0);
+        // Safely parse the manual HH:MM text input
+        let appliedCustomTime = false;
+        if (settings.customStartTime && settings.customStartTime.includes(':')) {
+            const parts = settings.customStartTime.split(':');
+            const cHours = parseInt(parts[0], 10);
+            const cMins = parseInt(parts[1], 10);
             
-            // Fix edge case: If it's 2 AM and the custom time is 18:00, 
-            // the custom time belongs to yesterday's shift.
-            if (isNight && hours < 6 && cHours >= 17) {
-                shiftStart.setDate(shiftStart.getDate() - 1);
+            // Only apply if the numbers are valid times
+            if (!isNaN(cHours) && !isNaN(cMins) && cHours >= 0 && cHours <= 23 && cMins >= 0 && cMins <= 59) {
+                shiftStart.setHours(cHours, cMins, 0, 0);
+                if (isNight && hours < 6 && cHours >= 17) {
+                    shiftStart.setDate(shiftStart.getDate() - 1);
+                }
+                appliedCustomTime = true;
             }
-        } else {
-            // --- Original Default Logic ---
+        } 
+        
+        // Default Logic if no custom time is set (or if it was invalid)
+        if (!appliedCustomTime) {
             if (isNight) {
                 if (hours < 6) shiftStart.setDate(shiftStart.getDate() - 1);
                 shiftStart.setHours(18, 30, 0, 0);
@@ -95,8 +101,6 @@
         }
         
         let effectiveMs = elapsedMs;
-        
-        // Break logic remains completely unchanged and respects the scheduled break window
         if (now >= breakStart && now < breakEnd) {
             effectiveMs = breakStart - shiftStart;
         } else if (now >= breakEnd) {
@@ -112,7 +116,7 @@
         
         return { ms: effectiveMs, formatted: `${h}h${m}m` };
     }
-
+    
     function calculateUPH() {
         if (itemCounter === 0) return "0.0";
         const timeData = getEffectiveWorkTime();
@@ -120,13 +124,13 @@
         const hoursWorked = timeData.ms / (1000 * 60 * 60);
         return (itemCounter / hoursWorked).toFixed(1);
     }
-    
+        
     function calculatePercentageStr(uphString) {
         const target = settings.targetRate || 47; 
         if (target <= 0) return "---%";
         return ((parseFloat(uphString) / target) * 100).toFixed(1) + "%";
     }
-
+    
     function isInsideModal(el) {
         if (el.closest('dialog[open]')) return true;
         const modal = el.closest('[role="dialog"],[role="alertdialog"],.modal,.popup,.overlay,.dialog');
@@ -136,11 +140,11 @@
         }
         return false;
     }
-
+    
     function createOrGetOverlay() {
         let overlay = document.getElementById('sh-item-overlay');
         if (overlay) return overlay;
-
+        
         overlay = document.createElement('div');
         overlay.id = 'sh-item-overlay';
         Object.assign(overlay.style, {
@@ -156,23 +160,23 @@
             display: active ? 'block' : 'none',
             whiteSpace: 'nowrap'
         });
-
+        
         if (settings.overlayLeft !== null && settings.overlayTop !== null) {
             overlay.style.left = `${settings.overlayLeft}px`;
             overlay.style.top = `${settings.overlayTop}px`;
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
         } else {
-            overlay.style.left = '49px';
+            overlay.style.left = '45px';
             overlay.style.top = '862px';
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
         }
-
+        
         const timeData = getEffectiveWorkTime();
         const currentUPH = calculateUPH();
         const currentPct = calculatePercentageStr(currentUPH);
-        
+                
         overlay.innerHTML = `
             <span id="sh-overlay-count">${itemCounter}</span>
             <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
@@ -181,11 +185,12 @@
             <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
             <span id="sh-overlay-time">${timeData.formatted}</span>
         `;
-
+        
         overlay.addEventListener('mouseenter', () => { if (overlayVisible) overlay.style.opacity = '1'; });
         overlay.addEventListener('mouseleave', () => { if (overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString(); });
-
+        
         let isDragging = false, startX, startY, initialLeft, initialTop;
+        
         function dragStart(e) {
             isDragging = true;
             const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
@@ -196,7 +201,7 @@
             initialLeft = rect.left;
             initialTop = rect.top;
         }
-
+        
         function dragMove(e) {
             if (!isDragging) return;
             if (e.type === 'touchmove') e.preventDefault();
@@ -205,7 +210,7 @@
             overlay.style.left = `${initialLeft + (clientX - startX)}px`;
             overlay.style.top = `${initialTop + (clientY - startY)}px`;
         }
-
+        
         function dragEnd() {
             if (isDragging) {
                 isDragging = false;
@@ -214,14 +219,14 @@
                 try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
             }
         }
-
+        
         overlay.addEventListener('mousedown', dragStart);
         document.addEventListener('mousemove', dragMove);
         document.addEventListener('mouseup', dragEnd);
         overlay.addEventListener('touchstart', dragStart, { passive: false });
         document.addEventListener('touchmove', dragMove, { passive: false });
         document.addEventListener('touchend', dragEnd);
-
+        
         window.addEventListener('resize', () => {
             if (!active) return;
             const rect = overlay.getBoundingClientRect();
@@ -240,46 +245,46 @@
                 try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
             }
         });
-
+        
         document.body.appendChild(overlay);
         return overlay;
     }
-
+    
     function updateCounterUI(count) {
         saveCount(count);
-        
+                
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count;
-        
+                
         const currentUPH = calculateUPH();
-        
+                
         const overlayUPH = document.getElementById('sh-overlay-uph');
         if (overlayUPH) overlayUPH.textContent = `${currentUPH}/h`;
-        
+                
         const overlayPct = document.getElementById('sh-overlay-pct');
         if (overlayPct) overlayPct.textContent = `(${calculatePercentageStr(currentUPH)})`;
-        
+                
         const overlayTime = document.getElementById('sh-overlay-time');
         if (overlayTime) overlayTime.textContent = getEffectiveWorkTime().formatted;
-
+        
         const hubInput = document.getElementById('sh-cfg-count');
         if (hubInput && document.activeElement !== hubInput) {
             hubInput.value = count === 0 ? '' : count;
         }
     }
-
+    
     function hasTargetLabel(labelString) {
         const lowerLabel = (labelString || '').toLowerCase();
         return TARGET_LABELS.some(target => lowerLabel.includes(target));
     }
-
+    
     function verifyAndCount(input) {
         const initialLabel = input.getAttribute('aria-label');
         if (!hasTargetLabel(initialLabel)) {
             isProcessingScan = false;
             return;
         }
-
+        
         let resolved = false;
         const observer = new MutationObserver(() => {
             if (resolved) return;
@@ -287,11 +292,11 @@
             const isHidden = input.offsetParent === null;
             const currentLabel = input.getAttribute('aria-label');
             const labelChanged = !hasTargetLabel(currentLabel);
-
+            
             if (isRemoved || isHidden || labelChanged) {
                 resolved = true;
                 observer.disconnect();
-                
+                                
                 setTimeout(() => {
                     saveCount(itemCounter + 1);
                     updateCounterUI(itemCounter);
@@ -299,12 +304,12 @@
                 }, 4000);
             }
         });
-
+        
         observer.observe(input, {
             attributes: true,
             attributeFilter: ['aria-label', 'disabled', 'class', 'style']
         });
-
+        
         setTimeout(() => {
             if (!resolved) {
                 resolved = true;
@@ -317,26 +322,26 @@
             }
         }, 4000);
     }
-
+    
     function handleScan(e) {
         if (!active) return;
         if (e.key !== 'Enter') return;
         if (isProcessingScan) return; 
-
+        
         const input = e.target;
         if (input.closest('#sh-root')) return;
         if (!input.matches('input:not([type="hidden"]):not([disabled])') || isInsideModal(input)) return;
-
+        
         const rawValue = input.value?.trim();
         if (!rawValue || !TOTE_REGEX.test(rawValue)) return;
-
+        
         isProcessingScan = true;
         verifyAndCount(input);
     }
-
+    
     document.addEventListener('keydown', (e) => {
         if (!active) return;
-        
+                
         if (e.key === 'F10') {
             e.preventDefault();
             overlayVisible = !overlayVisible;
@@ -344,32 +349,32 @@
             if (overlay) {
                 overlay.style.opacity = overlayVisible ? settings.overlayOpacity.toString() : '0';
                 overlay.style.display = overlayVisible ? 'block' : 'none';
-                
+                                
                 if (overlayVisible) {
                     updateCounterUI(itemCounter);
                 }
             }
         }
     });
-
+    
     setInterval(() => {
         if (active && overlayVisible) {
             const currentUPH = calculateUPH();
-            
+                        
             const uphEl = document.getElementById('sh-overlay-uph');
             if (uphEl) uphEl.textContent = `${currentUPH}/h`;
-            
+                        
             const pctEl = document.getElementById('sh-overlay-pct');
             if (pctEl) pctEl.textContent = `(${calculatePercentageStr(currentUPH)})`;
-            
+                        
             const timeEl = document.getElementById('sh-overlay-time');
             if (timeEl) timeEl.textContent = getEffectiveWorkTime().formatted;
         }
     }, 60000);
-
+    
     document.addEventListener('keydown', handleScan, true);
     createOrGetOverlay();
-
+    
     window.__itemCounter = {
         enable: () => {
             active = true;
