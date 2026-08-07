@@ -8,9 +8,10 @@
     let isRunning = false;
     let changeObserver = null;
     let fallbackTimer = null;
-    let enterTimer = null; 
+    let enterTimer = null; // New timer for the Enter keypress
 
     // 1. The Hit List & Kill Switch
+    // Note: "brak plomby" is placed before "brak" to ensure exact matches prioritize the longer phrase.
     const TARGET_WORDS = ["opinia", "brak plomby", "brak", "polybag", "nie"];
     const KILL_WORDS = ["tak, kontynuuj"];
 
@@ -19,80 +20,72 @@
         return (txt || '').replace(/\s+/g, ' ').trim().toLowerCase();
     }
 
-    // Helper: Scans the page for the DEEPEST element matching our lists
+    // Helper: Scans the page for matching elements
     function findButton(textList) {
-        // Grab everything that could possibly hold the text, including paragraphs and spans
-        const elements = Array.from(document.querySelectorAll('button, [role="button"], .awsui-button, .answer-card, p, span'));
-        
-        for (let target of textList) {
-            // Find ALL elements that contain the target text
-            const matches = elements.filter(el => {
-                if (el.offsetWidth === 0 || el.offsetHeight === 0) return false;
+        // Step 1: Search inside .answer-card specifically for a nested <p>
+        const answerCards = document.querySelectorAll('div.answer-card');
+        for (let card of answerCards) {
+            const paragraphs = card.querySelectorAll('p');
+            for (let p of paragraphs) {
+                // Skip hidden elements
+                if (p.offsetWidth === 0 || p.offsetHeight === 0) continue;
                 
-                const btnText = normalizeText(el.textContent);
-                return btnText === target || btnText.includes(target);
-            });
-            
-            if (matches.length > 0) {
-                // Because the browser reads outer containers first and inner elements last,
-                // the LAST match in the array is guaranteed to be the absolute deepest <p> or <span>.
-                return matches[matches.length - 1];
+                const pText = normalizeText(p.textContent);
+                
+                for (let target of textList) {
+                    // Exact match for most, but allow partial match (.includes) specifically for "opinia"
+                    if (pText === target || (target === 'opinia' && pText.includes(target))) {
+                        return p; // Return the specific <p> element to be clicked
+                    }
+                }
             }
         }
+
+        // Step 2: Fallback for standard buttons (required for "tak, kontynuuj" and standard UI popups)
+        const standardButtons = document.querySelectorAll('button, [role="button"], .awsui-button');
+        for (let btn of standardButtons) {
+            if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
+            
+            const btnText = normalizeText(btn.textContent);
+            
+            for (let target of textList) {
+                // Fallback allows exact or partial match for standard buttons
+                if (btnText === target || btnText.includes(target)) {
+                    // 🚨 React fix: If the button has a nested span, click the span instead of the outer button
+                    const innerSpan = btn.querySelector('span');
+                    return innerSpan ? innerSpan : btn;
+                }
+            }
+        }
+
         return null;
-    }
-
-    // Helper: The "Atomic Click" - Fakes exact physical screen coordinates and Pointer Events
-    function simulateClick(element) {
-        element.scrollIntoView({ block: 'center', behavior: 'instant' });
-        element.focus();
-
-        const rect = element.getBoundingClientRect();
-        const centerX = rect.left + (rect.width / 2);
-        const centerY = rect.top + (rect.height / 2);
-
-        const eventConfig = {
-            bubbles: true,
-            cancelable: true,
-            view: window,
-            clientX: centerX,
-            clientY: centerY,
-            buttons: 1
-        };
-
-        element.dispatchEvent(new PointerEvent('pointerover', eventConfig));
-        element.dispatchEvent(new PointerEvent('pointerenter', eventConfig));
-        element.dispatchEvent(new PointerEvent('pointerdown', eventConfig));
-        element.dispatchEvent(new MouseEvent('mousedown', eventConfig));
-        element.dispatchEvent(new PointerEvent('pointerup', eventConfig));
-        element.dispatchEvent(new MouseEvent('mouseup', eventConfig));
-        element.dispatchEvent(new MouseEvent('click', eventConfig));
     }
 
     // 2. The Reactor Loop
     function processNext() {
+        // Stop immediately if the script was disabled or cancelled
         if (!isRunning || !active) return;
 
         // Step A: Check for the Kill Switch
         const killBtn = findButton(KILL_WORDS);
         if (killBtn) {
             isRunning = false;
-            return; 
+            return; // Job done, leave it on the "Tak, kontynuuj" screen
         }
 
         // Step B: Check for the Hit List
         const actionBtn = findButton(TARGET_WORDS);
         if (actionBtn) {
-            simulateClick(actionBtn);
-            waitForDustToSettle(); 
+            actionBtn.click();
+            waitForDustToSettle(); // Lock the script and wait for the screen to change
             return;
         }
 
-        // Step C: Graceful Bailout
+        // Step C: Graceful Bailout (Unfamiliar screen)
         isRunning = false;
     }
 
-    // 3. The Watcher
+    // 3. The Watcher (Prevents "Ghost Clicks")
     function waitForDustToSettle() {
         if (changeObserver) changeObserver.disconnect();
         clearTimeout(fallbackTimer);
@@ -100,6 +93,7 @@
 
         let domChanged = false;
 
+        // Watch the webpage for any structural changes or loading animations
         changeObserver = new MutationObserver(() => {
             if (domChanged) return;
             domChanged = true;
@@ -107,6 +101,7 @@
             clearTimeout(fallbackTimer);
             clearTimeout(enterTimer);
             
+            // Wait an extra 150ms after the DOM changes so React can finish rendering the new buttons
             setTimeout(() => {
                 if (isRunning) processNext();
             }, 150);
@@ -119,10 +114,12 @@
             attributeFilter: ['disabled', 'class'] 
         });
 
-        // 4a. The "Stuck UI" Fix
+        // 4a. The "Stuck UI" Fix: Press Enter if nothing happens after 1 second
         enterTimer = setTimeout(() => {
             if (!domChanged) {
+                // Fire an Enter key event on the currently focused element (or the body)
                 const targetEl = document.activeElement || document.body;
+                
                 targetEl.dispatchEvent(new KeyboardEvent('keydown', {
                     key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
                 }));
@@ -132,7 +129,7 @@
             }
         }, 500);
 
-        // 4b. Deadlock Protection
+        // 4b. Deadlock Protection: Stop entirely if 3 seconds pass
         fallbackTimer = setTimeout(() => {
             if (!domChanged) {
                 changeObserver.disconnect();
@@ -146,12 +143,13 @@
         if (!active) return;
         
         if (e.key === 'F1') {
-            e.preventDefault(); 
+            e.preventDefault(); // Prevent F1 from opening the browser's Help menu
             
             if (!isRunning) {
                 isRunning = true;
                 processNext();
             } else {
+                // Emergency Stop: Pressing F1 while it's running forces it to cancel
                 isRunning = false;
                 if (changeObserver) changeObserver.disconnect();
                 clearTimeout(fallbackTimer);
@@ -162,7 +160,9 @@
 
     // 6. Hub Integration Handlers
     window.__autoQuestionnaire = {
-        enable: () => { active = true; },
+        enable: () => { 
+            active = true; 
+        },
         disable: () => { 
             active = false; 
             isRunning = false;
