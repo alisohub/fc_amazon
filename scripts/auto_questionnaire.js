@@ -37,17 +37,33 @@
         return null;
     }
 
-    // NEW Helper: Tricks React by firing a full sequence of human mouse events
+    // NEW Helper: The "Atomic Click" - Fakes exact physical screen coordinates and Pointer Events
     function simulateClick(element) {
-        const events = ['mousedown', 'mouseup', 'click'];
-        events.forEach(eventType => {
-            const event = new MouseEvent(eventType, {
-                bubbles: true,
-                cancelable: true,
-                view: window
-            });
-            element.dispatchEvent(event);
-        });
+        // Scroll the element into view just in case it's off-screen
+        element.scrollIntoView({ block: 'center', behavior: 'instant' });
+        element.focus();
+
+        const rect = element.getBoundingClientRect();
+        const centerX = rect.left + (rect.width / 2);
+        const centerY = rect.top + (rect.height / 2);
+
+        const eventConfig = {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            clientX: centerX,
+            clientY: centerY,
+            buttons: 1
+        };
+
+        // Fire the exact sequence a real human mouse produces
+        element.dispatchEvent(new PointerEvent('pointerover', eventConfig));
+        element.dispatchEvent(new PointerEvent('pointerenter', eventConfig));
+        element.dispatchEvent(new PointerEvent('pointerdown', eventConfig));
+        element.dispatchEvent(new MouseEvent('mousedown', eventConfig));
+        element.dispatchEvent(new PointerEvent('pointerup', eventConfig));
+        element.dispatchEvent(new MouseEvent('mouseup', eventConfig));
+        element.dispatchEvent(new MouseEvent('click', eventConfig));
     }
 
     // 2. The Reactor Loop
@@ -64,7 +80,6 @@
         // Step B: Check for the Hit List
         const actionBtn = findButton(TARGET_WORDS);
         if (actionBtn) {
-            // Use the new human-simulated click instead of a basic .click()
             simulateClick(actionBtn);
             waitForDustToSettle(); 
             return;
