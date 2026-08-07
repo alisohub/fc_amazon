@@ -22,8 +22,8 @@
 
     // Helper: Scans the page for buttons matching our lists
     function findButton(textList) {
-        // Amazon uses standard <button>, elements with role="button", or custom awsui buttons
-        const buttons = Array.from(document.querySelectorAll('button, [role="button"], .awsui-button, p'));
+        // Added .answer-card to catch Amazon's custom clickable divs
+        const buttons = Array.from(document.querySelectorAll('button, [role="button"], .awsui-button, p, .answer-card'));
         
         for (let btn of buttons) {
             // Skip hidden buttons (width/height of 0)
