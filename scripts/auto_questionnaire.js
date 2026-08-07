@@ -8,10 +8,9 @@
     let isRunning = false;
     let changeObserver = null;
     let fallbackTimer = null;
-    let enterTimer = null; // New timer for the Enter keypress
+    let enterTimer = null; 
 
     // 1. The Hit List & Kill Switch
-    // Note: "brak plomby" is placed before "brak" to ensure exact matches prioritize the longer phrase.
     const TARGET_WORDS = ["opinia", "brak plomby", "brak", "polybag", "nie"];
     const KILL_WORDS = ["tak, kontynuuj"];
 
@@ -22,17 +21,14 @@
 
     // Helper: Scans the page for buttons matching our lists
     function findButton(textList) {
-        // Added .answer-card to catch Amazon's custom clickable divs
         const buttons = Array.from(document.querySelectorAll('button, [role="button"], .awsui-button, p, .answer-card'));
         
         for (let btn of buttons) {
-            // Skip hidden buttons (width/height of 0)
             if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
             
             const btnText = normalizeText(btn.textContent);
             
             for (let target of textList) {
-                // Check for exact match first, then fallback to partial match
                 if (btnText === target || btnText.includes(target)) {
                     return btn;
                 }
@@ -41,31 +37,44 @@
         return null;
     }
 
+    // NEW Helper: Tricks React by firing a full sequence of human mouse events
+    function simulateClick(element) {
+        const events = ['mousedown', 'mouseup', 'click'];
+        events.forEach(eventType => {
+            const event = new MouseEvent(eventType, {
+                bubbles: true,
+                cancelable: true,
+                view: window
+            });
+            element.dispatchEvent(event);
+        });
+    }
+
     // 2. The Reactor Loop
     function processNext() {
-        // Stop immediately if the script was disabled or cancelled
         if (!isRunning || !active) return;
 
         // Step A: Check for the Kill Switch
         const killBtn = findButton(KILL_WORDS);
         if (killBtn) {
             isRunning = false;
-            return; // Job done, leave it on the "Tak, kontynuuj" screen
+            return; 
         }
 
         // Step B: Check for the Hit List
         const actionBtn = findButton(TARGET_WORDS);
         if (actionBtn) {
-            actionBtn.click();
-            waitForDustToSettle(); // Lock the script and wait for the screen to change
+            // Use the new human-simulated click instead of a basic .click()
+            simulateClick(actionBtn);
+            waitForDustToSettle(); 
             return;
         }
 
-        // Step C: Graceful Bailout (Unfamiliar screen)
+        // Step C: Graceful Bailout
         isRunning = false;
     }
 
-    // 3. The Watcher (Prevents "Ghost Clicks")
+    // 3. The Watcher
     function waitForDustToSettle() {
         if (changeObserver) changeObserver.disconnect();
         clearTimeout(fallbackTimer);
@@ -73,7 +82,6 @@
 
         let domChanged = false;
 
-        // Watch the webpage for any structural changes or loading animations
         changeObserver = new MutationObserver(() => {
             if (domChanged) return;
             domChanged = true;
@@ -81,7 +89,6 @@
             clearTimeout(fallbackTimer);
             clearTimeout(enterTimer);
             
-            // Wait an extra 150ms after the DOM changes so React can finish rendering the new buttons
             setTimeout(() => {
                 if (isRunning) processNext();
             }, 150);
@@ -94,12 +101,10 @@
             attributeFilter: ['disabled', 'class'] 
         });
 
-        // 4a. The "Stuck UI" Fix: Press Enter if nothing happens after 1 second
+        // 4a. The "Stuck UI" Fix
         enterTimer = setTimeout(() => {
             if (!domChanged) {
-                // Fire an Enter key event on the currently focused element (or the body)
                 const targetEl = document.activeElement || document.body;
-                
                 targetEl.dispatchEvent(new KeyboardEvent('keydown', {
                     key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
                 }));
@@ -109,7 +114,7 @@
             }
         }, 500);
 
-        // 4b. Deadlock Protection: Stop entirely if 3 seconds pass
+        // 4b. Deadlock Protection
         fallbackTimer = setTimeout(() => {
             if (!domChanged) {
                 changeObserver.disconnect();
@@ -123,13 +128,12 @@
         if (!active) return;
         
         if (e.key === 'F1') {
-            e.preventDefault(); // Prevent F1 from opening the browser's Help menu
+            e.preventDefault(); 
             
             if (!isRunning) {
                 isRunning = true;
                 processNext();
             } else {
-                // Emergency Stop: Pressing F1 while it's running forces it to cancel
                 isRunning = false;
                 if (changeObserver) changeObserver.disconnect();
                 clearTimeout(fallbackTimer);
@@ -140,9 +144,7 @@
 
     // 6. Hub Integration Handlers
     window.__autoQuestionnaire = {
-        enable: () => { 
-            active = true; 
-        },
+        enable: () => { active = true; },
         disable: () => { 
             active = false; 
             isRunning = false;
