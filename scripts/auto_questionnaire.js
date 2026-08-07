@@ -19,27 +19,31 @@
         return (txt || '').replace(/\s+/g, ' ').trim().toLowerCase();
     }
 
-    // Helper: Scans the page for buttons matching our lists
+    // Helper: Scans the page for the DEEPEST element matching our lists
     function findButton(textList) {
-        const buttons = Array.from(document.querySelectorAll('button, [role="button"], .awsui-button, p, .answer-card'));
+        // Grab everything that could possibly hold the text, including paragraphs and spans
+        const elements = Array.from(document.querySelectorAll('button, [role="button"], .awsui-button, .answer-card, p, span'));
         
-        for (let btn of buttons) {
-            if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
+        for (let target of textList) {
+            // Find ALL elements that contain the target text
+            const matches = elements.filter(el => {
+                if (el.offsetWidth === 0 || el.offsetHeight === 0) return false;
+                
+                const btnText = normalizeText(el.textContent);
+                return btnText === target || btnText.includes(target);
+            });
             
-            const btnText = normalizeText(btn.textContent);
-            
-            for (let target of textList) {
-                if (btnText === target || btnText.includes(target)) {
-                    return btn;
-                }
+            if (matches.length > 0) {
+                // Because the browser reads outer containers first and inner elements last,
+                // the LAST match in the array is guaranteed to be the absolute deepest <p> or <span>.
+                return matches[matches.length - 1];
             }
         }
         return null;
     }
 
-    // NEW Helper: The "Atomic Click" - Fakes exact physical screen coordinates and Pointer Events
+    // Helper: The "Atomic Click" - Fakes exact physical screen coordinates and Pointer Events
     function simulateClick(element) {
-        // Scroll the element into view just in case it's off-screen
         element.scrollIntoView({ block: 'center', behavior: 'instant' });
         element.focus();
 
@@ -56,7 +60,6 @@
             buttons: 1
         };
 
-        // Fire the exact sequence a real human mouse produces
         element.dispatchEvent(new PointerEvent('pointerover', eventConfig));
         element.dispatchEvent(new PointerEvent('pointerenter', eventConfig));
         element.dispatchEvent(new PointerEvent('pointerdown', eventConfig));
