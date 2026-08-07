@@ -191,9 +191,7 @@
             id: 'auto-questionnaire',
             name: 'Бінди',
             file: 'auto_questionnaire.js',
-            description: ```
-                Автоматично проклікує при натисненні
-                F1 - думка, без пошкоджень, полібаг```,
+            description: 'Автоматично проклікує при натисненні<br>F1 - думка, без пошкоджень, полібаг',
             getHandler: () => window.__autoQuestionnaire,
             experimental: true
         },
