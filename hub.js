@@ -85,6 +85,7 @@
                 const configRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
                 const targetRate = settings.targetRate || configRate; 
                 
+                // Force the counter to use the correct rate immediately on load
                 handler.updateSettings({ targetRate: targetRate });
                 
                 container.innerHTML = `
@@ -166,15 +167,23 @@
             }
         },
         {
-           id: 'auto-questionnaire',
-           name: 'Бінди',
-           file: 'auto_questionnaire.js',
-           description: 'Натисніть F1, щоб автоматично проклікати brak всього, polybag',
-           getHandler: () => window.__autoQuestionnaire
-       }
+            id: 'auto-questionnaire',
+            name: 'Бінди',
+            file: 'auto_questionnaire.js',
+            description: 'Натисніть F1, щоб автоматично проклікати brak всього, polybag',
+            getHandler: () => window.__autoQuestionnaire,
+            experimental: true
+        },
+        {
+            id: 'dev-inspector',
+            name: 'Dev Inspector',
+            file: 'dev_inspector.js',
+            description: 'Клікніть на будь-який елемент, щоб побачити його HTML (Тільки для розробки).',
+            getHandler: () => window.__devInspector,
+            experimental: true 
+        }
     ];
-
-    async function handleToggle(scriptObj, checkbox, settingsContainer) {
+async function handleToggle(scriptObj, checkbox, settingsContainer) {
         const isChecked = checkbox.checked;
         let handler = scriptObj.getHandler();
         
@@ -356,7 +365,7 @@
             }
         });
         
-        // --- NEW: Handle Department Change & Broadcast Config ---
+        // --- Handle Department Change & Broadcast Config ---
         const subDepSelect = document.getElementById('sh-subdep-select');
         subDepSelect.addEventListener('change', (e) => {
             currentDep = e.target.value;
@@ -374,15 +383,23 @@
                 }
             }
         });
+
+        // 🚨 Filter the scripts to only show standard ones OR show all if on development branch
+        const visibleScripts = SCRIPTS.filter(script => !script.experimental || currentBranch === 'development');
         
         const updateMasterToggleState = () => {
             const chkAll = document.getElementById('sh-chk-all');
             if (!chkAll) return;
-            const checkBoxes = SCRIPTS.map(s => document.getElementById(`sh-chk-${s.id}`));
+            
+            // The master switch should only monitor standard (non-experimental) scripts
+            const standardScripts = visibleScripts.filter(s => !s.experimental);
+            const checkBoxes = standardScripts.map(s => document.getElementById(`sh-chk-${s.id}`));
+            
             chkAll.checked = checkBoxes.length > 0 && checkBoxes.every(chk => chk && chk.checked);
         };
         
-        SCRIPTS.forEach(script => {
+        // Loop over ONLY the visible scripts for rendering
+        visibleScripts.forEach(script => {
             const handler = script.getHandler();
             const isCurrentlyActive = handler ? handler.isActive() : false;
             
@@ -424,7 +441,11 @@
                 const turnOn = e.target.checked;
                 const togglePromises = [];
                 
-                SCRIPTS.forEach(script => {
+                // Only loop over visible scripts when hitting "Toggle All"
+                visibleScripts.forEach(script => {
+                    // 🚨 Skip experimental scripts completely for master toggle action
+                    if (script.experimental) return; 
+                    
                     const chk = document.getElementById(`sh-chk-${script.id}`);
                     const settingsContainer = document.getElementById(`sh-settings-${script.id}`);
                     
