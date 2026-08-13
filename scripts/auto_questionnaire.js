@@ -9,28 +9,41 @@
     // ==========================================
     
     // The universal kill switch for all shortcuts
-    const KILL_WORDS = ["tak, kontynuuj", "да, продолжить"]; 
+    const KILL_WORDS = ["tak, kontynuuj", "да, продолжить", "так, продовжити"]; 
+    
+    // Words that only need to be partially matched (using .includes)
+    const PARTIAL_MATCHES = ["opinia", "мнение", "думка"];
 
     // Add new keyboard shortcuts and their target word lists here
     const SHORTCUTS = {
         'F1': {
-            targets: ["opinia", "мнение", "brak plomby", "не запечатано", "brak", "нет", "polybag", "полиэтиленовый мешок", "nie"]
+            // ⚠️ PRIORITY ORDER: Put nested/uncovered options FIRST in the list, 
+            // and their parent (expanding) buttons LAST.
+            targets: [
+                "opinia", "мнение", "думка", 
+                "brak plomby", "не запечатано", "пломба відсутня", 
+                "brak", "нет", "немає", 
+                "polybag", "полиэтиленовый мешок", "поліетиленовий пакет", 
+                "nie", "ні"
+            ]
         },
-
+        // Example for Dziura expanding UI:
+        // 'F2': {
+        //     targets: ["rozdarcie", "dziura"] // It will ALWAYS click rozdarcie if both are visible
+        // }
     };
 
     // ==========================================
     // 2. STATE MANAGEMENT
     // ==========================================
-    let active = false;        // Is the script enabled in the Hub?
-    let isRunning = false;     // Is a sequence currently executing?
-    let activeConfig = null;   // Which shortcut's config is currently running
+    let active = false;
+    let isRunning = false;
+    let activeConfig = null;
     
     let changeObserver = null;
     let fallbackTimer = null;
     let enterTimer = null;
 
-    // Helper: Safely completely stops the loop and resets state
     function stopScript() {
         isRunning = false;
         activeConfig = null;
@@ -47,36 +60,36 @@
     }
 
     function findButton(textList) {
-        // Step 1: Search inside .answer-card specifically for a nested <p>
-        const answerCards = document.querySelectorAll('div.answer-card');
-        for (let card of answerCards) {
-            const paragraphs = card.querySelectorAll('p');
+        // 1. Gather all potential targets on the screen once
+        const paragraphs = Array.from(document.querySelectorAll('div.answer-card p'))
+            .filter(p => p.offsetWidth > 0 && p.offsetHeight > 0);
+            
+        const standardButtons = Array.from(document.querySelectorAll('button, [role="button"], .awsui-button'))
+            .filter(btn => btn.offsetWidth > 0 && btn.offsetHeight > 0);
+
+        // 2. PRIORITY LOOP: Iterate through the text targets FIRST
+        for (let target of textList) {
+            const isPartial = PARTIAL_MATCHES.includes(target);
+            
+            // Check all paragraphs for THIS specific target
             for (let p of paragraphs) {
-                if (p.offsetWidth === 0 || p.offsetHeight === 0) continue;
-                
                 const pText = normalizeText(p.textContent);
-                for (let target of textList) {
-                    if (pText === target || (target === 'opinia' && pText.includes(target))) {
-                        return p; 
-                    }
+                if (pText === target || (isPartial && pText.includes(target))) {
+                    return p; 
                 }
             }
-        }
-
-        // Step 2: Fallback for standard buttons 
-        const standardButtons = document.querySelectorAll('button, [role="button"], .awsui-button');
-        for (let btn of standardButtons) {
-            if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
             
-            const btnText = normalizeText(btn.textContent);
-            for (let target of textList) {
-                if (btnText === target || btnText.includes(target)) {
+            // Check all standard buttons for THIS specific target
+            for (let btn of standardButtons) {
+                const btnText = normalizeText(btn.textContent);
+                if (btnText === target || (isPartial && btnText.includes(target))) {
                     const innerSpan = btn.querySelector('span');
                     return innerSpan ? innerSpan : btn;
                 }
             }
         }
-        return null;
+        
+        return null; // Return null only if NONE of the targets exist on screen
     }
 
     function processNext() {
@@ -85,7 +98,7 @@
         // Check for universal Kill Switch FIRST
         const killBtn = findButton(KILL_WORDS);
         if (killBtn) {
-            stopScript(); // Job done, leave it on the kill screen
+            stopScript(); 
             return; 
         }
 
@@ -124,7 +137,6 @@
             childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'class'] 
         });
 
-        // "Stuck UI" Fix
         enterTimer = setTimeout(() => {
             if (!domChanged) {
                 const targetEl = document.activeElement || document.body;
@@ -133,7 +145,6 @@
             }
         }, 500);
 
-        // Deadlock Protection
         fallbackTimer = setTimeout(() => {
             if (!domChanged) stopScript();
         }, 3000);
@@ -145,16 +156,14 @@
     document.addEventListener('keydown', (e) => {
         if (!active) return;
         
-        // Check if the pressed key exists in our SHORTCUTS dictionary
         if (SHORTCUTS[e.key]) {
             e.preventDefault(); 
             
             if (!isRunning) {
                 isRunning = true;
-                activeConfig = SHORTCUTS[e.key]; // Load the specific target list for this key
+                activeConfig = SHORTCUTS[e.key]; 
                 processNext();
             } else {
-                // Emergency Stop: Pressing the key while running cancels it
                 stopScript();
             }
         }
