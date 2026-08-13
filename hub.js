@@ -150,13 +150,64 @@
 
                     if (timeInput && btnNow && btnReset) {
                         timeInput.addEventListener('input', (e) => {
-                            let val = e.target.value.replace(/[^\d:]/g, ''); 
-                            if (val.length === 2 && !val.includes(':') && e.inputType !== 'deleteContentBackward') {
-                                val += ':';
+                            // 1. Strip everything except raw numbers and turn it into an array (queue)
+                            let digits = e.target.value.replace(/\D/g, '').split('');
+                            let out = '';
+
+                            // 2. Process Hour 1
+                            if (digits.length > 0) {
+                                let d = digits.shift();
+                                if (d >= '3') {
+                                    out += '0' + d; // e.g., typing '3' becomes '03'
+                                } else {
+                                    out += d;
+                                }
                             }
-                            e.target.value = val;
-                            if (val.match(/^\d{1,2}:\d{2}$/)) {
-                                handler.updateSettings({ customStartTime: val });
+
+                            // 3. Process Hour 2
+                            if (digits.length > 0 && out.length === 1) {
+                                let d = digits.shift();
+                                // If hour starts with 2, max second digit is 3 (23:59). 
+                                // If they type '2' then '5', it shifts to '02:5...'
+                                if (out[0] === '2' && d >= '4') {
+                                    out = '0' + out[0];
+                                    digits.unshift(d); // Put the '5' back in the queue for the minutes
+                                } else {
+                                    out += d;
+                                }
+                            }
+
+                            // 4. Add Colon smartly (preserve it during normal backspacing)
+                            if (out.length === 2) {
+                                if (digits.length > 0 || e.inputType !== 'deleteContentBackward' || e.target.value.endsWith(':')) {
+                                    out += ':';
+                                }
+                            }
+
+                            // 5. Process Minute 1
+                            if (digits.length > 0) {
+                                let d = digits.shift();
+                                if (d >= '6') {
+                                    out += '0' + d; // e.g., typing '6' becomes '06'
+                                } else {
+                                    out += d;
+                                }
+                            }
+
+                            // 6. Process Minute 2
+                            if (digits.length > 0 && out.length === 4) {
+                                let d = digits.shift();
+                                out += d;
+                            }
+
+                            // Apply the beautifully formatted string back to the input
+                            e.target.value = out;
+
+                            // Save to settings only if it's a complete, valid time
+                            if (out.length === 5 && out.match(/^\d{2}:\d{2}$/)) {
+                                handler.updateSettings({ customStartTime: out });
+                            } else if (out === '') {
+                                handler.updateSettings({ customStartTime: null }); // Clear it out if empty
                             }
                         });
 
