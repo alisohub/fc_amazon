@@ -23,14 +23,19 @@
                 "opinia", "мнение", "думка", 
                 "brak plomby", "не запечатано", "пломба відсутня", 
                 "brak", "нет", "немає", 
+                "nieprzezroczyste pudełko", "непрозрачная коробка", "непрозора коробка", 
+                "nie", "ні"
+            ]
+        },
+        'F7': {
+            targets: [
+                "opinia", "мнение", "думка", 
+                "brak plomby", "не запечатано", "пломба відсутня", 
+                "brak", "нет", "немає", 
                 "polybag", "полиэтиленовый мешок", "поліетиленовий пакет", 
                 "nie", "ні"
             ]
         },
-        // Example for Dziura expanding UI:
-        // 'F2': {
-        //     targets: ["rozdarcie", "dziura"] // It will ALWAYS click rozdarcie if both are visible
-        // }
     };
 
     // ==========================================
