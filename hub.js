@@ -4,8 +4,8 @@
         if (panel) {
             if (panel.classList.contains('sh-open')) {
                 panel.classList.remove('sh-open');
-                const advContainer = document.getElementById('sh-adv-container');
-                if (advContainer) advContainer.style.display = 'none';
+                // Target ALL advanced containers and collapse them
+                document.querySelectorAll('.sh-adv-container').forEach(el => el.classList.remove('sh-expanded'));
             } else {
                 panel.classList.add('sh-open');
             }
@@ -88,19 +88,19 @@
                         <input type="range" id="sh-cfg-opacity" class="sh-range" min="0" max="1" step="0.05" value="${settings.overlayOpacity}" />
                     </div>
                     
-                    <div id="sh-adv-container" style="display: none; padding-top: 8px; margin-top: 8px; border-top: 1px dashed #e0e0e0;">
+                    <div id="sh-adv-container-item-counter" class="sh-adv-container">
                         <div class="sh-setting-row" title="Target Rate">
                             <span class="sh-emoji">🎯</span>
-                            <input type="number" id="sh-cfg-target" class="sh-input" min="0" value="${targetRate}" placeholder="Необхідна норма" style="flex: 1;" />
+                            <input type="number" id="sh-cfg-target" class="sh-input sh-flex-1" min="0" value="${targetRate}" placeholder="Необхідна норма" />
                         </div>
                         
                         ${currentBranch === 'development' ? `
-                        <div class="sh-setting-row" title="Власний час початку зміни" style="margin-top: 8px; justify-content: space-between;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="sh-setting-row sh-mt-8 sh-space-between" title="Власний час початку зміни">
+                            <div class="sh-flex-center-gap">
                                 <span class="sh-emoji">⏱️</span>
-                                <input type="text" id="sh-cfg-start-time" class="sh-input" value="${settings.customStartTime || ''}" placeholder="14:30" maxlength="5" style="width: 55px; text-align: center; padding: 6px 4px;" />
+                                <input type="text" id="sh-cfg-start-time" class="sh-input sh-time-input-small" value="${settings.customStartTime || ''}" placeholder="14:30" maxlength="5" />
                             </div>
-                            <div style="display: flex; gap: 6px;">
+                            <div class="sh-flex-gap">
                                 <button id="sh-btn-start-now" class="sh-time-btn">Зараз</button>
                                 <button id="sh-btn-start-reset" class="sh-time-btn">Скинути</button>
                             </div>
@@ -108,8 +108,8 @@
                         ` : ''}
                     </div>
                     
-                    <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
-                        <span id="sh-adv-btn" class="sh-adv-text">Розширені</span>
+                    <div class="sh-adv-toggle-wrap">
+                        <span id="sh-adv-btn-item-counter" class="sh-adv-text">Розширені</span>
                     </div>
                 `;
                 
@@ -150,64 +150,48 @@
 
                     if (timeInput && btnNow && btnReset) {
                         timeInput.addEventListener('input', (e) => {
-                            // 1. Strip everything except raw numbers and turn it into an array (queue)
                             let digits = e.target.value.replace(/\D/g, '').split('');
                             let out = '';
 
-                            // 2. Process Hour 1
                             if (digits.length > 0) {
                                 let d = digits.shift();
-                                if (d >= '3') {
-                                    out += '0' + d; // e.g., typing '3' becomes '03'
-                                } else {
-                                    out += d;
-                                }
+                                if (d >= '3') out += '0' + d; 
+                                else out += d;
                             }
 
-                            // 3. Process Hour 2
                             if (digits.length > 0 && out.length === 1) {
                                 let d = digits.shift();
-                                // If hour starts with 2, max second digit is 3 (23:59). 
-                                // If they type '2' then '5', it shifts to '02:5...'
                                 if (out[0] === '2' && d >= '4') {
                                     out = '0' + out[0];
-                                    digits.unshift(d); // Put the '5' back in the queue for the minutes
+                                    digits.unshift(d);
                                 } else {
                                     out += d;
                                 }
                             }
 
-                            // 4. Add Colon smartly (preserve it during normal backspacing)
                             if (out.length === 2) {
                                 if (digits.length > 0 || e.inputType !== 'deleteContentBackward' || e.target.value.endsWith(':')) {
                                     out += ':';
                                 }
                             }
 
-                            // 5. Process Minute 1
                             if (digits.length > 0) {
                                 let d = digits.shift();
-                                if (d >= '6') {
-                                    out += '0' + d; // e.g., typing '6' becomes '06'
-                                } else {
-                                    out += d;
-                                }
+                                if (d >= '6') out += '0' + d; 
+                                else out += d;
                             }
 
-                            // 6. Process Minute 2
                             if (digits.length > 0 && out.length === 4) {
                                 let d = digits.shift();
                                 out += d;
                             }
 
-                            // Apply the beautifully formatted string back to the input
                             e.target.value = out;
 
-                            // Save to settings only if it's a complete, valid time
                             if (out.length === 5 && out.match(/^\d{2}:\d{2}$/)) {
                                 handler.updateSettings({ customStartTime: out });
                             } else if (out === '') {
-                                handler.updateSettings({ customStartTime: null }); // Clear it out if empty
+                                handler.updateSettings({ customStartTime: null }); 
                             }
                         });
 
@@ -227,14 +211,10 @@
                     }
                 }
 
-                const advBtn = container.querySelector('#sh-adv-btn');
-                const advContainer = container.querySelector('#sh-adv-container');
+                const advBtn = container.querySelector('#sh-adv-btn-item-counter');
+                const advContainer = container.querySelector('#sh-adv-container-item-counter');
                 advBtn.addEventListener('click', () => {
-                    if (advContainer.style.display === 'none') {
-                        advContainer.style.display = 'block';
-                    } else {
-                        advContainer.style.display = 'none';
-                    }
+                    advContainer.classList.toggle('sh-expanded');
                 });
             }
         },
@@ -242,9 +222,50 @@
             id: 'auto-questionnaire',
             name: 'Бінди',
             file: 'auto_questionnaire.js',
-            description: 'Автоматично проклікує при натисненні<br>F1 - думка, без пошкоджень, полібаг',
+            description: 'Автоматично проклікує при натисненні.<br>Детальніше, щоб побачити всі команди',
             getHandler: () => window.__autoQuestionnaire,
-            experimental: true
+            renderSettings: (container) => {
+                const handler = window.__autoQuestionnaire;
+                if (!handler) return;
+                
+                // Fetch the dynamic shortcuts using the optimized 'sequence' array
+                const shortcutsData = handler.getShortcuts ? handler.getShortcuts() : {};
+                const keys = Object.keys(shortcutsData);
+                
+                let listItems = '';
+                if (keys.length > 0) {
+                    listItems = keys.map(key => {
+                        // Extract [0] from each variable inside the sequence array
+                        const sequenceLabels = shortcutsData[key].sequence ? shortcutsData[key].sequence.map(arr => arr[0]) : [];
+                        return `
+                            <div class="sh-bind-row">
+                                <div class="sh-bind-key">${key}</div>
+                                <div class="sh-bind-action">${sequenceLabels.join(' <span class="sh-arrow">➔</span> ')}</div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    listItems = `<div style="text-align:center; padding: 10px; font-size: 11px; color:#9aa0a6;">Наразі немає жодного бінда.</div>`;
+                }
+                
+                container.innerHTML = `
+                    <div id="sh-adv-container-auto-questionnaire" class="sh-adv-container">
+                        <div class="sh-bind-list">
+                            ${listItems}
+                        </div>
+                    </div>
+                    
+                    <div class="sh-adv-toggle-wrap">
+                        <span id="sh-adv-btn-auto-questionnaire" class="sh-adv-text">Детальніше</span>
+                    </div>
+                `;
+
+                const advBtn = container.querySelector('#sh-adv-btn-auto-questionnaire');
+                const advContainer = container.querySelector('#sh-adv-container-auto-questionnaire');
+                advBtn.addEventListener('click', () => {
+                    advContainer.classList.toggle('sh-expanded');
+                });
+            }
         },
         {
             id: 'dev-inspector',
@@ -331,13 +352,23 @@
                 .sh-opt-btn:hover:not(.active) { background: #f1f3f4; }
                 .sh-opt-btn.active { background: #1a73e8; border-color: #1a73e8; color: #ffffff; }
                 
-                /* NEW: Specific class for the time buttons so they don't break the active state */
                 .sh-time-btn { background: #ffffff; border: 1px solid #dadce0; border-radius: 6px; color: #5f6368; font-size: 11px; font-weight: 600; padding: 4px 8px; cursor: pointer; transition: all 0.2s; }
                 .sh-time-btn:hover { background: #f1f3f4; color: #202124; }
 
                 .sh-input { padding: 6px 10px; font-size: 13px; border: 1px solid #dadce0; border-radius: 6px; box-sizing: border-box; outline: none; transition: border 0.2s; }
                 .sh-input:focus { border-color: #1a73e8; }
                 .sh-input-small { width: 35%; flex: 0 0 35%; }
+                
+                /* HIDE ARROWS FOR NUMBER INPUTS */
+                .sh-input[type=number]::-webkit-inner-spin-button, 
+                .sh-input[type=number]::-webkit-outer-spin-button { 
+                    -webkit-appearance: none; 
+                    margin: 0; 
+                }
+                .sh-input[type=number] { 
+                    -moz-appearance: textfield; 
+                }
+
                 .sh-range { flex: 1; accent-color: #1a73e8; cursor: pointer; }
                 .sh-switch { position: relative; width: 34px; height: 20px; flex-shrink: 0; margin-top: 2px;}
                 .sh-switch input { opacity: 0; width: 0; height: 0; }
@@ -345,6 +376,24 @@
                 .sh-slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
                 input:checked + .sh-slider { background-color: #1a73e8; }
                 input:checked + .sh-slider:before { transform: translateX(14px); }
+
+                /* Shared Advanced Container Logic & Utility Classes */
+                .sh-adv-container { display: none; padding-top: 8px; margin-top: 8px; border-top: 1px dashed #e0e0e0; }
+                .sh-adv-container.sh-expanded { display: block; }
+                .sh-adv-toggle-wrap { display: flex; justify-content: flex-end; margin-top: 6px; }
+                .sh-flex-1 { flex: 1; }
+                .sh-mt-8 { margin-top: 8px; }
+                .sh-space-between { justify-content: space-between; }
+                .sh-flex-center-gap { display: flex; align-items: center; gap: 8px; }
+                .sh-flex-gap { display: flex; gap: 6px; }
+                .sh-time-input-small { width: 55px; text-align: center; padding: 6px 4px; }
+                
+                /* Auto Questionnaire Styles (Flex Rows for crisp separation) */
+                .sh-bind-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+                .sh-bind-row { display: flex; align-items: stretch; background: #f8f9fa; border: 1px solid #e8eaed; border-radius: 6px; overflow: hidden; }
+                .sh-bind-key { background: #e8f0fe; color: #1a73e8; font-weight: 600; font-size: 12px; padding: 6px 10px; display: flex; align-items: center; justify-content: center; min-width: 32px; border-right: 1px solid #e8eaed; }
+                .sh-bind-action { padding: 6px 10px; font-size: 11px; color: #5f6368; line-height: 1.4; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+                .sh-arrow { color: #bdc1c6; font-size: 10px; }
             </style>
             
             <div id="sh-panel">
@@ -371,8 +420,8 @@
         
         function closePanel() {
             panel.classList.remove('sh-open');
-            const advContainer = document.getElementById('sh-adv-container');
-            if (advContainer) advContainer.style.display = 'none';
+            // Target ALL advanced containers and collapse them dynamically
+            document.querySelectorAll('.sh-adv-container').forEach(el => el.classList.remove('sh-expanded'));
         }
         
         document.getElementById('sh-close-btn').onclick = closePanel;

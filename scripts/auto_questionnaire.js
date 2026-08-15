@@ -5,41 +5,42 @@
     window.__autoQuestionnaireLoaded = true;
 
     // ==========================================
-    // 1. CONFIGURATION (Easy to expand)
+    // 1. CONFIGURATION (Translation Clusters)
     // ==========================================
     
     // The universal kill switch for all shortcuts
     const KILL_WORDS = ["tak, kontynuuj", "да, продолжить", "так, продовжити"]; 
+
+    const OPINIA = ["opinia", "мнение", "думка"];
+    const BRAK_PLOMBY = ["brak plomby", "не запечатано", "пломба відсутня"];
+    const BRAK = ["brak", "нет", "немає"];
+    const NIE = ["nie", "нет", "ні"];
+    
+    const BOX = ["nieprzezroczyste pudełko", "непрозрачная коробка", "непрозора коробка"];
+    const POLYBAG = ["polybag", "полиэтиленовый мешок", "поліетиленовий пакет"];
     
     // Words that only need to be partially matched (using .includes)
-    const PARTIAL_MATCHES = ["opinia", "мнение", "думка"];
-
-    // Add new keyboard shortcuts and their target word lists here
-    const SHORTCUTS = {
-        'F1': {
-            // ⚠️ PRIORITY ORDER: Put nested/uncovered options FIRST in the list, 
-            // and their parent (expanding) buttons LAST.
-            targets: [
-                "opinia", "мнение", "думка", 
-                "brak plomby", "не запечатано", "пломба відсутня", 
-                "brak", "нет", "немає", 
-                "nieprzezroczyste pudełko", "непрозрачная коробка", "непрозора коробка", 
-                "nie", "ні"
-            ]
-        },
-        'F7': {
-            targets: [
-                "opinia", "мнение", "думка", 
-                "brak plomby", "не запечатано", "пломба відсутня", 
-                "brak", "нет", "немає", 
-                "polybag", "полиэтиленовый мешок", "поліетиленовий пакет", 
-                "nie", "ні"
-            ]
-        },
-    };
+    const PARTIAL_MATCHES = [...OPINIA];
 
     // ==========================================
-    // 2. STATE MANAGEMENT
+    // 2. SHORTCUTS BINDING
+    // ==========================================
+
+    const SHORTCUTS = {
+        'F1': {
+            sequence: [OPINIA, BRAK_PLOMBY, BOX, BRAK, NIE]
+        },
+        'F7': {
+            sequence: [OPINIA, BRAK_PLOMBY, POLYBAG, BRAK, NIE]
+        }
+    };
+
+    for (let key in SHORTCUTS) {
+        SHORTCUTS[key].targets = SHORTCUTS[key].sequence.flat().reverse();
+    }
+
+    // ==========================================
+    // 3. STATE MANAGEMENT
     // ==========================================
     let active = false;
     let isRunning = false;
@@ -58,25 +59,25 @@
     }
 
     // ==========================================
-    // 3. CORE LOGIC (The Engine)
+    // 4. CORE LOGIC (The Engine)
     // ==========================================
     function normalizeText(txt) {
         return (txt || '').replace(/\s+/g, ' ').trim().toLowerCase();
     }
 
     function findButton(textList) {
-        // 1. Gather all potential targets on the screen once
+        // 1. Gather all potential targets on the screen ONCE and store them in memory
         const paragraphs = Array.from(document.querySelectorAll('div.answer-card p'))
             .filter(p => p.offsetWidth > 0 && p.offsetHeight > 0);
             
         const standardButtons = Array.from(document.querySelectorAll('button, [role="button"], .awsui-button'))
             .filter(btn => btn.offsetWidth > 0 && btn.offsetHeight > 0);
 
-        // 2. PRIORITY LOOP: Iterate through the text targets FIRST
+        // 2. LOOP: Read through the pre-reversed array
         for (let target of textList) {
             const isPartial = PARTIAL_MATCHES.includes(target);
             
-            // Check all paragraphs for THIS specific target
+            // Check all stored paragraphs for THIS specific target
             for (let p of paragraphs) {
                 const pText = normalizeText(p.textContent);
                 if (pText === target || (isPartial && pText.includes(target))) {
@@ -84,7 +85,7 @@
                 }
             }
             
-            // Check all standard buttons for THIS specific target
+            // Check all stored standard buttons for THIS specific target
             for (let btn of standardButtons) {
                 const btnText = normalizeText(btn.textContent);
                 if (btnText === target || (isPartial && btnText.includes(target))) {
@@ -156,7 +157,7 @@
     }
 
     // ==========================================
-    // 4. TRIGGERS & INTEGRATION
+    // 5. TRIGGERS & INTEGRATION
     // ==========================================
     document.addEventListener('keydown', (e) => {
         if (!active) return;
@@ -180,6 +181,7 @@
             active = false; 
             stopScript();
         },
-        isActive: () => active
+        isActive: () => active,
+        getShortcuts: () => SHORTCUTS // Expose for hub.js UI table
     };
 })();
