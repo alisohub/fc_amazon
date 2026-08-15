@@ -1,32 +1,28 @@
-(() => {
-    if (window.__autoQuestionnaireLoaded) {
-        return;
-    }
+if (!window.__autoQuestionnaireLoaded) {
     window.__autoQuestionnaireLoaded = true;
 
     // ==========================================
     // 1. CONFIGURATION (Translation Clusters)
     // ==========================================
     
-    // The universal kill switch for all shortcuts
-    const KILL_WORDS = ["tak, kontynuuj", "да, продолжить", "так, продовжити"]; 
+    const KILL_WORDS: string[] = ["tak, kontynuuj", "да, продолжить", "так, продовжити"]; 
 
-    const OPINIA = ["opinia", "мнение", "думка"];
-    const BRAK_PLOMBY = ["brak plomby", "не запечатано", "пломба відсутня"];
-    const BRAK = ["brak", "нет", "немає"];
-    const NIE = ["nie", "нет", "ні"];
+    const OPINIA: string[] = ["opinia", "мнение", "думка"];
+    const BRAK_PLOMBY: string[] = ["brak plomby", "не запечатано", "пломба відсутня"];
+    const BRAK: string[] = ["brak", "нет", "немає"];
+    const NIE: string[] = ["nie", "нет", "ні"];
     
-    const BOX = ["nieprzezroczyste pudełko", "непрозрачная коробка", "непрозора коробка"];
-    const POLYBAG = ["polybag", "полиэтиленовый мешок", "поліетиленовий пакет"];
+    const BOX: string[] = ["nieprzezroczyste pudełko", "непрозрачная коробка", "непрозора коробка"];
+    const POLYBAG: string[] = ["polybag", "полиэтиленовый мешок", "поліетиленовий пакет"];
     
-    // Words that only need to be partially matched (using .includes)
-    const PARTIAL_MATCHES = [...OPINIA];
+    const PARTIAL_MATCHES: string[] = [...OPINIA];
 
     // ==========================================
     // 2. SHORTCUTS BINDING
     // ==========================================
 
-    const SHORTCUTS = {
+    // Use the Record utility type to ensure all keys map to our global ShortcutConfig interface
+    const SHORTCUTS: Record<string, ShortcutConfig> = {
         'F1': {
             sequence: [OPINIA, BRAK_PLOMBY, BOX, BRAK, NIE]
         },
@@ -42,15 +38,17 @@
     // ==========================================
     // 3. STATE MANAGEMENT
     // ==========================================
-    let active = false;
-    let isRunning = false;
-    let activeConfig = null;
+    let active: boolean = false;
+    let isRunning: boolean = false;
+    let activeConfig: ShortcutConfig | null = null;
     
-    let changeObserver = null;
-    let fallbackTimer = null;
-    let enterTimer = null;
+    let changeObserver: MutationObserver | null = null;
+    
+    // Type-safe timer definitions
+    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+    let enterTimer: ReturnType<typeof setTimeout> | undefined;
 
-    function stopScript() {
+    function stopScript(): void {
         isRunning = false;
         activeConfig = null;
         if (changeObserver) changeObserver.disconnect();
@@ -61,23 +59,21 @@
     // ==========================================
     // 4. CORE LOGIC (The Engine)
     // ==========================================
-    function normalizeText(txt) {
+    function normalizeText(txt: string | null): string {
         return (txt || '').replace(/\s+/g, ' ').trim().toLowerCase();
     }
 
-    function findButton(textList) {
-        // 1. Gather all potential targets on the screen ONCE and store them in memory
-        const paragraphs = Array.from(document.querySelectorAll('div.answer-card p'))
+    function findButton(textList: string[]): HTMLElement | null {
+        // Query generic HTMLElements immediately to avoid casting later
+        const paragraphs = Array.from(document.querySelectorAll<HTMLElement>('div.answer-card p'))
             .filter(p => p.offsetWidth > 0 && p.offsetHeight > 0);
             
-        const standardButtons = Array.from(document.querySelectorAll('button, [role="button"], .awsui-button'))
+        const standardButtons = Array.from(document.querySelectorAll<HTMLElement>('button, [role="button"], .awsui-button'))
             .filter(btn => btn.offsetWidth > 0 && btn.offsetHeight > 0);
 
-        // 2. LOOP: Read through the pre-reversed array
         for (let target of textList) {
-            const isPartial = PARTIAL_MATCHES.includes(target);
+            const isPartial: boolean = PARTIAL_MATCHES.includes(target);
             
-            // Check all stored paragraphs for THIS specific target
             for (let p of paragraphs) {
                 const pText = normalizeText(p.textContent);
                 if (pText === target || (isPartial && pText.includes(target))) {
@@ -85,30 +81,28 @@
                 }
             }
             
-            // Check all stored standard buttons for THIS specific target
             for (let btn of standardButtons) {
                 const btnText = normalizeText(btn.textContent);
                 if (btnText === target || (isPartial && btnText.includes(target))) {
                     const innerSpan = btn.querySelector('span');
-                    return innerSpan ? innerSpan : btn;
+                    // Return the inner span if it exists, otherwise the button itself
+                    return (innerSpan as HTMLElement) || btn;
                 }
             }
         }
         
-        return null; // Return null only if NONE of the targets exist on screen
+        return null; 
     }
 
-    function processNext() {
-        if (!isRunning || !active || !activeConfig) return;
+    function processNext(): void {
+        if (!isRunning || !active || !activeConfig || !activeConfig.targets) return;
 
-        // Check for universal Kill Switch FIRST
         const killBtn = findButton(KILL_WORDS);
         if (killBtn) {
             stopScript(); 
             return; 
         }
 
-        // Check for Hit List for the active shortcut
         const actionBtn = findButton(activeConfig.targets);
         if (actionBtn) {
             actionBtn.click();
@@ -116,21 +110,21 @@
             return;
         }
 
-        // Bailout if no buttons are found (unfamiliar screen)
         stopScript();
     }
 
-    function waitForDustToSettle() {
+    function waitForDustToSettle(): void {
         if (changeObserver) changeObserver.disconnect();
         clearTimeout(fallbackTimer);
         clearTimeout(enterTimer);
 
-        let domChanged = false;
+        let domChanged: boolean = false;
 
         changeObserver = new MutationObserver(() => {
             if (domChanged) return;
             domChanged = true;
-            changeObserver.disconnect();
+            
+            if (changeObserver) changeObserver.disconnect();
             clearTimeout(fallbackTimer);
             clearTimeout(enterTimer);
             
@@ -145,7 +139,8 @@
 
         enterTimer = setTimeout(() => {
             if (!domChanged) {
-                const targetEl = document.activeElement || document.body;
+                // Ensure document.activeElement resolves to an HTMLElement safely
+                const targetEl = (document.activeElement as HTMLElement) || document.body;
                 targetEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
                 targetEl.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
             }
@@ -159,7 +154,7 @@
     // ==========================================
     // 5. TRIGGERS & INTEGRATION
     // ==========================================
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
         if (!active) return;
         
         if (SHORTCUTS[e.key]) {
@@ -176,12 +171,12 @@
     });
 
     window.__autoQuestionnaire = {
-        enable: () => { active = true; },
-        disable: () => { 
+        enable: (): void => { active = true; },
+        disable: (): void => { 
             active = false; 
             stopScript();
         },
-        isActive: () => active,
-        getShortcuts: () => SHORTCUTS // Expose for hub.js UI table
+        isActive: (): boolean => active,
+        getShortcuts: () => SHORTCUTS
     };
-})();
+}

@@ -1,23 +1,26 @@
-(() => {
-    if (window.__scriptHubLoaded) {
-        const panel = document.getElementById('sh-panel');
-        if (panel) {
-            if (panel.classList.contains('sh-open')) {
-                panel.classList.remove('sh-open');
-                // Target ALL advanced containers and collapse them
-                document.querySelectorAll('.sh-adv-container').forEach(el => el.classList.remove('sh-expanded'));
-            } else {
-                panel.classList.add('sh-open');
-            }
+import { HUB_STYLES } from './styles';
+
+if (window.__scriptHubLoaded) {
+    const panel = document.getElementById('sh-panel');
+    if (panel) {
+        if (panel.classList.contains('sh-open')) {
+            panel.classList.remove('sh-open');
+            document.querySelectorAll('.sh-adv-container').forEach(el => el.classList.remove('sh-expanded'));
+        } else {
+            panel.classList.add('sh-open');
         }
-        return;
     }
+} 
+else {
     window.__scriptHubLoaded = true;
+
+    type Branch = "main" | "development" | "ts-all-the-way";
+    type Department = "CRET" | "FAST" | "UG" | "REFURB";
+
+    const currentBranch: Branch = (window.__SH_BRANCH as Branch) || 'main';
+    const REPO_BASE_URL: string = `https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/${currentBranch}/dist`;
     
-    const currentBranch = window.__SH_BRANCH || 'main';
-    const REPO_BASE_URL = `https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/${currentBranch}/scripts`;
-    
-    const DEPARTMENT_CONFIG = {
+    const DEPARTMENT_CONFIG: Record<Department, { targetRate: number }> = {
         "CRET": { targetRate: 47 },
         "FAST": { targetRate: 100 },
         "UG":   { targetRate: 47 },
@@ -27,7 +30,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const gradingMode = urlParams.get('gradingMode');
     
-    let DEPARTAMENT_OPTIONS = [];
+    let DEPARTAMENT_OPTIONS: Department[] = [];
     if (gradingMode === 'CRETURN_PRIMARY_GRADING') {
         DEPARTAMENT_OPTIONS = ["UG"];
     } else if (gradingMode === 'CRETURN') {
@@ -38,13 +41,30 @@
         DEPARTAMENT_OPTIONS = ["CRET", "FAST", "UG", "REFURB"]; 
     }
     
-    let currentDep = localStorage.getItem('sh_hub_dep');
-    if (!currentDep || !DEPARTAMENT_OPTIONS.includes(currentDep)) {
-        currentDep = DEPARTAMENT_OPTIONS[0]; 
+    function isDepartment(value: string | null): value is Department {
+        return value === "CRET" || value === "FAST" || value === "UG" || value === "REFURB";
+    }
+
+    const storedDep = localStorage.getItem('sh_hub_dep');
+    let currentDep: Department = (isDepartment(storedDep) && DEPARTAMENT_OPTIONS.includes(storedDep))
+        ? storedDep 
+        : DEPARTAMENT_OPTIONS[0];
+
+    if (storedDep !== currentDep) {
         try { localStorage.setItem('sh_hub_dep', currentDep); } catch (e) {}
     }
+
+    interface ScriptDefinition {
+        id: string;
+        name: string;
+        file: string;
+        description: string;
+        getHandler: () => ScriptHandler | undefined | any;
+        renderSettings?: (container: HTMLElement) => void;
+        experimental?: boolean;
+    }
     
-    const SCRIPTS = [
+    const SCRIPTS: ScriptDefinition[] = [
         {
             id: 'auto-lpn',
             name: 'Авто-LPN',
@@ -58,7 +78,7 @@
             file: 'counter.js',
             description: 'Рахує пачки, можете сховати з екрану за допомогою F10. Виставте перерву.',
             getHandler: () => window.__itemCounter,
-            renderSettings: (container) => {
+            renderSettings: (container: HTMLElement) => {
                 const handler = window.__itemCounter;
                 if (!handler) return;
                 
@@ -94,7 +114,7 @@
                             <input type="number" id="sh-cfg-target" class="sh-input sh-flex-1" min="0" value="${targetRate}" placeholder="Необхідна норма" />
                         </div>
                         
-                        ${currentBranch === 'development' ? `
+                        ${(currentBranch === 'development' || currentBranch === 'ts-all-the-way') ? `
                         <div class="sh-setting-row sh-mt-8 sh-space-between" title="Власний час початку зміни">
                             <div class="sh-flex-center-gap">
                                 <span class="sh-emoji">⏱️</span>
@@ -114,53 +134,68 @@
                 `;
                 
                 container.querySelectorAll('.sh-opt-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
+                    btn.addEventListener('click', (e: Event) => {
+                        const target = e.target as HTMLElement;
                         container.querySelectorAll('.sh-opt-btn').forEach(b => b.classList.remove('active'));
-                        e.target.classList.add('active');
-                        const val = parseInt(e.target.getAttribute('data-val'), 10);
+                        target.classList.add('active');
+                        const val = parseInt(target.getAttribute('data-val') || '1', 10);
                         handler.updateSettings({ counterOption: val });
                     });
                 });
                 
-                container.querySelector('#sh-cfg-count').addEventListener('input', (e) => {
-                    let val = parseInt(e.target.value, 10);
-                    if (isNaN(val)) val = 0;
-                    if (val < 0) {
-                        val = 0;
-                        e.target.value = 0;
-                    }
-                    handler.setCount(val);
-                });
+                const countInput = container.querySelector('#sh-cfg-count') as HTMLInputElement;
+                if (countInput) {
+                    countInput.addEventListener('input', (e: Event) => {
+                        const target = e.target as HTMLInputElement;
+                        let val = parseInt(target.value, 10);
+                        if (isNaN(val)) val = 0;
+                        if (val < 0) {
+                            val = 0;
+                            target.value = '0';
+                        }
+                        handler.setCount(val);
+                    });
+                }
                 
-                container.querySelector('#sh-cfg-opacity').addEventListener('input', (e) => {
-                    const val = parseFloat(e.target.value);
-                    handler.updateSettings({ overlayOpacity: val });
-                });
+                const opacityInput = container.querySelector('#sh-cfg-opacity') as HTMLInputElement;
+                if (opacityInput) {
+                    opacityInput.addEventListener('input', (e: Event) => {
+                        const target = e.target as HTMLInputElement;
+                        const val = parseFloat(target.value);
+                        handler.updateSettings({ overlayOpacity: val });
+                    });
+                }
 
-                container.querySelector('#sh-cfg-target').addEventListener('input', (e) => {
-                    let val = parseFloat(e.target.value);
-                    if (isNaN(val) || val < 0) val = 0;
-                    handler.updateSettings({ targetRate: val });
-                });
+                const targetInput = container.querySelector('#sh-cfg-target') as HTMLInputElement;
+                if (targetInput) {
+                    targetInput.addEventListener('input', (e: Event) => {
+                        const target = e.target as HTMLInputElement;
+                        let val = parseFloat(target.value);
+                        if (isNaN(val) || val < 0) val = 0;
+                        handler.updateSettings({ targetRate: val });
+                    });
+                }
 
-                if (currentBranch === 'development') {
-                    const timeInput = container.querySelector('#sh-cfg-start-time');
-                    const btnNow = container.querySelector('#sh-btn-start-now');
-                    const btnReset = container.querySelector('#sh-btn-start-reset');
+                if (currentBranch === 'development' || currentBranch === 'ts-all-the-way') {
+                    const timeInput = container.querySelector('#sh-cfg-start-time') as HTMLInputElement;
+                    const btnNow = container.querySelector('#sh-btn-start-now') as HTMLButtonElement;
+                    const btnReset = container.querySelector('#sh-btn-start-reset') as HTMLButtonElement;
 
                     if (timeInput && btnNow && btnReset) {
-                        timeInput.addEventListener('input', (e) => {
-                            let digits = e.target.value.replace(/\D/g, '').split('');
+                        timeInput.addEventListener('input', (e: Event) => {
+                            const target = e.target as HTMLInputElement;
+                            const inputEvent = e as InputEvent;
+                            let digits = target.value.replace(/\D/g, '').split('');
                             let out = '';
 
                             if (digits.length > 0) {
-                                let d = digits.shift();
+                                let d = digits.shift()!;
                                 if (d >= '3') out += '0' + d; 
                                 else out += d;
                             }
 
                             if (digits.length > 0 && out.length === 1) {
-                                let d = digits.shift();
+                                let d = digits.shift()!;
                                 if (out[0] === '2' && d >= '4') {
                                     out = '0' + out[0];
                                     digits.unshift(d);
@@ -170,23 +205,23 @@
                             }
 
                             if (out.length === 2) {
-                                if (digits.length > 0 || e.inputType !== 'deleteContentBackward' || e.target.value.endsWith(':')) {
+                                if (digits.length > 0 || inputEvent.inputType !== 'deleteContentBackward' || target.value.endsWith(':')) {
                                     out += ':';
                                 }
                             }
 
                             if (digits.length > 0) {
-                                let d = digits.shift();
+                                let d = digits.shift()!;
                                 if (d >= '6') out += '0' + d; 
                                 else out += d;
                             }
 
                             if (digits.length > 0 && out.length === 4) {
-                                let d = digits.shift();
+                                let d = digits.shift()!;
                                 out += d;
                             }
 
-                            e.target.value = out;
+                            target.value = out;
 
                             if (out.length === 5 && out.match(/^\d{2}:\d{2}$/)) {
                                 handler.updateSettings({ customStartTime: out });
@@ -211,11 +246,13 @@
                     }
                 }
 
-                const advBtn = container.querySelector('#sh-adv-btn-item-counter');
-                const advContainer = container.querySelector('#sh-adv-container-item-counter');
-                advBtn.addEventListener('click', () => {
-                    advContainer.classList.toggle('sh-expanded');
-                });
+                const advBtn = container.querySelector('#sh-adv-btn-item-counter') as HTMLElement;
+                const advContainer = container.querySelector('#sh-adv-container-item-counter') as HTMLElement;
+                if (advBtn && advContainer) {
+                    advBtn.addEventListener('click', () => {
+                        advContainer.classList.toggle('sh-expanded');
+                    });
+                }
             }
         },
         {
@@ -224,18 +261,16 @@
             file: 'auto_questionnaire.js',
             description: 'Автоматично проклікує при натисненні.<br>Детальніше, щоб побачити всі команди',
             getHandler: () => window.__autoQuestionnaire,
-            renderSettings: (container) => {
+            renderSettings: (container: HTMLElement) => {
                 const handler = window.__autoQuestionnaire;
                 if (!handler) return;
                 
-                // Fetch the dynamic shortcuts using the optimized 'sequence' array
                 const shortcutsData = handler.getShortcuts ? handler.getShortcuts() : {};
                 const keys = Object.keys(shortcutsData);
                 
                 let listItems = '';
                 if (keys.length > 0) {
                     listItems = keys.map(key => {
-                        // Extract [0] from each variable inside the sequence array
                         const sequenceLabels = shortcutsData[key].sequence ? shortcutsData[key].sequence.map(arr => arr[0]) : [];
                         return `
                             <div class="sh-bind-row">
@@ -260,11 +295,13 @@
                     </div>
                 `;
 
-                const advBtn = container.querySelector('#sh-adv-btn-auto-questionnaire');
-                const advContainer = container.querySelector('#sh-adv-container-auto-questionnaire');
-                advBtn.addEventListener('click', () => {
-                    advContainer.classList.toggle('sh-expanded');
-                });
+                const advBtn = container.querySelector('#sh-adv-btn-auto-questionnaire') as HTMLElement;
+                const advContainer = container.querySelector('#sh-adv-container-auto-questionnaire') as HTMLElement;
+                if (advBtn && advContainer) {
+                    advBtn.addEventListener('click', () => {
+                        advContainer.classList.toggle('sh-expanded');
+                    });
+                }
             }
         },
         {
@@ -277,7 +314,7 @@
         }
     ];
 
-    async function handleToggle(scriptObj, checkbox, settingsContainer) {
+    async function handleToggle(scriptObj: ScriptDefinition, checkbox: HTMLInputElement, settingsContainer: HTMLElement | null): Promise<void> {
         const isChecked = checkbox.checked;
         let handler = scriptObj.getHandler();
         
@@ -295,7 +332,7 @@
                 
                 handler = scriptObj.getHandler();
                 checkbox.disabled = false;
-            } catch (err) {
+            } catch (err: any) {
                 alert(`⚠️ Failed to load ${scriptObj.name}:\n${err.message}`);
                 checkbox.checked = false;
                 checkbox.disabled = false;
@@ -320,80 +357,12 @@
         }
     }
 
-    function injectUI() {
+    function injectUI(): void {
         const hub = document.createElement('div');
         hub.id = 'sh-root';
         hub.innerHTML = `
             <style>
-                #sh-root { font-family: 'Roboto', -apple-system, sans-serif; z-index: 999999; }
-                #sh-panel { position: fixed; top: 0; right: -340px; width: 320px; height: 100vh; z-index: 999998; background: #fafafa; box-shadow: -4px 0 24px rgba(0,0,0,0.12); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
-                #sh-panel.sh-open { right: 0; }
-                .sh-header { background: #ffffff; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e0e0e0; }
-                .sh-header-group { display: flex; gap: 8px; align-items: center; }
-                .sh-dep-dropdown, .sh-url-btn { background: #f1f3f4; border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; font-size: 12px; color: #444746; font-weight: 600; cursor: pointer; outline: none; transition: background 0.2s, border 0.2s, color 0.2s; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: 24px; box-sizing: border-box; }
-                .sh-dep-dropdown:hover, .sh-url-btn:hover { background: #e8eaed; color: #202124; text-decoration: none; }
-                .sh-dep-dropdown:focus, .sh-url-btn:focus { border-color: #1a73e8; background: #ffffff; }
-                .sh-close { background: none; border: none; color: #5f6368; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; padding: 0; line-height: 1; }
-                .sh-close:hover { background: rgba(0,0,0,0.05); color: #202124; }
-                .sh-body { padding: 16px; overflow-y: auto; flex: 1; }
-                .sh-card { background: #ffffff; border: 1px solid #dadce0; border-radius: 10px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
-                .sh-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
-                .sh-card-info { flex: 1; padding-right: 12px; }
-                .sh-card-title { font-weight: 500; font-size: 14px; color: #202124; margin-bottom: 4px; }
-                .sh-card-desc { font-size: 12px; color: #5f6368; line-height: 1.3; }
-                .sh-card-settings { display: none; margin-top: 10px; }
-                .sh-settings-divider { height: 1px; background: #f1f3f4; margin: 10px 0; }
-                .sh-setting-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-                .sh-emoji { font-size: 16px; line-height: 1; opacity: 0.8; }
-                .sh-adv-text { font-size: 11px; color: #9aa0a6; cursor: pointer; user-select: none; transition: color 0.2s; }
-                .sh-adv-text:hover { color: #5f6368; }
-                .sh-opt-group { display: flex; gap: 4px; flex: 1; }
-                .sh-opt-btn { background: #ffffff; border: 1px solid #dadce0; border-radius: 6px; color: #5f6368; font-size: 12px; font-weight: 600; padding: 4px 0; flex: 1; text-align: center; cursor: pointer; transition: all 0.2s; }
-                .sh-opt-btn:hover:not(.active) { background: #f1f3f4; }
-                .sh-opt-btn.active { background: #1a73e8; border-color: #1a73e8; color: #ffffff; }
-                
-                .sh-time-btn { background: #ffffff; border: 1px solid #dadce0; border-radius: 6px; color: #5f6368; font-size: 11px; font-weight: 600; padding: 4px 8px; cursor: pointer; transition: all 0.2s; }
-                .sh-time-btn:hover { background: #f1f3f4; color: #202124; }
-
-                .sh-input { padding: 6px 10px; font-size: 13px; border: 1px solid #dadce0; border-radius: 6px; box-sizing: border-box; outline: none; transition: border 0.2s; }
-                .sh-input:focus { border-color: #1a73e8; }
-                .sh-input-small { width: 35%; flex: 0 0 35%; }
-                
-                /* HIDE ARROWS FOR NUMBER INPUTS */
-                .sh-input[type=number]::-webkit-inner-spin-button, 
-                .sh-input[type=number]::-webkit-outer-spin-button { 
-                    -webkit-appearance: none; 
-                    margin: 0; 
-                }
-                .sh-input[type=number] { 
-                    -moz-appearance: textfield; 
-                }
-
-                .sh-range { flex: 1; accent-color: #1a73e8; cursor: pointer; }
-                .sh-switch { position: relative; width: 34px; height: 20px; flex-shrink: 0; margin-top: 2px;}
-                .sh-switch input { opacity: 0; width: 0; height: 0; }
-                .sh-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #dadce0; transition: .3s; border-radius: 20px; }
-                .sh-slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-                input:checked + .sh-slider { background-color: #1a73e8; }
-                input:checked + .sh-slider:before { transform: translateX(14px); }
-
-                /* Shared Advanced Container Logic & Utility Classes */
-                .sh-adv-container { display: none; padding-top: 8px; margin-top: 8px; border-top: 1px dashed #e0e0e0; }
-                .sh-adv-container.sh-expanded { display: block; }
-                .sh-adv-toggle-wrap { display: flex; justify-content: flex-end; margin-top: 6px; }
-                .sh-flex-1 { flex: 1; }
-                .sh-mt-8 { margin-top: 8px; }
-                .sh-space-between { justify-content: space-between; }
-                .sh-flex-center-gap { display: flex; align-items: center; gap: 8px; }
-                .sh-flex-gap { display: flex; gap: 6px; }
-                .sh-time-input-small { width: 55px; text-align: center; padding: 6px 4px; }
-                
-                /* Auto Questionnaire Styles (Flex Rows for crisp separation) */
-                .sh-bind-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-                .sh-bind-row { display: flex; align-items: stretch; background: #f8f9fa; border: 1px solid #e8eaed; border-radius: 6px; overflow: hidden; }
-                .sh-bind-key { background: #e8f0fe; color: #1a73e8; font-weight: 600; font-size: 12px; padding: 6px 10px; display: flex; align-items: center; justify-content: center; min-width: 32px; border-right: 1px solid #e8eaed; }
-                .sh-bind-action { padding: 6px 10px; font-size: 11px; color: #5f6368; line-height: 1.4; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
-                .sh-arrow { color: #bdc1c6; font-size: 10px; }
+                ${HUB_STYLES}
             </style>
             
             <div id="sh-panel">
@@ -416,85 +385,102 @@
         `;
         document.body.appendChild(hub);
         
-        const panel = document.getElementById('sh-panel');
+        const panelEl = document.getElementById('sh-panel') as HTMLElement;
         
-        function closePanel() {
-            panel.classList.remove('sh-open');
-            // Target ALL advanced containers and collapse them dynamically
+        function closePanel(): void {
+            panelEl.classList.remove('sh-open');
             document.querySelectorAll('.sh-adv-container').forEach(el => el.classList.remove('sh-expanded'));
         }
         
-        document.getElementById('sh-close-btn').onclick = closePanel;
-        document.addEventListener('mousedown', (e) => { if (panel.classList.contains('sh-open') && !panel.contains(e.target)) closePanel(); });
-        
-        const subDepSelect = document.getElementById('sh-subdep-select');
-        subDepSelect.addEventListener('change', (e) => {
-            currentDep = e.target.value;
-            localStorage.setItem('sh_hub_dep', currentDep);
-            if (window.__itemCounter) {
-                const newConfig = DEPARTMENT_CONFIG[currentDep];
-                if (newConfig) {
-                    window.__itemCounter.updateSettings({ targetRate: newConfig.targetRate });
-                    const targetInput = document.getElementById('sh-cfg-target');
-                    if (targetInput) targetInput.value = newConfig.targetRate;
-                }
-            }
-        });
+        const closeBtn = document.getElementById('sh-close-btn');
+        if (closeBtn) closeBtn.onclick = closePanel;
 
-        const visibleScripts = SCRIPTS.filter(script => !script.experimental || currentBranch === 'development');
+        document.addEventListener('mousedown', (e: MouseEvent) => { 
+            const target = e.target as Node;
+            if (panelEl.classList.contains('sh-open') && !panelEl.contains(target)) closePanel(); 
+        });
         
-        const updateMasterToggleState = () => {
-            const chkAll = document.getElementById('sh-chk-all');
+        const subDepSelect = document.getElementById('sh-subdep-select') as HTMLSelectElement;
+        if (subDepSelect) {
+            subDepSelect.addEventListener('change', (e: Event) => {
+                const target = e.target as HTMLSelectElement;
+                
+                if (isDepartment(target.value)) {
+                    currentDep = target.value;
+                    localStorage.setItem('sh_hub_dep', currentDep);
+                    if (window.__itemCounter) {
+                        const newConfig = DEPARTMENT_CONFIG[currentDep];
+                        if (newConfig) {
+                            window.__itemCounter.updateSettings({ targetRate: newConfig.targetRate });
+                            const targetInput = document.getElementById('sh-cfg-target') as HTMLInputElement;
+                            if (targetInput) targetInput.value = newConfig.targetRate.toString();
+                        }
+                    }
+                }
+            });
+        }
+
+        const visibleScripts = SCRIPTS.filter(script => !script.experimental || currentBranch === 'development' || currentBranch === 'ts-all-the-way');
+        
+        const updateMasterToggleState = (): void => {
+            const chkAll = document.getElementById('sh-chk-all') as HTMLInputElement;
             if (!chkAll) return;
             const standardScripts = visibleScripts.filter(s => !s.experimental);
-            const checkBoxes = standardScripts.map(s => document.getElementById(`sh-chk-${s.id}`));
+            const checkBoxes = standardScripts.map(s => document.getElementById(`sh-chk-${s.id}`) as HTMLInputElement | null);
             chkAll.checked = checkBoxes.length > 0 && checkBoxes.every(chk => chk && chk.checked);
         };
         
-        visibleScripts.forEach(script => {
-            const handler = script.getHandler();
-            const isCurrentlyActive = handler ? handler.isActive() : false;
-            
-            const card = document.createElement('div');
-            card.className = 'sh-card';
-            card.innerHTML = `
-                <div class="sh-card-top">
-                    <div class="sh-card-info">
-                        <div class="sh-card-title">${script.name}</div>
-                        <div class="sh-card-desc">${script.description}</div>
+        const listContainer = document.getElementById('sh-list');
+        if (listContainer) {
+            visibleScripts.forEach(script => {
+                const handler = script.getHandler();
+                const isCurrentlyActive = handler ? handler.isActive() : false;
+                
+                const card = document.createElement('div');
+                card.className = 'sh-card';
+                card.innerHTML = `
+                    <div class="sh-card-top">
+                        <div class="sh-card-info">
+                            <div class="sh-card-title">${script.name}</div>
+                            <div class="sh-card-desc">${script.description}</div>
+                        </div>
+                        <label class="sh-switch">
+                            <input type="checkbox" id="sh-chk-${script.id}" ${isCurrentlyActive ? 'checked' : ''}>
+                            <span class="sh-slider"></span>
+                        </label>
                     </div>
-                    <label class="sh-switch">
-                        <input type="checkbox" id="sh-chk-${script.id}" ${isCurrentlyActive ? 'checked' : ''}>
-                        <span class="sh-slider"></span>
-                    </label>
-                </div>
-                <div class="sh-card-settings" id="sh-settings-${script.id}"></div>
-            `;
-            
-            document.getElementById('sh-list').appendChild(card);
-            
-            const chk = card.querySelector(`#sh-chk-${script.id}`);
-            const settingsContainer = card.querySelector(`#sh-settings-${script.id}`);
-            
-            if (isCurrentlyActive && script.renderSettings) {
-                settingsContainer.style.display = 'block';
-                script.renderSettings(settingsContainer);
-            }
-            
-            chk.onchange = async () => {
-                await handleToggle(script, chk, settingsContainer);
-                updateMasterToggleState();
-            };
-        });
+                    <div class="sh-card-settings" id="sh-settings-${script.id}"></div>
+                `;
+                
+                listContainer.appendChild(card);
+                
+                const chk = card.querySelector(`#sh-chk-${script.id}`) as HTMLInputElement;
+                const settingsContainer = card.querySelector(`#sh-settings-${script.id}`) as HTMLElement;
+                
+                if (isCurrentlyActive && script.renderSettings) {
+                    settingsContainer.style.display = 'block';
+                    script.renderSettings(settingsContainer);
+                }
+                
+                if (chk) {
+                    chk.onchange = async () => {
+                        await handleToggle(script, chk, settingsContainer);
+                        updateMasterToggleState();
+                    };
+                }
+            });
+        }
         
-        const chkAll = document.getElementById('sh-chk-all');
+        const chkAll = document.getElementById('sh-chk-all') as HTMLInputElement;
         if (chkAll) {
-            chkAll.addEventListener('change', async (e) => {
-                const turnOn = e.target.checked;
-                const togglePromises = [];
+            chkAll.addEventListener('change', async (e: Event) => {
+                const target = e.target as HTMLInputElement;
+                const turnOn = target.checked;
+                const togglePromises: Promise<void>[] = [];
+                
                 visibleScripts.forEach(script => {
                     if (script.experimental) return; 
-                    const chk = document.getElementById(`sh-chk-${script.id}`);
+                    const chk = document.getElementById(`sh-chk-${script.id}`) as HTMLInputElement;
                     const settingsContainer = document.getElementById(`sh-settings-${script.id}`);
                     if (chk && chk.checked !== turnOn && !chk.disabled) {
                         chk.checked = turnOn;
@@ -507,8 +493,8 @@
         }
         
         updateMasterToggleState();
-        setTimeout(() => { if (panel) panel.classList.add('sh-open'); }, 100);
+        setTimeout(() => { panelEl.classList.add('sh-open'); }, 100);
     }
     
     injectUI();
-})();
+}

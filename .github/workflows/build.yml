@@ -1,0 +1,54 @@
+name: Compile TypeScript
+
+on:
+  push:
+    branches:
+      - main
+      - development
+      - ts-all-the-way
+    paths:
+      - 'src/**'            # Only run if code inside src/ changes
+      - 'package.json'
+      - 'tsup.config.ts'
+
+# 2. What should it do?
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    # Grant the bot permission to push the compiled code back to your repo
+    permissions:
+      contents: write
+
+    steps:
+      # Step A: Download your repository onto the cloud machine
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step B: Install Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      # Step C: Install tsup and typescript
+      - name: Install dependencies
+        run: npm install
+
+      # Step D: Compile the code (This creates the /dist folder)
+      - name: Build scripts
+        run: npm run build
+
+      # Step E: Commit the finished .js files back to GitHub
+      - name: Commit and Push changes
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Stage the dist folder
+          git add dist/
+          
+          # Check if there are actually any changes to commit. 
+          # The "[skip ci]" tag is critical! It stops GitHub Actions from triggering an infinite loop of builds.
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: auto-compile typescript to dist [skip ci]" && git push)

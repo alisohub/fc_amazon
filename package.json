@@ -1,0 +1,13 @@
+{
+  "name": "fc-amazon-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -1,10 +1,10 @@
-(() => {
-    if (window.__counterLoaded) {
-        return;
-    }
+import { isInsideModal } from '@shared/dom';
+import { getEffectiveWorkTime, calculateUPH, calculatePercentageStr } from '@shared/time';
+
+if (!window.__counterLoaded) {
     window.__counterLoaded = true;
 
-    const TARGET_LABELS = [
+    const TARGET_LABELS: string[] = [
         'wprowadź pojemnik',
         'вкажіть транспортну тару',
         'введите тару'
@@ -13,135 +13,45 @@
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';
     const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
     
-    let settings = {
+    // Uses the CounterSettings interface we defined in global.d.ts
+    let settings: CounterSettings = {
         overlayOpacity: 0.3,
         counterOption: 1,
         overlayLeft: null,
         overlayTop: null,
-        customStartTime: null 
+        customStartTime: null,
+        targetRate: 47 // Default fallback
     };
     
     try {
         const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
         if (savedSettings) {
             const parsed = JSON.parse(savedSettings);
+            // Ensure targetRate isn't overwritten incorrectly during load
             delete parsed.targetRate; 
             settings = { ...settings, ...parsed };
         }
     } catch (e) {}
     
-    const TOTE_REGEX = /^ts[a-z0-9]+/i;
-    let itemCounter = 0;
+    const TOTE_REGEX: RegExp = /^ts[a-z0-9]+/i;
+    let itemCounter: number = 0;
     
     try {
         const savedCount = localStorage.getItem(STORAGE_KEY_COUNT);
         if (savedCount !== null) itemCounter = parseInt(savedCount, 10) || 0;
     } catch (e) {}
     
-    let active = false;
-    let overlayVisible = true;
-    let isProcessingScan = false;
+    let active: boolean = false;
+    let overlayVisible: boolean = true;
+    let isProcessingScan: boolean = false;
     
-    function saveCount(count) {
+    function saveCount(count: number): void {
         itemCounter = count;
         try { localStorage.setItem(STORAGE_KEY_COUNT, count.toString()); }
         catch (e) {}
     }
     
-    function getEffectiveWorkTime() {
-        const now = new Date();
-        const hours = now.getHours();
-        const isNight = hours >= 17 || hours < 6;
-        let shiftStart = new Date(now);
-
-        // Safely parse the manual HH:MM text input
-        let appliedCustomTime = false;
-        if (settings.customStartTime && settings.customStartTime.includes(':')) {
-            const parts = settings.customStartTime.split(':');
-            const cHours = parseInt(parts[0], 10);
-            const cMins = parseInt(parts[1], 10);
-            
-            // Only apply if the numbers are valid times
-            if (!isNaN(cHours) && !isNaN(cMins) && cHours >= 0 && cHours <= 23 && cMins >= 0 && cMins <= 59) {
-                shiftStart.setHours(cHours, cMins, 0, 0);
-                if (isNight && hours < 6 && cHours >= 17) {
-                    shiftStart.setDate(shiftStart.getDate() - 1);
-                }
-                appliedCustomTime = true;
-            }
-        } 
-        
-        // Default Logic if no custom time is set (or if it was invalid)
-        if (!appliedCustomTime) {
-            if (isNight) {
-                if (hours < 6) shiftStart.setDate(shiftStart.getDate() - 1);
-                shiftStart.setHours(18, 30, 0, 0);
-            } else {
-                shiftStart.setHours(6, 30, 0, 0);
-            }
-        }
-
-        const elapsedMs = now - shiftStart;
-        if (elapsedMs <= 0) return { ms: 0, formatted: '0h0m' };
-        
-        let breakStart = new Date(shiftStart);
-        let breakEnd = new Date(shiftStart);
-        const opt = settings.counterOption || 1;
-        
-        if (isNight) {
-            if (opt === 1) { breakStart.setHours(23, 20, 0, 0); breakEnd.setHours(23, 50, 0, 0); }
-            else if (opt === 2) { breakStart.setHours(23, 50, 0, 0); breakEnd.setDate(breakEnd.getDate()+1); breakEnd.setHours(0, 20, 0, 0); }
-            else if (opt === 3) { breakStart.setDate(breakStart.getDate()+1); breakStart.setHours(0, 20, 0, 0); breakEnd.setDate(breakEnd.getDate()+1); breakEnd.setHours(0, 50, 0, 0); }
-            else if (opt === 4) { breakStart.setDate(breakStart.getDate()+1); breakStart.setHours(0, 50, 0, 0); breakEnd.setDate(breakEnd.getDate()+1); breakEnd.setHours(1, 20, 0, 0); }
-        } else {
-            if (opt === 1) { breakStart.setHours(11, 20, 0, 0); breakEnd.setHours(11, 50, 0, 0); }
-            else if (opt === 2) { breakStart.setHours(11, 50, 0, 0); breakEnd.setHours(12, 20, 0, 0); }
-            else if (opt === 3) { breakStart.setHours(12, 20, 0, 0); breakEnd.setHours(12, 50, 0, 0); }
-            else if (opt === 4) { breakStart.setHours(12, 50, 0, 0); breakEnd.setHours(13, 20, 0, 0); }
-        }
-        
-        let effectiveMs = elapsedMs;
-        if (now >= breakStart && now < breakEnd) {
-            effectiveMs = breakStart - shiftStart;
-        } else if (now >= breakEnd) {
-            effectiveMs = elapsedMs - (30 * 60 * 1000);
-        }
-        
-        const maxMs = 10 * 60 * 60 * 1000;
-        if (effectiveMs > maxMs) effectiveMs = maxMs;
-        
-        const totalMinutes = Math.floor(effectiveMs / (1000 * 60));
-        const h = Math.floor(totalMinutes / 60);
-        const m = totalMinutes % 60;
-        
-        return { ms: effectiveMs, formatted: `${h}h${m}m` };
-    }
-    
-    function calculateUPH() {
-        if (itemCounter === 0) return "0.0";
-        const timeData = getEffectiveWorkTime();
-        if (timeData.ms <= 0) return "0.0";
-        const hoursWorked = timeData.ms / (1000 * 60 * 60);
-        return (itemCounter / hoursWorked).toFixed(1);
-    }
-        
-    function calculatePercentageStr(uphString) {
-        const target = settings.targetRate || 47; 
-        if (target <= 0) return "---%";
-        return ((parseFloat(uphString) / target) * 100).toFixed(1) + "%";
-    }
-    
-    function isInsideModal(el) {
-        if (el.closest('dialog[open]')) return true;
-        const modal = el.closest('[role="dialog"],[role="alertdialog"],.modal,.popup,.overlay,.dialog');
-        if (modal) {
-            const style = window.getComputedStyle(modal);
-            if (style.display !== 'none' && style.visibility !== 'hidden') return true;
-        }
-        return false;
-    }
-    
-    function createOrGetOverlay() {
+    function createOrGetOverlay(): HTMLElement {
         let overlay = document.getElementById('sh-item-overlay');
         if (overlay) return overlay;
         
@@ -173,9 +83,10 @@
             overlay.style.bottom = 'auto';
         }
         
-        const timeData = getEffectiveWorkTime();
-        const currentUPH = calculateUPH();
-        const currentPct = calculatePercentageStr(currentUPH);
+        // Use our imported shared utility functions
+        const timeData = getEffectiveWorkTime(settings.customStartTime, settings.counterOption);
+        const currentUPH = calculateUPH(itemCounter, timeData.ms);
+        const currentPct = calculatePercentageStr(currentUPH, settings.targetRate || 47);
                 
         overlay.innerHTML = `
             <span id="sh-overlay-count">${itemCounter}</span>
@@ -186,49 +97,60 @@
             <span id="sh-overlay-time">${timeData.formatted}</span>
         `;
         
-        overlay.addEventListener('mouseenter', () => { if (overlayVisible) overlay.style.opacity = '1'; });
-        overlay.addEventListener('mouseleave', () => { if (overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString(); });
+        overlay.addEventListener('mouseenter', () => { if (overlayVisible && overlay) overlay.style.opacity = '1'; });
+        overlay.addEventListener('mouseleave', () => { if (overlayVisible && overlay) overlay.style.opacity = settings.overlayOpacity.toString(); });
         
-        let isDragging = false, startX, startY, initialLeft, initialTop;
+        let isDragging: boolean = false;
+        let startX: number = 0;
+        let startY: number = 0;
+        let initialLeft: number = 0;
+        let initialTop: number = 0;
         
-        function dragStart(e) {
+        // Strict typing for Drag and Drop
+        const dragStart = (e: MouseEvent | TouchEvent): void => {
             isDragging = true;
-            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+            const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+            const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+            
             startX = clientX;
             startY = clientY;
-            const rect = overlay.getBoundingClientRect();
-            initialLeft = rect.left;
-            initialTop = rect.top;
-        }
+            
+            if (overlay) {
+                const rect = overlay.getBoundingClientRect();
+                initialLeft = rect.left;
+                initialTop = rect.top;
+            }
+        };
         
-        function dragMove(e) {
-            if (!isDragging) return;
-            if (e.type === 'touchmove') e.preventDefault();
-            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+        const dragMove = (e: MouseEvent | TouchEvent): void => {
+            if (!isDragging || !overlay) return;
+            if ('touches' in e && e.cancelable) e.preventDefault();
+            
+            const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+            const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+            
             overlay.style.left = `${initialLeft + (clientX - startX)}px`;
             overlay.style.top = `${initialTop + (clientY - startY)}px`;
-        }
+        };
         
-        function dragEnd() {
-            if (isDragging) {
+        const dragEnd = (): void => {
+            if (isDragging && overlay) {
                 isDragging = false;
                 settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
                 settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
                 try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
             }
-        }
+        };
         
-        overlay.addEventListener('mousedown', dragStart);
-        document.addEventListener('mousemove', dragMove);
+        overlay.addEventListener('mousedown', dragStart as EventListener);
+        document.addEventListener('mousemove', dragMove as EventListener);
         document.addEventListener('mouseup', dragEnd);
-        overlay.addEventListener('touchstart', dragStart, { passive: false });
-        document.addEventListener('touchmove', dragMove, { passive: false });
+        overlay.addEventListener('touchstart', dragStart as EventListener, { passive: false });
+        document.addEventListener('touchmove', dragMove as EventListener, { passive: false });
         document.addEventListener('touchend', dragEnd);
         
         window.addEventListener('resize', () => {
-            if (!active) return;
+            if (!active || !overlay) return;
             const rect = overlay.getBoundingClientRect();
             let changed = false;
             if (rect.right > window.innerWidth) {
@@ -250,35 +172,36 @@
         return overlay;
     }
     
-    function updateCounterUI(count) {
+    function updateCounterUI(count: number): void {
         saveCount(count);
                 
         const overlayCount = document.getElementById('sh-overlay-count');
-        if (overlayCount) overlayCount.textContent = count;
+        if (overlayCount) overlayCount.textContent = count.toString();
                 
-        const currentUPH = calculateUPH();
+        const timeData = getEffectiveWorkTime(settings.customStartTime, settings.counterOption);
+        const currentUPH = calculateUPH(count, timeData.ms);
                 
         const overlayUPH = document.getElementById('sh-overlay-uph');
         if (overlayUPH) overlayUPH.textContent = `${currentUPH}/h`;
                 
         const overlayPct = document.getElementById('sh-overlay-pct');
-        if (overlayPct) overlayPct.textContent = `(${calculatePercentageStr(currentUPH)})`;
+        if (overlayPct) overlayPct.textContent = `(${calculatePercentageStr(currentUPH, settings.targetRate || 47)})`;
                 
         const overlayTime = document.getElementById('sh-overlay-time');
-        if (overlayTime) overlayTime.textContent = getEffectiveWorkTime().formatted;
+        if (overlayTime) overlayTime.textContent = timeData.formatted;
         
-        const hubInput = document.getElementById('sh-cfg-count');
+        const hubInput = document.getElementById('sh-cfg-count') as HTMLInputElement | null;
         if (hubInput && document.activeElement !== hubInput) {
-            hubInput.value = count === 0 ? '' : count;
+            hubInput.value = count === 0 ? '' : count.toString();
         }
     }
     
-    function hasTargetLabel(labelString) {
+    function hasTargetLabel(labelString: string | null): boolean {
         const lowerLabel = (labelString || '').toLowerCase();
         return TARGET_LABELS.some(target => lowerLabel.includes(target));
     }
     
-    function verifyAndCount(input) {
+    function verifyAndCount(input: HTMLInputElement): void {
         const initialLabel = input.getAttribute('aria-label');
         if (!hasTargetLabel(initialLabel)) {
             isProcessingScan = false;
@@ -323,12 +246,14 @@
         }, 4000);
     }
     
-    function handleScan(e) {
+    function handleScan(e: KeyboardEvent): void {
         if (!active) return;
         if (e.key !== 'Enter') return;
         if (isProcessingScan) return; 
         
-        const input = e.target;
+        const input = e.target as HTMLInputElement;
+        
+        if (!input.matches) return; // Prevent crashes on non-DOM elements
         if (input.closest('#sh-root')) return;
         if (!input.matches('input:not([type="hidden"]):not([disabled])') || isInsideModal(input)) return;
         
@@ -339,7 +264,7 @@
         verifyAndCount(input);
     }
     
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
         if (!active) return;
                 
         if (e.key === 'F10') {
@@ -359,39 +284,40 @@
     
     setInterval(() => {
         if (active && overlayVisible) {
-            const currentUPH = calculateUPH();
+            const timeData = getEffectiveWorkTime(settings.customStartTime, settings.counterOption);
+            const currentUPH = calculateUPH(itemCounter, timeData.ms);
                         
             const uphEl = document.getElementById('sh-overlay-uph');
             if (uphEl) uphEl.textContent = `${currentUPH}/h`;
                         
             const pctEl = document.getElementById('sh-overlay-pct');
-            if (pctEl) pctEl.textContent = `(${calculatePercentageStr(currentUPH)})`;
+            if (pctEl) pctEl.textContent = `(${calculatePercentageStr(currentUPH, settings.targetRate || 47)})`;
                         
             const timeEl = document.getElementById('sh-overlay-time');
-            if (timeEl) timeEl.textContent = getEffectiveWorkTime().formatted;
+            if (timeEl) timeEl.textContent = timeData.formatted;
         }
     }, 60000);
     
-    document.addEventListener('keydown', handleScan, true);
+    document.addEventListener('keydown', handleScan as EventListener, true);
     createOrGetOverlay();
     
     window.__itemCounter = {
-        enable: () => {
+        enable: (): void => {
             active = true;
             const overlay = createOrGetOverlay();
             if (overlay) overlay.style.display = overlayVisible ? 'block' : 'none';
             updateCounterUI(itemCounter);
         },
-        disable: () => {
+        disable: (): void => {
             active = false;
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay) overlay.style.display = 'none';
         },
-        isActive: () => active,
-        getCount: () => itemCounter,
-        setCount: (newCount) => updateCounterUI(newCount),
-        getSettings: () => settings,
-        updateSettings: (newSettings) => {
+        isActive: (): boolean => active,
+        getCount: (): number => itemCounter,
+        setCount: (newCount: number): void => updateCounterUI(newCount),
+        getSettings: (): CounterSettings => settings,
+        updateSettings: (newSettings: Partial<CounterSettings>): void => {
             settings = { ...settings, ...newSettings };
             try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
             const overlay = document.getElementById('sh-item-overlay');
@@ -399,5 +325,6 @@
             updateCounterUI(itemCounter);
         }
     };
+    
     window.__itemCounter.enable();
-})();
+}
