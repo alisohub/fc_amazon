@@ -7,7 +7,7 @@ export interface WorkTimeData {
  * Calculates the exact amount of milliseconds a user has been working,
  * factoring in day/night shifts, custom start times, and Amazon break deductions.
  */
-export function getEffectiveWorkTime(customStartTime: string | null, counterOption: number): WorkTimeData {
+export function getEffectiveWorkTime(customStartTime: string | null, lunchBreak: number): WorkTimeData {
     const now = new Date();
     const hours = now.getHours();
     const isNight = hours >= 17 || hours < 6;
@@ -45,7 +45,7 @@ export function getEffectiveWorkTime(customStartTime: string | null, counterOpti
     
     let breakStart = new Date(shiftStart.getTime());
     let breakEnd = new Date(shiftStart.getTime());
-    const opt = counterOption || 1;
+    const opt = lunchBreak || 1;
     
     // Break schedules
     if (isNight) {

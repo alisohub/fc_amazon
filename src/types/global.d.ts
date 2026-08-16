@@ -17,7 +17,7 @@ declare global {
     // specific settings shape for the counter
     interface CounterSettings {
         overlayOpacity: number;
-        counterOption: number;
+        lunchBreak: number;
         overlayLeft: number | null;
         overlayTop: number | null;
         customStartTime: string | null;

@@ -16,9 +16,9 @@ if (!window.__counterLoaded) {
     // Uses the CounterSettings interface we defined in global.d.ts
     let settings: CounterSettings = {
         overlayOpacity: 0.3,
-        counterOption: 1,
-        overlayLeft: null,
-        overlayTop: null,
+        lunchBreak: 1,
+        overlayLeft: 40,
+        overlayTop: 862,
         customStartTime: null,
         targetRate: 47 // Default fallback
     };
@@ -77,14 +77,14 @@ if (!window.__counterLoaded) {
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
         } else {
-            overlay.style.left = '45px';
+            overlay.style.left = '40px';
             overlay.style.top = '862px';
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
         }
         
         // Use our imported shared utility functions
-        const timeData = getEffectiveWorkTime(settings.customStartTime, settings.counterOption);
+        const timeData = getEffectiveWorkTime(settings.customStartTime, settings.lunchBreak);
         const currentUPH = calculateUPH(itemCounter, timeData.ms);
         const currentPct = calculatePercentageStr(currentUPH, settings.targetRate || 47);
                 
@@ -178,7 +178,7 @@ if (!window.__counterLoaded) {
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count.toString();
                 
-        const timeData = getEffectiveWorkTime(settings.customStartTime, settings.counterOption);
+        const timeData = getEffectiveWorkTime(settings.customStartTime, settings.lunchBreak);
         const currentUPH = calculateUPH(count, timeData.ms);
                 
         const overlayUPH = document.getElementById('sh-overlay-uph');
@@ -284,7 +284,7 @@ if (!window.__counterLoaded) {
     
     setInterval(() => {
         if (active && overlayVisible) {
-            const timeData = getEffectiveWorkTime(settings.customStartTime, settings.counterOption);
+            const timeData = getEffectiveWorkTime(settings.customStartTime, settings.lunchBreak);
             const currentUPH = calculateUPH(itemCounter, timeData.ms);
                         
             const uphEl = document.getElementById('sh-overlay-uph');

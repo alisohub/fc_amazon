@@ -62,6 +62,7 @@ else {
         getHandler: () => ScriptHandler | undefined | any;
         renderSettings?: (container: HTMLElement) => void;
         experimental?: boolean;
+        excludeDeps?: Department[]; 
     }
     
     const SCRIPTS: ScriptDefinition[] = [
@@ -70,6 +71,7 @@ else {
             name: 'Авто-LPN',
             file: 'auto_lpn.js',
             description: 'Автоматично відкриває "перепризначити LPN" при скануванні LPN або будь-чого іншого, окрім тота',
+            excludeDeps: ['REFURB'],
             getHandler: () => window.__autoLpn
         },
         {
@@ -95,10 +97,10 @@ else {
                     <div class="sh-setting-row" title="Options & Manual Edit">
                         <span class="sh-emoji">🍴</span>
                         <div class="sh-opt-group">
-                            <div class="sh-opt-btn ${settings.counterOption === 1 ? 'active' : ''}" data-val="1">1</div>
-                            <div class="sh-opt-btn ${settings.counterOption === 2 ? 'active' : ''}" data-val="2">2</div>
-                            <div class="sh-opt-btn ${settings.counterOption === 3 ? 'active' : ''}" data-val="3">3</div>
-                            <div class="sh-opt-btn ${settings.counterOption === 4 ? 'active' : ''}" data-val="4">4</div>
+                            <div class="sh-opt-btn ${settings.lunchBreak === 1 ? 'active' : ''}" data-val="1">1</div>
+                            <div class="sh-opt-btn ${settings.lunchBreak === 2 ? 'active' : ''}" data-val="2">2</div>
+                            <div class="sh-opt-btn ${settings.lunchBreak === 3 ? 'active' : ''}" data-val="3">3</div>
+                            <div class="sh-opt-btn ${settings.lunchBreak === 4 ? 'active' : ''}" data-val="4">4</div>
                         </div>
                         <span class="sh-emoji">✏️</span>
                         <input type="number" id="sh-cfg-count" class="sh-input sh-input-small" min="0" value="${currentCount === 0 ? '' : currentCount}" placeholder="666" />
@@ -114,7 +116,6 @@ else {
                             <input type="number" id="sh-cfg-target" class="sh-input sh-flex-1" min="0" value="${targetRate}" placeholder="Необхідна норма" />
                         </div>
                         
-                        ${(currentBranch === 'development' || currentBranch === 'ts-all-the-way') ? `
                         <div class="sh-setting-row sh-mt-8 sh-space-between" title="Власний час початку зміни">
                             <div class="sh-flex-center-gap">
                                 <span class="sh-emoji">⏱️</span>
@@ -125,7 +126,6 @@ else {
                                 <button id="sh-btn-start-reset" class="sh-time-btn">Скинути</button>
                             </div>
                         </div>
-                        ` : ''}
                     </div>
                     
                     <div class="sh-adv-toggle-wrap">
@@ -139,7 +139,7 @@ else {
                         container.querySelectorAll('.sh-opt-btn').forEach(b => b.classList.remove('active'));
                         target.classList.add('active');
                         const val = parseInt(target.getAttribute('data-val') || '1', 10);
-                        handler.updateSettings({ counterOption: val });
+                        handler.updateSettings({ lunchBreak: val });
                     });
                 });
                 
@@ -176,74 +176,72 @@ else {
                     });
                 }
 
-                if (currentBranch === 'development' || currentBranch === 'ts-all-the-way') {
-                    const timeInput = container.querySelector('#sh-cfg-start-time') as HTMLInputElement;
-                    const btnNow = container.querySelector('#sh-btn-start-now') as HTMLButtonElement;
-                    const btnReset = container.querySelector('#sh-btn-start-reset') as HTMLButtonElement;
+                const timeInput = container.querySelector('#sh-cfg-start-time') as HTMLInputElement;
+                const btnNow = container.querySelector('#sh-btn-start-now') as HTMLButtonElement;
+                const btnReset = container.querySelector('#sh-btn-start-reset') as HTMLButtonElement;
 
-                    if (timeInput && btnNow && btnReset) {
-                        timeInput.addEventListener('input', (e: Event) => {
-                            const target = e.target as HTMLInputElement;
-                            const inputEvent = e as InputEvent;
-                            let digits = target.value.replace(/\D/g, '').split('');
-                            let out = '';
+                if (timeInput && btnNow && btnReset) {
+                    timeInput.addEventListener('input', (e: Event) => {
+                        const target = e.target as HTMLInputElement;
+                        const inputEvent = e as InputEvent;
+                        let digits = target.value.replace(/\D/g, '').split('');
+                        let out = '';
 
-                            if (digits.length > 0) {
-                                let d = digits.shift()!;
-                                if (d >= '3') out += '0' + d; 
-                                else out += d;
-                            }
+                        if (digits.length > 0) {
+                            let d = digits.shift()!;
+                            if (d >= '3') out += '0' + d; 
+                            else out += d;
+                        }
 
-                            if (digits.length > 0 && out.length === 1) {
-                                let d = digits.shift()!;
-                                if (out[0] === '2' && d >= '4') {
-                                    out = '0' + out[0];
-                                    digits.unshift(d);
-                                } else {
-                                    out += d;
-                                }
-                            }
-
-                            if (out.length === 2) {
-                                if (digits.length > 0 || inputEvent.inputType !== 'deleteContentBackward' || target.value.endsWith(':')) {
-                                    out += ':';
-                                }
-                            }
-
-                            if (digits.length > 0) {
-                                let d = digits.shift()!;
-                                if (d >= '6') out += '0' + d; 
-                                else out += d;
-                            }
-
-                            if (digits.length > 0 && out.length === 4) {
-                                let d = digits.shift()!;
+                        if (digits.length > 0 && out.length === 1) {
+                            let d = digits.shift()!;
+                            if (out[0] === '2' && d >= '4') {
+                                out = '0' + out[0];
+                                digits.unshift(d);
+                            } else {
                                 out += d;
                             }
+                        }
 
-                            target.value = out;
-
-                            if (out.length === 5 && out.match(/^\d{2}:\d{2}$/)) {
-                                handler.updateSettings({ customStartTime: out });
-                            } else if (out === '') {
-                                handler.updateSettings({ customStartTime: null }); 
+                        if (out.length === 2) {
+                            if (digits.length > 0 || inputEvent.inputType !== 'deleteContentBackward' || target.value.endsWith(':')) {
+                                out += ':';
                             }
-                        });
+                        }
 
-                        btnNow.addEventListener('click', () => {
-                            const now = new Date();
-                            const hh = String(now.getHours()).padStart(2, '0');
-                            const mm = String(now.getMinutes()).padStart(2, '0');
-                            const timeStr = `${hh}:${mm}`;
-                            timeInput.value = timeStr;
-                            handler.updateSettings({ customStartTime: timeStr });
-                        });
+                        if (digits.length > 0) {
+                            let d = digits.shift()!;
+                            if (d >= '6') out += '0' + d; 
+                            else out += d;
+                        }
 
-                        btnReset.addEventListener('click', () => {
-                            timeInput.value = '';
-                            handler.updateSettings({ customStartTime: null });
-                        });
-                    }
+                        if (digits.length > 0 && out.length === 4) {
+                            let d = digits.shift()!;
+                            out += d;
+                        }
+
+                        target.value = out;
+
+                        if (out.length === 5 && out.match(/^\d{2}:\d{2}$/)) {
+                            handler.updateSettings({ customStartTime: out });
+                        } else if (out === '') {
+                            handler.updateSettings({ customStartTime: null }); 
+                        }
+                    });
+
+                    btnNow.addEventListener('click', () => {
+                        const now = new Date();
+                        const hh = String(now.getHours()).padStart(2, '0');
+                        const mm = String(now.getMinutes()).padStart(2, '0');
+                        const timeStr = `${hh}:${mm}`;
+                        timeInput.value = timeStr;
+                        handler.updateSettings({ customStartTime: timeStr });
+                    });
+
+                    btnReset.addEventListener('click', () => {
+                        timeInput.value = '';
+                        handler.updateSettings({ customStartTime: null });
+                    });
                 }
 
                 const advBtn = container.querySelector('#sh-adv-btn-item-counter') as HTMLElement;
@@ -260,6 +258,7 @@ else {
             name: 'Бінди',
             file: 'auto_questionnaire.js',
             description: 'Автоматично проклікує при натисненні.<br>Детальніше, щоб побачити всі команди',
+            excludeDeps: ['REFURB'],
             getHandler: () => window.__autoQuestionnaire,
             renderSettings: (container: HTMLElement) => {
                 const handler = window.__autoQuestionnaire;
@@ -408,6 +407,7 @@ else {
                 if (isDepartment(target.value)) {
                     currentDep = target.value;
                     localStorage.setItem('sh_hub_dep', currentDep);
+                    
                     if (window.__itemCounter) {
                         const newConfig = DEPARTMENT_CONFIG[currentDep];
                         if (newConfig) {
@@ -416,6 +416,25 @@ else {
                             if (targetInput) targetInput.value = newConfig.targetRate.toString();
                         }
                     }
+
+                    visibleScripts.forEach(script => {
+                        const card = document.getElementById(`sh-card-${script.id}`);
+                        if (card) {
+                            if (script.excludeDeps?.includes(currentDep)) {
+                                card.style.display = 'none';
+                                
+                                // Safely turn the script off if it is currently running
+                                const handler = script.getHandler();
+                                const chk = document.getElementById(`sh-chk-${script.id}`) as HTMLInputElement | null;
+                                if (handler && handler.isActive()) {
+                                    handler.disable();
+                                    if (chk) chk.checked = false;
+                                }
+                            } else {
+                                card.style.display = 'block';
+                            }
+                        }
+                    });
                 }
             });
         }
@@ -437,7 +456,12 @@ else {
                 const isCurrentlyActive = handler ? handler.isActive() : false;
                 
                 const card = document.createElement('div');
+                card.id = `sh-card-${script.id}`; 
                 card.className = 'sh-card';
+                
+                if (script.excludeDeps?.includes(currentDep)) {
+                    card.style.display = 'none';
+                }
                 card.innerHTML = `
                     <div class="sh-card-top">
                         <div class="sh-card-info">
