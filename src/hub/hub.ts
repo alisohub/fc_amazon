@@ -14,11 +14,15 @@ if (window.__scriptHubLoaded) {
 else {
     window.__scriptHubLoaded = true;
 
-    type Branch = "main" | "development" | "ts-all-the-way";
+    type Branch = "main" | "development" | "ts-all-the-way" | "local";
     type Department = "CRET" | "FAST" | "UG" | "REFURB";
 
     const currentBranch: Branch = (window.__SH_BRANCH as Branch) || 'main';
-    const REPO_BASE_URL: string = `https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/${currentBranch}/dist`;
+    
+    // If branch is 'local', use localhost. Otherwise, use GitHub!
+    const REPO_BASE_URL: string = currentBranch === 'local'
+        ? 'http://localhost:3000/dist'
+        : `https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/${currentBranch}/dist`;
     
     const DEPARTMENT_CONFIG: Record<Department, { targetRate: number }> = {
         "CRET": { targetRate: 47 },
