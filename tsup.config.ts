@@ -6,7 +6,7 @@ export default defineConfig({
     entry: {
         'hub': 'src/hub/hub.ts',
         'auto_lpn': 'src/scripts/auto_lpn.ts',
-        'auto_questionnaire': 'src/scripts/auto_questionnaire.ts',
+        'binds': 'src/scripts/binds.ts',
         'counter': 'src/scripts/counter.ts',
         'dev_inspector': 'src/scripts/dev_inspector.ts'
     },

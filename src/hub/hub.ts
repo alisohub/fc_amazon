@@ -4,8 +4,15 @@ if (window.__scriptHubLoaded) {
     const panel = document.getElementById('sh-panel');
     if (panel) {
         if (panel.classList.contains('sh-open')) {
+            // Close the panel and collapse all containers
             panel.classList.remove('sh-open');
             document.querySelectorAll('.sh-adv-container').forEach(el => el.classList.remove('sh-expanded'));
+            
+            const cancelBtn = document.getElementById('sh-adv-btn-binds');
+            if (cancelBtn && cancelBtn.textContent === 'Скасувати') cancelBtn.click();
+            
+            const editBtn = document.getElementById('sh-btn-edit-binds');
+            if (editBtn && editBtn.textContent === 'Редагувати') editBtn.style.display = 'none';
         } else {
             panel.classList.add('sh-open');
         }
@@ -258,53 +265,149 @@ else {
             }
         },
         {
-            id: 'auto-questionnaire',
+            id: 'binds',
             name: 'Бінди',
-            file: 'auto_questionnaire.js',
+            file: 'binds.js',
             description: 'Автоматично проклікує при натисненні.<br>Детальніше, щоб побачити всі команди',
             excludeDeps: ['REFURB'],
-            getHandler: () => window.__autoQuestionnaire,
+            getHandler: () => window.__binds,
             renderSettings: (container: HTMLElement) => {
-                const handler = window.__autoQuestionnaire;
+                const handler = window.__binds;
                 if (!handler) return;
                 
-                const shortcutsData = handler.getShortcuts ? handler.getShortcuts() : {};
-                const keys = Object.keys(shortcutsData);
+                let isEditMode = false;
+                let tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts ? handler.getShortcuts() : {}));
+                const dictionary = handler.getDictionary ? handler.getDictionary() : [];
                 
-                let listItems = '';
-                if (keys.length > 0) {
-                    listItems = keys.map(key => {
-                        const sequenceLabels = shortcutsData[key].sequence ? shortcutsData[key].sequence.map(arr => arr[0]) : [];
-                        return `
-                            <div class="sh-bind-row">
-                                <div class="sh-bind-key">${key}</div>
-                                <div class="sh-bind-action">${sequenceLabels.join(' <span class="sh-arrow">➔</span> ')}</div>
-                            </div>
-                        `;
-                    }).join('');
-                } else {
-                    listItems = `<div style="text-align:center; padding: 10px; font-size: 11px; color:#9aa0a6;">Наразі немає жодного бінда.</div>`;
-                }
-                
-                container.innerHTML = `
-                    <div id="sh-adv-container-auto-questionnaire" class="sh-adv-container">
-                        <div class="sh-bind-list">
-                            ${listItems}
-                        </div>
-                    </div>
+                const renderUI = () => {
+                    const keys = Object.keys(tempShortcuts);
                     
-                    <div class="sh-adv-toggle-wrap">
-                        <span id="sh-adv-btn-auto-questionnaire" class="sh-adv-text">Детальніше</span>
-                    </div>
-                `;
+                    let listItems = '';
+                    if (keys.length > 0) {
+                        listItems = keys.map(key => {
+                            if (isEditMode) {
+                                const seq = [...tempShortcuts[key], ""]; 
+                                const inputs = seq.map((val, idx) => `
+                                    <input type="text" class="sh-bind-input" value="${val}" data-key="${key}" data-idx="${idx}" list="sh-binds-dict" size="${val.length > 0 ? val.length + 1 : 8}" placeholder="${idx === seq.length - 1 ? '+ додати' : ''}">
+                                `).join(' <span class="sh-arrow">➔</span> ');
 
-                const advBtn = container.querySelector('#sh-adv-btn-auto-questionnaire') as HTMLElement;
-                const advContainer = container.querySelector('#sh-adv-container-auto-questionnaire') as HTMLElement;
-                if (advBtn && advContainer) {
-                    advBtn.addEventListener('click', () => {
-                        advContainer.classList.toggle('sh-expanded');
+                                return `
+                                    <div class="sh-bind-row">
+                                        <div class="sh-bind-key sh-bind-key-edit" data-key="${key}" title="Скинути до стандартних (Reset)">${key}</div>
+                                        <div class="sh-bind-action">${inputs}</div>
+                                    </div>
+                                `;
+                            } else {
+                                const sequenceLabels = tempShortcuts[key];
+                                return `
+                                    <div class="sh-bind-row">
+                                        <div class="sh-bind-key">${key}</div>
+                                        <div class="sh-bind-action">${sequenceLabels.join(' <span class="sh-arrow">➔</span> ')}</div>
+                                    </div>
+                                `;
+                            }
+                        }).join('');
+                    } else {
+                        listItems = `<div style="text-align:center; padding: 10px; font-size: 11px; color:#9aa0a6;">Наразі немає жодного бінда.</div>`;
+                    }
+                    
+                    const dictOptions = dictionary.map((w: string) => `<option value="${w}">`).join('');
+
+                    container.innerHTML = `
+                        <datalist id="sh-binds-dict">
+                            ${dictOptions}
+                        </datalist>
+                        <div id="sh-adv-container-binds" class="sh-adv-container ${container.querySelector('#sh-adv-container-binds')?.classList.contains('sh-expanded') ? 'sh-expanded' : ''}">
+                            <div class="sh-bind-list">
+                                ${listItems}
+                            </div>
+                        </div>
+                        
+                        <div class="sh-adv-toggle-wrap">
+                            ${isEditMode 
+                                ? `<span id="sh-btn-edit-binds" class="sh-adv-text">Готово</span>
+                                   <span id="sh-adv-btn-binds" class="sh-adv-text" style="margin-left: auto;">Скасувати</span>`
+                                : `<span id="sh-btn-edit-binds" class="sh-adv-text" style="display: ${container.querySelector('#sh-adv-container-binds')?.classList.contains('sh-expanded') ? 'block' : 'none'};">Редагувати</span>
+                                   <span id="sh-adv-btn-binds" class="sh-adv-text" style="margin-left: auto;">Детальніше</span>`
+                            }
+                        </div>
+                    `;
+
+                    const advBtn = container.querySelector('#sh-adv-btn-binds') as HTMLElement;
+                    const advContainer = container.querySelector('#sh-adv-container-binds') as HTMLElement;
+                    const editBtn = container.querySelector('#sh-btn-edit-binds') as HTMLElement;
+
+                    if (advBtn && advContainer) {
+                        advBtn.addEventListener('click', () => {
+                            if (isEditMode) {
+                                isEditMode = false;
+                                tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts())); 
+                                renderUI();
+                            } else {
+                                advContainer.classList.toggle('sh-expanded');
+                                if (editBtn) editBtn.style.display = advContainer.classList.contains('sh-expanded') ? 'block' : 'none';
+                            }
+                        });
+                    }
+
+                    if (editBtn) {
+                        editBtn.addEventListener('click', () => {
+                            if (isEditMode) {
+                                Object.keys(tempShortcuts).forEach(k => {
+                                    tempShortcuts[k] = tempShortcuts[k].map((s: string) => s.trim()).filter((s: string) => s !== "");
+                                });
+                                handler.updateShortcuts(tempShortcuts);
+                                isEditMode = false;
+                                renderUI();
+                            } else {
+                                // FIX 1: Always grab a fresh copy of the saved binds when entering Edit Mode
+                                tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts()));
+                                isEditMode = true;
+                                renderUI();
+                            }
+                        });
+                    }
+
+                    container.querySelectorAll('.sh-bind-key-edit').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            if (!isEditMode) return; // Shield against ghost clicks
+                            
+                            const target = e.target as HTMLElement;
+                            const key = target.getAttribute('data-key');
+                            
+                            if (key && handler.getDefaults) {
+                                const defaults = handler.getDefaults();
+                                if (defaults[key]) {
+                                    // Update ONLY the temporary draft for this specific key
+                                    tempShortcuts[key] = [...defaults[key]]; 
+                                    renderUI();
+                                }
+                            }
+                        });
                     });
-                }
+
+                    container.querySelectorAll('.sh-bind-input').forEach(input => {
+                        input.addEventListener('change', (e) => {
+                            // FIX 2: Block ghost browser events if Cancel was already clicked
+                            if (!isEditMode) return; 
+
+                            const target = e.target as HTMLInputElement;
+                            const key = target.getAttribute('data-key')!;
+                            const idx = parseInt(target.getAttribute('data-idx')!, 10);
+                            const val = target.value.trim();
+
+                            if (idx === tempShortcuts[key].length) {
+                                if (val) tempShortcuts[key].push(val); 
+                            } else {
+                                if (!val) tempShortcuts[key].splice(idx, 1); 
+                                else tempShortcuts[key][idx] = val; 
+                            }
+                            renderUI(); 
+                        });
+                    });
+                };
+                
+                renderUI();
             }
         },
         {
@@ -393,6 +496,12 @@ else {
         function closePanel(): void {
             panelEl.classList.remove('sh-open');
             document.querySelectorAll('.sh-adv-container').forEach(el => el.classList.remove('sh-expanded'));
+
+            const cancelBtn = document.getElementById('sh-adv-btn-binds');
+            if (cancelBtn && cancelBtn.textContent === 'Скасувати') cancelBtn.click();
+
+            const editBtn = document.getElementById('sh-btn-edit-binds');
+            if (editBtn && editBtn.textContent === 'Редагувати') editBtn.style.display = 'none';
         }
         
         const closeBtn = document.getElementById('sh-close-btn');

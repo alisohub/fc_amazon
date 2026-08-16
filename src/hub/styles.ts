@@ -68,4 +68,29 @@ export const HUB_STYLES: string = `
     .sh-bind-key { background: #e8f0fe; color: #1a73e8; font-weight: 600; font-size: 12px; padding: 6px 10px; display: flex; align-items: center; justify-content: center; min-width: 32px; border-right: 1px solid #e8eaed; }
     .sh-bind-action { padding: 6px 10px; font-size: 11px; color: #5f6368; line-height: 1.4; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
     .sh-arrow { color: #bdc1c6; font-size: 10px; }
+
+    .sh-bind-input { 
+        background: #ffffff !important; 
+        border: 2px solid #9aa0a6 !important; /* Tight grey border from your drawing */
+        border-radius: 3px !important; 
+        padding: 2px 4px !important; 
+        margin: 0 !important;
+        font-size: 11px !important; 
+        color: #5f6368 !important; 
+        outline: none !important; 
+        text-align: center !important; 
+        font-family: inherit !important;
+        
+        /* THE FIX: Force it to act like text and ignore Amazon's 100% width */
+        display: inline-block !important; 
+        width: auto !important; 
+        flex: 0 1 auto !important; 
+    }
+    .sh-bind-input:focus { 
+        border-color: #1a73e8 !important; 
+    }
+    .sh-bind-input::placeholder { color: #bdc1c6 !important; }
+    
+    .sh-bind-key-edit { cursor: pointer; transition: background 0.2s, color 0.2s; }
+    .sh-bind-key-edit:hover { background: #d2e3fc; color: #174ea6; }
 `;

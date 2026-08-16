@@ -33,15 +33,16 @@ declare global {
         updateSettings: (newSettings: Partial<CounterSettings>) => void;
     }
 
-    // specific shape for your Auto Questionnaire binds
-    interface ShortcutConfig {
-        sequence: string[][];
-        targets?: string[]; // The pre-calculated flat array
-    }
-
-    // Extended handler just for the questionnaire script
-    interface QuestionnaireHandler extends ScriptHandler {
-        getShortcuts: () => Record<string, ShortcutConfig>;
+    interface BindsHandler extends ScriptHandler {
+        // Returns the current active shortcuts (e.g., F1: ["opinia", "brak", ...])
+        getShortcuts: () => Record<string, string[]>;
+        // Returns the primary Polish words for the dropdowns
+        getDictionary: () => string[];
+        // Saves user edits to localStorage and updates the engine
+        updateShortcuts: (newBinds: Record<string, string[]>) => void;
+        // Restores a specific F-key to its default sequence
+        resetToDefault: (key: string) => void;
+        getDefaults: () => Record<string, string[]>;
     }
 
     // ==========================================
@@ -55,14 +56,14 @@ declare global {
         // Load Trackers (The ? means they might be undefined initially)
         __scriptHubLoaded?: boolean;
         __autoLpnLoaded?: boolean;
-        __autoQuestionnaireLoaded?: boolean;
         __counterLoaded?: boolean;
+        __bindsLoaded?: boolean;
         __devInspectorLoaded?: boolean;
 
         // Script Handlers (Attached to the window so the Hub can read them)
         __autoLpn?: ScriptHandler;
         __itemCounter?: CounterHandler;
-        __autoQuestionnaire?: QuestionnaireHandler;
+        __binds?: BindsHandler;
         __devInspector?: ScriptHandler;
     }
 }
