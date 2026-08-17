@@ -98,8 +98,8 @@ else {
                 const settings = handler.getSettings();
                 const currentCount = handler.getCount();
                 
-                const configRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
-                const targetRate = settings.targetRate || configRate; 
+                // FIX: Force the target rate to strictly match the currently selected department
+                const targetRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
                 
                 handler.updateSettings({ targetRate: targetRate });
                 
