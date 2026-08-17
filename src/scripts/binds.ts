@@ -20,6 +20,11 @@ if (!window.__bindsLoaded) {
 
     const DEFAULT_SHORTCUTS: Record<string, string[]> = {
         'F1': ["opinia", "brak plomby", "nieprzezroczyste pudełko", "brak", "nie"],
+        'F2': [],
+        'F3': [],
+        'F4': [],
+        'F5': [],
+        'F6': [],
         'F7': ["opinia", "brak plomby", "polybag", "brak", "nie"]
     };
 
