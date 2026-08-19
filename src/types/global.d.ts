@@ -22,6 +22,7 @@ declare global {
         overlayTop: number | null;
         customStartTime: string | null;
         targetRate?: number;
+        offTaskEnabled?: boolean;
     }
 
     // Extended handler just for the counter script

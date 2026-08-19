@@ -93,11 +93,12 @@ else {
                 
                 // 1. Get the current department's default rate
                 const configRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
-                
                 // 2. If you have a custom rate saved, use it. Otherwise, use the configRate.
                 const targetRate = settings.targetRate !== undefined ? settings.targetRate : configRate;
+                const offTaskEnabled = settings.offTaskEnabled || false;
                 
-                handler.updateSettings({ targetRate: targetRate }); 
+                handler.updateSettings({ targetRate: targetRate, offTaskEnabled: offTaskEnabled });
+
                 container.innerHTML = `
                     <div class="sh-settings-divider"></div>
                     <div class="sh-setting-row" title="Options & Manual Edit">
@@ -132,13 +133,23 @@ else {
                                 <button id="sh-btn-start-reset" class="sh-time-btn">Скинути</button>
                             </div>
                         </div>
+
+                        <!-- NEW OFF-TASK TOGGLE -->
+                        <div class="sh-setting-row sh-mt-8" title="Автоматично натискає Enter через 15с бездіяльності">
+                            <span class="sh-flex-1" style="font-size: 12px; color: #3c4043; font-weight: 500;">Off-Task (15s Auto-Enter)</span>
+                            <label class="sh-switch">
+                                <input type="checkbox" id="sh-offtask-toggle" ${offTaskEnabled ? 'checked' : ''}>
+                                <span class="sh-slider"></span>
+                            </label>
+                        </div>
                     </div>
                     
                     <div class="sh-adv-toggle-wrap">
                         <span id="sh-adv-btn-item-counter" class="sh-adv-text">Розширені</span>
                     </div>
                 `;
-                
+
+                // ... (Keep all your existing listeners for lunch breaks, count, opacity, target, and time exactly as they were) ...
                 container.querySelectorAll('.sh-opt-btn').forEach(btn => {
                     btn.addEventListener('click', (e: Event) => {
                         const target = e.target as HTMLElement;
@@ -148,7 +159,7 @@ else {
                         handler.updateSettings({ lunchBreak: val });
                     });
                 });
-                
+
                 const countInput = container.querySelector('#sh-cfg-count') as HTMLInputElement;
                 if (countInput) {
                     countInput.addEventListener('input', (e: Event) => {
@@ -162,7 +173,7 @@ else {
                         handler.setCount(val);
                     });
                 }
-                
+
                 const opacityInput = container.querySelector('#sh-cfg-opacity') as HTMLInputElement;
                 if (opacityInput) {
                     opacityInput.addEventListener('input', (e: Event) => {
@@ -185,20 +196,17 @@ else {
                 const timeInput = container.querySelector('#sh-cfg-start-time') as HTMLInputElement;
                 const btnNow = container.querySelector('#sh-btn-start-now') as HTMLButtonElement;
                 const btnReset = container.querySelector('#sh-btn-start-reset') as HTMLButtonElement;
-
                 if (timeInput && btnNow && btnReset) {
                     timeInput.addEventListener('input', (e: Event) => {
                         const target = e.target as HTMLInputElement;
                         const inputEvent = e as InputEvent;
                         let digits = target.value.replace(/\D/g, '').split('');
                         let out = '';
-
                         if (digits.length > 0) {
                             let d = digits.shift()!;
                             if (d >= '3') out += '0' + d; 
                             else out += d;
                         }
-
                         if (digits.length > 0 && out.length === 1) {
                             let d = digits.shift()!;
                             if (out[0] === '2' && d >= '4') {
@@ -208,26 +216,21 @@ else {
                                 out += d;
                             }
                         }
-
                         if (out.length === 2) {
                             if (digits.length > 0 || inputEvent.inputType !== 'deleteContentBackward' || target.value.endsWith(':')) {
                                 out += ':';
                             }
                         }
-
                         if (digits.length > 0) {
                             let d = digits.shift()!;
                             if (d >= '6') out += '0' + d; 
                             else out += d;
                         }
-
                         if (digits.length > 0 && out.length === 4) {
                             let d = digits.shift()!;
                             out += d;
                         }
-
                         target.value = out;
-
                         if (out.length === 5 && out.match(/^\d{2}:\d{2}$/)) {
                             handler.updateSettings({ customStartTime: out });
                         } else if (out === '') {
@@ -247,6 +250,14 @@ else {
                     btnReset.addEventListener('click', () => {
                         timeInput.value = '';
                         handler.updateSettings({ customStartTime: null });
+                    });
+                }
+
+                const offTaskToggle = container.querySelector('#sh-offtask-toggle') as HTMLInputElement;
+                if (offTaskToggle) {
+                    offTaskToggle.addEventListener('change', (e: Event) => {
+                        const target = e.target as HTMLInputElement;
+                        handler.updateSettings({ offTaskEnabled: target.checked });
                     });
                 }
 

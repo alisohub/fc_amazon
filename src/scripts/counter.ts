@@ -3,16 +3,16 @@ import { getEffectiveWorkTime, calculateUPH, calculatePercentageStr } from '@sha
 
 if (!window.__counterLoaded) {
     window.__counterLoaded = true;
-
+    
     const TARGET_LABELS: string[] = [
         'wprowadź pojemnik',
         'вкажіть транспортну тару',
         'введите тару'
     ];
-    
+        
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';
     const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
-    
+        
     // Uses the CounterSettings interface we defined in global.d.ts
     let settings: CounterSettings = {
         overlayOpacity: 0.3,
@@ -20,9 +20,10 @@ if (!window.__counterLoaded) {
         overlayLeft: 40,
         overlayTop: 862,
         customStartTime: null,
-        targetRate: 47 // Default fallback
+        targetRate: 47, // Default fallback
+        offTaskEnabled: false // NEW: Default to off
     };
-    
+        
     try {
         const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
         if (savedSettings) {
@@ -31,29 +32,88 @@ if (!window.__counterLoaded) {
             settings = { ...settings, ...parsed };
         }
     } catch (e) {}
-    
+        
     const TOTE_REGEX: RegExp = /^ts[a-z0-9]+/i;
     let itemCounter: number = 0;
-    
+        
     try {
         const savedCount = localStorage.getItem(STORAGE_KEY_COUNT);
         if (savedCount !== null) itemCounter = parseInt(savedCount, 10) || 0;
     } catch (e) {}
-    
+        
     let active: boolean = false;
     let overlayVisible: boolean = true;
     let isProcessingScan: boolean = false;
-    
+
+    // ==========================================
+    // NEW: OFF-TASK TIMER LOGIC
+    // ==========================================
+    let offTaskTimer: number | null = null;
+    let lastKnownInputValue: string = "";
+
+    function resetOffTaskTimer(): void {
+        if (offTaskTimer !== null) {
+            window.clearTimeout(offTaskTimer);
+            offTaskTimer = null;
+        }
+    }
+
+    function checkOffTaskAutoEnter(): void {
+        // If script is inactive or off-task is disabled, do nothing
+        if (!active || !settings.offTaskEnabled) {
+            resetOffTaskTimer();
+            return;
+        }
+
+        const activeInput = document.querySelector('input[type="text"]:not([hidden]):not([disabled])') as HTMLInputElement | null;
+
+        // Use your existing hasTargetLabel to ensure we are in the EXACT right input field!
+        if (activeInput && !isInsideModal(activeInput) && hasTargetLabel(activeInput.getAttribute('aria-label'))) {
+            const currentValue = activeInput.value.trim();
+
+            if (currentValue.length > 0) {
+                if (currentValue !== lastKnownInputValue) {
+                    lastKnownInputValue = currentValue;
+                    resetOffTaskTimer();
+                    
+                    offTaskTimer = window.setTimeout(() => {
+                        // 15 seconds passed. Fire Enter!
+                        const enterEvent = new KeyboardEvent('keydown', {
+                            key: 'Enter',
+                            code: 'Enter',
+                            keyCode: 13,
+                            which: 13,
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        activeInput.dispatchEvent(enterEvent);
+                        
+                        resetOffTaskTimer();
+                        lastKnownInputValue = "";
+                    }, 15000); // 15 seconds
+                }
+            } else {
+                resetOffTaskTimer();
+                lastKnownInputValue = "";
+            }
+        } else {
+            resetOffTaskTimer();
+            lastKnownInputValue = "";
+        }
+    }
+    // ==========================================
+
+        
     function saveCount(count: number): void {
         itemCounter = count;
         try { localStorage.setItem(STORAGE_KEY_COUNT, count.toString()); }
         catch (e) {}
     }
-    
+        
     function createOrGetOverlay(): HTMLElement {
         let overlay = document.getElementById('sh-item-overlay');
         if (overlay) return overlay;
-        
+                
         overlay = document.createElement('div');
         overlay.id = 'sh-item-overlay';
         Object.assign(overlay.style, {
@@ -69,7 +129,7 @@ if (!window.__counterLoaded) {
             display: active ? 'block' : 'none',
             whiteSpace: 'nowrap'
         });
-        
+                
         if (settings.overlayLeft !== null && settings.overlayTop !== null) {
             overlay.style.left = `${settings.overlayLeft}px`;
             overlay.style.top = `${settings.overlayTop}px`;
@@ -81,12 +141,12 @@ if (!window.__counterLoaded) {
             overlay.style.right = 'auto';
             overlay.style.bottom = 'auto';
         }
-        
+                
         // Use our imported shared utility functions
         const timeData = getEffectiveWorkTime(settings.customStartTime, settings.lunchBreak);
         const currentUPH = calculateUPH(itemCounter, timeData.ms);
         const currentPct = calculatePercentageStr(currentUPH, settings.targetRate || 47);
-                
+                        
         overlay.innerHTML = `
             <span id="sh-overlay-count">${itemCounter}</span>
             <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
@@ -95,43 +155,43 @@ if (!window.__counterLoaded) {
             <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
             <span id="sh-overlay-time">${timeData.formatted}</span>
         `;
-        
+                
         overlay.addEventListener('mouseenter', () => { if (overlayVisible && overlay) overlay.style.opacity = '1'; });
         overlay.addEventListener('mouseleave', () => { if (overlayVisible && overlay) overlay.style.opacity = settings.overlayOpacity.toString(); });
-        
+                
         let isDragging: boolean = false;
         let startX: number = 0;
         let startY: number = 0;
         let initialLeft: number = 0;
         let initialTop: number = 0;
-        
+                
         // Strict typing for Drag and Drop
         const dragStart = (e: MouseEvent | TouchEvent): void => {
             isDragging = true;
             const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
             const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-            
+                        
             startX = clientX;
             startY = clientY;
-            
+                        
             if (overlay) {
                 const rect = overlay.getBoundingClientRect();
                 initialLeft = rect.left;
                 initialTop = rect.top;
             }
         };
-        
+                
         const dragMove = (e: MouseEvent | TouchEvent): void => {
             if (!isDragging || !overlay) return;
             if ('touches' in e && e.cancelable) e.preventDefault();
-            
+                        
             const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
             const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-            
+                        
             overlay.style.left = `${initialLeft + (clientX - startX)}px`;
             overlay.style.top = `${initialTop + (clientY - startY)}px`;
         };
-        
+                
         const dragEnd = (): void => {
             if (isDragging && overlay) {
                 isDragging = false;
@@ -140,14 +200,14 @@ if (!window.__counterLoaded) {
                 try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
             }
         };
-        
+                
         overlay.addEventListener('mousedown', dragStart as EventListener);
         document.addEventListener('mousemove', dragMove as EventListener);
         document.addEventListener('mouseup', dragEnd);
         overlay.addEventListener('touchstart', dragStart as EventListener, { passive: false });
         document.addEventListener('touchmove', dragMove as EventListener, { passive: false });
         document.addEventListener('touchend', dragEnd);
-        
+                
         window.addEventListener('resize', () => {
             if (!active || !overlay) return;
             const rect = overlay.getBoundingClientRect();
@@ -166,47 +226,47 @@ if (!window.__counterLoaded) {
                 try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
             }
         });
-        
+                
         document.body.appendChild(overlay);
         return overlay;
     }
-    
+        
     function updateCounterUI(count: number): void {
         saveCount(count);
-                
+                        
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count.toString();
-                
+                        
         const timeData = getEffectiveWorkTime(settings.customStartTime, settings.lunchBreak);
         const currentUPH = calculateUPH(count, timeData.ms);
-                
+                        
         const overlayUPH = document.getElementById('sh-overlay-uph');
         if (overlayUPH) overlayUPH.textContent = `${currentUPH}/h`;
-                
+                        
         const overlayPct = document.getElementById('sh-overlay-pct');
         if (overlayPct) overlayPct.textContent = `(${calculatePercentageStr(currentUPH, settings.targetRate || 47)})`;
-                
+                        
         const overlayTime = document.getElementById('sh-overlay-time');
         if (overlayTime) overlayTime.textContent = timeData.formatted;
-        
+                
         const hubInput = document.getElementById('sh-cfg-count') as HTMLInputElement | null;
         if (hubInput && document.activeElement !== hubInput) {
             hubInput.value = count === 0 ? '' : count.toString();
         }
     }
-    
+        
     function hasTargetLabel(labelString: string | null): boolean {
         const lowerLabel = (labelString || '').toLowerCase();
         return TARGET_LABELS.some(target => lowerLabel.includes(target));
     }
-    
+        
     function verifyAndCount(input: HTMLInputElement): void {
         const initialLabel = input.getAttribute('aria-label');
         if (!hasTargetLabel(initialLabel)) {
             isProcessingScan = false;
             return;
         }
-        
+                
         let resolved = false;
         const observer = new MutationObserver(() => {
             if (resolved) return;
@@ -214,11 +274,11 @@ if (!window.__counterLoaded) {
             const isHidden = input.offsetParent === null;
             const currentLabel = input.getAttribute('aria-label');
             const labelChanged = !hasTargetLabel(currentLabel);
-            
+                        
             if (isRemoved || isHidden || labelChanged) {
                 resolved = true;
                 observer.disconnect();
-                                
+                                                
                 setTimeout(() => {
                     saveCount(itemCounter + 1);
                     updateCounterUI(itemCounter);
@@ -226,12 +286,12 @@ if (!window.__counterLoaded) {
                 }, 4000);
             }
         });
-        
+                
         observer.observe(input, {
             attributes: true,
             attributeFilter: ['aria-label', 'disabled', 'class', 'style']
         });
-        
+                
         setTimeout(() => {
             if (!resolved) {
                 resolved = true;
@@ -244,28 +304,28 @@ if (!window.__counterLoaded) {
             }
         }, 4000);
     }
-    
+        
     function handleScan(e: KeyboardEvent): void {
         if (!active) return;
         if (e.key !== 'Enter') return;
         if (isProcessingScan) return; 
-        
+                
         const input = e.target as HTMLInputElement;
-        
+                
         if (!input.matches) return; // Prevent crashes on non-DOM elements
         if (input.closest('#sh-root')) return;
         if (!input.matches('input:not([type="hidden"]):not([disabled])') || isInsideModal(input)) return;
-        
+                
         const rawValue = input.value?.trim();
         if (!rawValue || !TOTE_REGEX.test(rawValue)) return;
-        
+                
         isProcessingScan = true;
         verifyAndCount(input);
     }
-    
+        
     document.addEventListener('keydown', (e: KeyboardEvent) => {
         if (!active) return;
-                
+                        
         if (e.key === 'F10') {
             e.preventDefault();
             overlayVisible = !overlayVisible;
@@ -273,33 +333,36 @@ if (!window.__counterLoaded) {
             if (overlay) {
                 overlay.style.opacity = overlayVisible ? settings.overlayOpacity.toString() : '0';
                 overlay.style.display = overlayVisible ? 'block' : 'none';
-                                
+                                                
                 if (overlayVisible) {
                     updateCounterUI(itemCounter);
                 }
             }
         }
     });
-    
+        
     setInterval(() => {
         if (active && overlayVisible) {
             const timeData = getEffectiveWorkTime(settings.customStartTime, settings.lunchBreak);
             const currentUPH = calculateUPH(itemCounter, timeData.ms);
-                        
+                                    
             const uphEl = document.getElementById('sh-overlay-uph');
             if (uphEl) uphEl.textContent = `${currentUPH}/h`;
-                        
+                                    
             const pctEl = document.getElementById('sh-overlay-pct');
             if (pctEl) pctEl.textContent = `(${calculatePercentageStr(currentUPH, settings.targetRate || 47)})`;
-                        
+                                    
             const timeEl = document.getElementById('sh-overlay-time');
             if (timeEl) timeEl.textContent = timeData.formatted;
         }
     }, 60000);
-    
+
+    // NEW: Start the Off-Task monitor loop (checks every 500ms)
+    setInterval(checkOffTaskAutoEnter, 500);
+        
     document.addEventListener('keydown', handleScan as EventListener, true);
     createOrGetOverlay();
-    
+        
     window.__itemCounter = {
         enable: (): void => {
             active = true;
@@ -324,6 +387,6 @@ if (!window.__counterLoaded) {
             updateCounterUI(itemCounter);
         }
     };
-    
+        
     window.__itemCounter.enable();
 }
