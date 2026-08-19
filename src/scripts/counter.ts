@@ -15,7 +15,6 @@ if (!window.__counterLoaded) {
         overlayTop: 862,
         customStartTime: null,
         targetRate: 47, // Default fallback
-        offTaskEnabled: false // NEW: Default to off
     };
         
     try {
@@ -39,65 +38,6 @@ if (!window.__counterLoaded) {
     let overlayVisible: boolean = true;
     let isProcessingScan: boolean = false;
 
-    // ==========================================
-    // NEW: OFF-TASK TIMER LOGIC
-    // ==========================================
-    let offTaskTimer: number | null = null;
-    let lastKnownInputValue: string = "";
-
-    function resetOffTaskTimer(): void {
-        if (offTaskTimer !== null) {
-            window.clearTimeout(offTaskTimer);
-            offTaskTimer = null;
-        }
-    }
-
-    function checkOffTaskAutoEnter(): void {
-        // If script is inactive or off-task is disabled, do nothing
-        if (!active || !settings.offTaskEnabled) {
-            resetOffTaskTimer();
-            return;
-        }
-
-        const activeInput = document.querySelector('input[type="text"]:not([hidden]):not([disabled])') as HTMLInputElement | null;
-
-        // Use your existing hasTargetLabel to ensure we are in the EXACT right input field!
-        if (activeInput && !isInsideModal(activeInput) && hasTargetLabel(activeInput.getAttribute('aria-label'))) {
-            const currentValue = activeInput.value.trim();
-
-            if (currentValue.length > 0) {
-                if (currentValue !== lastKnownInputValue) {
-                    lastKnownInputValue = currentValue;
-                    resetOffTaskTimer();
-                    
-                    offTaskTimer = window.setTimeout(() => {
-                        // 15 seconds passed. Fire Enter!
-                        const enterEvent = new KeyboardEvent('keydown', {
-                            key: 'Enter',
-                            code: 'Enter',
-                            keyCode: 13,
-                            which: 13,
-                            bubbles: true,
-                            cancelable: true
-                        });
-                        activeInput.dispatchEvent(enterEvent);
-                        
-                        resetOffTaskTimer();
-                        lastKnownInputValue = "";
-                    }, 15000); // 15 seconds
-                }
-            } else {
-                resetOffTaskTimer();
-                lastKnownInputValue = "";
-            }
-        } else {
-            resetOffTaskTimer();
-            lastKnownInputValue = "";
-        }
-    }
-    // ==========================================
-
-        
     function saveCount(count: number): void {
         itemCounter = count;
         try { localStorage.setItem(STORAGE_KEY_COUNT, count.toString()); }
@@ -346,9 +286,6 @@ if (!window.__counterLoaded) {
         }
     }, 60000);
 
-    // NEW: Start the Off-Task monitor loop (checks every 500ms)
-    setInterval(checkOffTaskAutoEnter, 500);
-        
     document.addEventListener('keydown', handleScan as EventListener, true);
     createOrGetOverlay();
         
