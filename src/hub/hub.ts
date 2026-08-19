@@ -288,15 +288,15 @@ else {
                 const toteBarcode = settings.toteBarcode || '';
 
                 // Notice: sh-ot-mins is now type="text" so it can hold "04:59"
+                // We added 'gap: 6px' to tighten spacing, 'min-width: 0' to prevent overflow, and a shorter placeholder
                 container.innerHTML = `
-                    <div class="sh-setting-row" style="align-items: center; margin-bottom: 2px;">
-                        <span class="sh-emoji" title="Тара для введення">📦</span>
-                        <input type="text" id="sh-ot-tote" class="sh-input sh-flex-1" value="${toteBarcode}" placeholder="ts... (пусто = вимкнено)" autocomplete="off">
-                        <span class="sh-emoji" style="margin-left: 6px;" title="Хвилини">⏱️</span>
-                        <input type="text" id="sh-ot-mins" class="sh-input sh-time-input-small" value="${timeoutMins}" title="Таймер">
+                    <div class="sh-setting-row" style="align-items: center; gap: 6px; margin-bottom: 2px;">
+                        <span class="sh-emoji" title="Тара">📦</span>
+                        <input type="text" id="sh-ot-tote" class="sh-input sh-flex-1" style="min-width: 0;" value="${toteBarcode}" placeholder="ts... (пусто=вимк)" autocomplete="off">
+                        <span class="sh-emoji" title="Хвилини">⏱️</span>
+                        <input type="text" id="sh-ot-mins" class="sh-input sh-time-input-small" style="width: 50px; padding: 6px 2px;" value="${timeoutMins}" title="Таймер">
                     </div>
                 `;
-
                 const toteInput = container.querySelector('#sh-ot-tote') as HTMLInputElement;
                 const minsInput = container.querySelector('#sh-ot-mins') as HTMLInputElement;
 
