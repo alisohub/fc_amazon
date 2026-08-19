@@ -336,9 +336,13 @@ else {
 
                     // Restore focus dynamically if 'Enter' was just pressed
                     if (focusTarget && isEditMode) {
-                        const inputToFocus = container.querySelector(`.sh-bind-input[data-key="${focusTarget.key}"][data-idx="${focusTarget.idx}"]`) as HTMLInputElement;
-                        if (inputToFocus) inputToFocus.focus();
-                        focusTarget = null;
+                        setTimeout(() => {
+                            if (focusTarget) {
+                                const inputToFocus = container.querySelector(`.sh-bind-input[data-key="${focusTarget.key}"][data-idx="${focusTarget.idx}"]`) as HTMLInputElement;
+                                if (inputToFocus) inputToFocus.focus();
+                                focusTarget = null;
+                            }
+                        }, 10); // Give the browser 10ms to paint the new DOM elements
                     }
 
                     const advBtn = container.querySelector('#sh-adv-btn-binds') as HTMLElement;
@@ -381,43 +385,53 @@ else {
                     });
 
                     container.querySelectorAll('.sh-bind-input').forEach(input => {
-                        input.addEventListener('keydown', (e) => {
-                            if (!isEditMode) return;
-                            const ev = e as KeyboardEvent;
-                            
-                            if (ev.key === 'Enter') {
-                                ev.preventDefault();
-                                const target = ev.target as HTMLInputElement;
-                                focusTarget = { 
-                                    key: target.getAttribute('data-key')!, 
-                                    idx: parseInt(target.getAttribute('data-idx')!, 10) + 1 
-                                };
-                                target.blur(); // Forces the 'change' event to run and save
-                            } else if (ev.key === 'Escape') {
-                                ev.preventDefault();
-                                focusTarget = null;
-                                (ev.target as HTMLInputElement).blur(); // Forces the 'change' event without focusing next
-                            }
-                        });
+                        let isProcessing = false; // Shield to prevent double-firing
 
-                        input.addEventListener('change', (e) => {
-                            if (!isEditMode) return; 
+                        const saveAndRender = (target: HTMLInputElement, advanceFocus: boolean) => {
+                            if (isProcessing) return;
+                            isProcessing = true;
 
-                            const target = e.target as HTMLInputElement;
                             const key = target.getAttribute('data-key')!;
                             const idx = parseInt(target.getAttribute('data-idx')!, 10);
                             const val = target.value.trim();
 
+                            // 1. Save logic
                             if (idx === tempShortcuts[key].length) {
                                 if (val) tempShortcuts[key].push(val); 
                             } else {
                                 if (!val) tempShortcuts[key].splice(idx, 1); 
                                 else tempShortcuts[key][idx] = val; 
                             }
-                            
-                            // Immediately auto-save every change directly to memory/storage
                             handler.updateShortcuts(tempShortcuts);
-                            renderUI(); 
+
+                            // 2. Focus logic
+                            if (advanceFocus && val !== "") {
+                                focusTarget = { key, idx: idx + 1 };
+                            } else {
+                                focusTarget = null;
+                            }
+
+                            // 3. Re-render
+                            renderUI();
+                        };
+
+                        input.addEventListener('keydown', (e) => {
+                            if (!isEditMode) return;
+                            const ev = e as KeyboardEvent;
+                            
+                            if (ev.key === 'Enter') {
+                                ev.preventDefault();
+                                saveAndRender(ev.target as HTMLInputElement, true);
+                            } else if (ev.key === 'Escape') {
+                                ev.preventDefault();
+                                saveAndRender(ev.target as HTMLInputElement, false);
+                            }
+                        });
+
+                        // Standard click-away auto-save
+                        input.addEventListener('change', (e) => {
+                            if (!isEditMode) return; 
+                            saveAndRender(e.target as HTMLInputElement, false);
                         });
                     });
                 };
