@@ -91,11 +91,13 @@ else {
                 const settings = handler.getSettings();
                 const currentCount = handler.getCount();
                 
-                // FIX: Force the target rate to strictly match the currently selected department
-                const targetRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
+                // 1. Get the current department's default rate
+                const configRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
                 
-                handler.updateSettings({ targetRate: targetRate });
+                // 2. If you have a custom rate saved, use it. Otherwise, use the configRate.
+                const targetRate = settings.targetRate !== undefined ? settings.targetRate : configRate;
                 
+                handler.updateSettings({ targetRate: targetRate }); 
                 container.innerHTML = `
                     <div class="sh-settings-divider"></div>
                     <div class="sh-setting-row" title="Options & Manual Edit">

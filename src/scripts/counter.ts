@@ -28,7 +28,6 @@ if (!window.__counterLoaded) {
         if (savedSettings) {
             const parsed = JSON.parse(savedSettings);
             // Ensure targetRate isn't overwritten incorrectly during load
-            delete parsed.targetRate; 
             settings = { ...settings, ...parsed };
         }
     } catch (e) {}
