@@ -271,6 +271,97 @@ else {
             }
         },
         {
+            id: 'off-task',
+            name: 'Авто-Введення (Off-Task)',
+            file: 'off_task.js',
+            description: 'Автоматично прибиває до тота через зазначений час.',
+            getHandler: () => window.__offTask,
+            renderSettings: (container: HTMLElement) => {
+                const handler = window.__offTask;
+                if (!handler) return;
+
+                const currentDep = (document.getElementById('sh-subdep-select') as HTMLSelectElement).value;
+                const defaultMins = (currentDep === 'CRET' || currentDep === 'UG') ? 4 : 10;
+
+                const settings = handler.getSettings();
+                const timeoutMins = settings.timeoutMins !== undefined ? settings.timeoutMins : defaultMins;
+                const toteBarcode = settings.toteBarcode || '';
+
+                // Notice: sh-ot-mins is now type="text" so it can hold "04:59"
+                container.innerHTML = `
+                    <div class="sh-setting-row" style="align-items: center; margin-bottom: 2px;">
+                        <span class="sh-emoji" title="Тара для введення">📦</span>
+                        <input type="text" id="sh-ot-tote" class="sh-input sh-flex-1" value="${toteBarcode}" placeholder="ts... (пусто = вимкнено)" autocomplete="off">
+                        <span class="sh-emoji" style="margin-left: 6px;" title="Хвилини">⏱️</span>
+                        <input type="text" id="sh-ot-mins" class="sh-input sh-time-input-small" value="${timeoutMins}" title="Таймер">
+                    </div>
+                `;
+
+                const toteInput = container.querySelector('#sh-ot-tote') as HTMLInputElement;
+                const minsInput = container.querySelector('#sh-ot-mins') as HTMLInputElement;
+
+                toteInput.addEventListener('input', (e) => {
+                    const val = (e.target as HTMLInputElement).value.trim();
+                    handler.updateSettings({ toteBarcode: val });
+                    // Reset minute box to default setting visually if deactivated
+                    if (!val) minsInput.value = handler.getSettings().timeoutMins?.toString() || defaultMins.toString();
+                });
+
+                // When user finishes typing in the timer box and clicks away or hits Enter
+                minsInput.addEventListener('change', (e) => {
+                    const val = (e.target as HTMLInputElement).value.trim();
+                    let newMins = defaultMins;
+
+                    // Parse MM:SS or raw numbers
+                    if (val.includes(':')) {
+                        const parts = val.split(':');
+                        newMins = parseInt(parts[0] || '0', 10) + (parseInt(parts[1] || '0', 10) / 60);
+                    } else {
+                        const parsed = parseFloat(val);
+                        if (!isNaN(parsed) && parsed > 0) newMins = parsed;
+                    }
+
+                    handler.updateSettings({ timeoutMins: newMins });
+                });
+
+                // Prevent Enter key from doing anything weird while editing the timer
+                minsInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') minsInput.blur();
+                });
+
+                const onUpdate = (e: any) => {
+                    if (document.activeElement !== toteInput) {
+                        toteInput.value = handler.getSettings().toteBarcode || '';
+                    }
+                    if (document.activeElement !== minsInput) {
+                        minsInput.value = handler.getSettings().timeoutMins?.toString() || defaultMins.toString();
+                        minsInput.style.color = ''; // Reset color
+                    }
+                };
+
+                const onTick = (e: any) => {
+                    // IF THE USER IS CLICKED INTO THE BOX, DO NOT UPDATE IT (LET THEM TYPE!)
+                    if (document.activeElement === minsInput) return;
+                    
+                    if (!handler.getSettings().toteBarcode) return;
+                    
+                    const totalSec = Math.ceil(e.detail.remainingMs / 1000);
+                    const m = Math.floor(totalSec / 60);
+                    const s = String(totalSec % 60).padStart(2, '0');
+                    
+                    // Update the input box to show the live countdown!
+                    minsInput.value = `${m}:${s}`;
+                    
+                    // Turn text red if under 30 seconds
+                    minsInput.style.color = totalSec <= 30 ? '#d93025' : '#1a73e8';
+                    minsInput.style.fontWeight = 'bold';
+                };
+
+                window.addEventListener('sh-offtask-update', onUpdate);
+                window.addEventListener('sh-offtask-tick', onTick);
+            }
+        },
+        {
             id: 'binds',
             name: 'Бінди',
             file: 'binds.js',

@@ -49,8 +49,14 @@ declare global {
     // ==========================================
     // 2. THE WINDOW OBJECT EXTENSIONS
     // ==========================================
-    
+    interface OffTaskSettings {
+        toteBarcode?: string;
+        timeoutMins?: number;
+    }
+
     interface Window {
+    __offTaskLoaded?: boolean;
+    __offTask?: ScriptHandler; 
         // Branch / Environment info
         __SH_BRANCH?: string;
 

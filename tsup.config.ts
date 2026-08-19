@@ -8,6 +8,7 @@ export default defineConfig({
         'auto_lpn': 'src/scripts/auto_lpn.ts',
         'binds': 'src/scripts/binds.ts',
         'counter': 'src/scripts/counter.ts',
+        'off_task': 'src/scripts/off_task.ts',
         'dev_inspector': 'src/scripts/dev_inspector.ts'
     },
     format: ['iife'],

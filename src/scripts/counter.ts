@@ -1,14 +1,8 @@
-import { isInsideModal } from '@shared/dom';
+import { isInsideModal, hasTargetLabel } from '@shared/dom';
 import { getEffectiveWorkTime, calculateUPH, calculatePercentageStr } from '@shared/time';
-
 if (!window.__counterLoaded) {
     window.__counterLoaded = true;
     
-    const TARGET_LABELS: string[] = [
-        'wprowadź pojemnik',
-        'вкажіть транспортну тару',
-        'введите тару'
-    ];
         
     const STORAGE_KEY_COUNT = 'sh_item_counter_count';
     const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
@@ -253,11 +247,6 @@ if (!window.__counterLoaded) {
         if (hubInput && document.activeElement !== hubInput) {
             hubInput.value = count === 0 ? '' : count.toString();
         }
-    }
-        
-    function hasTargetLabel(labelString: string | null): boolean {
-        const lowerLabel = (labelString || '').toLowerCase();
-        return TARGET_LABELS.some(target => lowerLabel.includes(target));
     }
         
     function verifyAndCount(input: HTMLInputElement): void {
