@@ -4,15 +4,8 @@ if (window.__scriptHubLoaded) {
     const panel = document.getElementById('sh-panel');
     if (panel) {
         if (panel.classList.contains('sh-open')) {
-            // Close the panel and collapse all containers
             panel.classList.remove('sh-open');
             document.querySelectorAll('.sh-adv-container').forEach(el => el.classList.remove('sh-expanded'));
-            
-            const cancelBtn = document.getElementById('sh-adv-btn-binds');
-            if (cancelBtn && cancelBtn.textContent === 'Скасувати') cancelBtn.click();
-            
-            const editBtn = document.getElementById('sh-btn-edit-binds');
-            if (editBtn && editBtn.textContent === 'Редагувати') editBtn.style.display = 'none';
         } else {
             panel.classList.add('sh-open');
         }
@@ -279,6 +272,17 @@ else {
                 let tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts ? handler.getShortcuts() : {}));
                 const dictionary = handler.getDictionary ? handler.getDictionary() : [];
                 
+                // Tracks which input should receive focus after a re-render (for Enter key functionality)
+                let focusTarget: { key: string, idx: number } | null = null;
+
+                // Listen for panel closure to cleanly exit Edit Mode
+                window.addEventListener('sh-panel-closed', () => {
+                    if (isEditMode) {
+                        isEditMode = false;
+                        renderUI();
+                    }
+                });
+                
                 const renderUI = () => {
                     const keys = Object.keys(tempShortcuts);
                     
@@ -293,7 +297,7 @@ else {
 
                                 return `
                                     <div class="sh-bind-row">
-                                        <div class="sh-bind-key sh-bind-key-edit" data-key="${key}" title="Скинути до стандартних (Reset)">${key}</div>
+                                        <div class="sh-bind-key sh-bind-key-edit" data-key="${key}" title="Очистити всі команди (Clear)">${key}</div>
                                         <div class="sh-bind-action">${inputs}</div>
                                     </div>
                                 `;
@@ -318,77 +322,83 @@ else {
                             ${dictOptions}
                         </datalist>
                         <div id="sh-adv-container-binds" class="sh-adv-container ${container.querySelector('#sh-adv-container-binds')?.classList.contains('sh-expanded') ? 'sh-expanded' : ''}">
-                            <div class="sh-bind-list">
+                            <div class="sh-bind-list" style="cursor: ${isEditMode ? 'default' : 'pointer'};" title="${isEditMode ? '' : 'Натисніть для редагування'}">
                                 ${listItems}
                             </div>
                         </div>
                         
                         <div class="sh-adv-toggle-wrap">
-                            ${isEditMode 
-                                ? `<span id="sh-btn-edit-binds" class="sh-adv-text">Готово</span>
-                                   <span id="sh-adv-btn-binds" class="sh-adv-text" style="margin-left: auto;">Скасувати</span>`
-                                : `<span id="sh-btn-edit-binds" class="sh-adv-text" style="display: ${container.querySelector('#sh-adv-container-binds')?.classList.contains('sh-expanded') ? 'block' : 'none'};">Редагувати</span>
-                                   <span id="sh-adv-btn-binds" class="sh-adv-text" style="margin-left: auto;">Детальніше</span>`
-                            }
+                            <span id="sh-adv-btn-binds" class="sh-adv-text" style="margin-left: auto;">Детальніше</span>
                         </div>
                     `;
 
+                    // Restore focus dynamically if 'Enter' was just pressed
+                    if (focusTarget && isEditMode) {
+                        const inputToFocus = container.querySelector(`.sh-bind-input[data-key="${focusTarget.key}"][data-idx="${focusTarget.idx}"]`) as HTMLInputElement;
+                        if (inputToFocus) inputToFocus.focus();
+                        focusTarget = null;
+                    }
+
                     const advBtn = container.querySelector('#sh-adv-btn-binds') as HTMLElement;
                     const advContainer = container.querySelector('#sh-adv-container-binds') as HTMLElement;
-                    const editBtn = container.querySelector('#sh-btn-edit-binds') as HTMLElement;
 
                     if (advBtn && advContainer) {
+                        // Toggling the advanced container always resets to read-only mode
                         advBtn.addEventListener('click', () => {
-                            if (isEditMode) {
-                                isEditMode = false;
-                                tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts())); 
-                                renderUI();
-                            } else {
-                                advContainer.classList.toggle('sh-expanded');
-                                if (editBtn) editBtn.style.display = advContainer.classList.contains('sh-expanded') ? 'block' : 'none';
-                            }
+                            advContainer.classList.toggle('sh-expanded');
+                            isEditMode = false;
+                            renderUI();
                         });
                     }
 
-                    if (editBtn) {
-                        editBtn.addEventListener('click', () => {
-                            if (isEditMode) {
-                                Object.keys(tempShortcuts).forEach(k => {
-                                    tempShortcuts[k] = tempShortcuts[k].map((s: string) => s.trim()).filter((s: string) => s !== "");
-                                });
-                                handler.updateShortcuts(tempShortcuts);
-                                isEditMode = false;
-                                renderUI();
-                            } else {
-                                // FIX 1: Always grab a fresh copy of the saved binds when entering Edit Mode
-                                tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts()));
+                    if (advContainer) {
+                        // Clicking anywhere inside the container triggers Edit Mode
+                        advContainer.addEventListener('click', (e) => {
+                            if (!isEditMode) {
                                 isEditMode = true;
+                                tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts())); 
                                 renderUI();
                             }
                         });
                     }
 
                     container.querySelectorAll('.sh-bind-key-edit').forEach(btn => {
+                        // Clicking the F-Key clears the array and focuses the first new empty box
                         btn.addEventListener('click', (e) => {
-                            if (!isEditMode) return; // Shield against ghost clicks
-                            
+                            if (!isEditMode) return; 
                             const target = e.target as HTMLElement;
                             const key = target.getAttribute('data-key');
                             
-                            if (key && handler.getDefaults) {
-                                const defaults = handler.getDefaults();
-                                if (defaults[key]) {
-                                    // Update ONLY the temporary draft for this specific key
-                                    tempShortcuts[key] = [...defaults[key]]; 
-                                    renderUI();
-                                }
+                            if (key) {
+                                tempShortcuts[key] = []; 
+                                handler.updateShortcuts(tempShortcuts); // Auto-save
+                                focusTarget = { key, idx: 0 }; 
+                                renderUI();
                             }
                         });
                     });
 
                     container.querySelectorAll('.sh-bind-input').forEach(input => {
+                        input.addEventListener('keydown', (e) => {
+                            if (!isEditMode) return;
+                            const ev = e as KeyboardEvent;
+                            
+                            if (ev.key === 'Enter') {
+                                ev.preventDefault();
+                                const target = ev.target as HTMLInputElement;
+                                focusTarget = { 
+                                    key: target.getAttribute('data-key')!, 
+                                    idx: parseInt(target.getAttribute('data-idx')!, 10) + 1 
+                                };
+                                target.blur(); // Forces the 'change' event to run and save
+                            } else if (ev.key === 'Escape') {
+                                ev.preventDefault();
+                                focusTarget = null;
+                                (ev.target as HTMLInputElement).blur(); // Forces the 'change' event without focusing next
+                            }
+                        });
+
                         input.addEventListener('change', (e) => {
-                            // FIX 2: Block ghost browser events if Cancel was already clicked
                             if (!isEditMode) return; 
 
                             const target = e.target as HTMLInputElement;
@@ -402,6 +412,9 @@ else {
                                 if (!val) tempShortcuts[key].splice(idx, 1); 
                                 else tempShortcuts[key][idx] = val; 
                             }
+                            
+                            // Immediately auto-save every change directly to memory/storage
+                            handler.updateShortcuts(tempShortcuts);
                             renderUI(); 
                         });
                     });
@@ -548,10 +561,7 @@ else {
             if (globalSettings) globalSettings.classList.remove('sh-expanded');
             if (settingsToggleBtn) settingsToggleBtn.classList.remove('active');
 
-            const cancelBtn = document.getElementById('sh-adv-btn-binds');
-            if (cancelBtn && cancelBtn.textContent === 'Скасувати') cancelBtn.click();
-            const editBtn = document.getElementById('sh-btn-edit-binds');
-            if (editBtn && editBtn.textContent === 'Редагувати') editBtn.style.display = 'none';
+            window.dispatchEvent(new CustomEvent('sh-panel-closed'));
         }
 
         document.addEventListener('mousedown', (e: MouseEvent) => { 
