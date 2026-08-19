@@ -463,7 +463,26 @@ else {
         }
     }
 
+    ['keydown', 'keyup', 'keypress'].forEach(eventType => {
+        window.addEventListener(eventType, (e: Event) => {
+            const target = e.target as HTMLElement | null;
+            if (target && target.closest('#sh-root')) {
+                e.stopPropagation();
+            }
+        }, true);
+    });
+
     function injectUI(): void {
+        const STORAGE_KEY_PANEL_OPACITY = 'sh_panel_opacity';
+        let panelOpacity = 0.4;
+        try {
+            const savedOpacity = localStorage.getItem(STORAGE_KEY_PANEL_OPACITY);
+            if (savedOpacity !== null) {
+                const parsed = parseFloat(savedOpacity);
+                if (!isNaN(parsed) && parsed >= 0.1 && parsed <= 1) panelOpacity = parsed;
+            }
+        } catch (e) {}
+
         const hub = document.createElement('div');
         hub.id = 'sh-root';
         hub.innerHTML = `
@@ -471,7 +490,7 @@ else {
                 ${HUB_STYLES}
             </style>
             
-            <div id="sh-panel">
+            <div id="sh-panel" style="opacity: ${panelOpacity};">
                 <div class="sh-header">
                     <div class="sh-header-group">
                         <select id="sh-subdep-select" class="sh-dep-dropdown">
@@ -484,28 +503,56 @@ else {
                         <a href="https://eu-cretfc-tools-dub.dub.proxy.amazon.com/gravis" target="_blank" rel="noopener noreferrer" class="sh-url-btn">GRAVIS</a>
                         <a href="https://w.amazon.com/bin/view/Wikipedia_LCJ4/" target="_blank" rel="noopener noreferrer" class="sh-url-btn">WIKI</a>
                     </div>
-                    <button class="sh-close" id="sh-close-btn" title="Close">✖</button>
+                    <button class="sh-settings-btn" id="sh-settings-toggle-btn" title="Налаштування">⚙️</button>
+                </div>
+                <div class="sh-global-settings" id="sh-global-settings">
+                    <div class="sh-global-settings-title">Налаштування панелі</div>
+                    <div class="sh-setting-row" title="Прозорість панелі">
+                        <span class="sh-emoji">👁️</span>
+                        <input type="range" id="sh-panel-opacity" class="sh-range" min="0.1" max="1" step="0.05" value="${panelOpacity}" />
+                    </div>
                 </div>
                 <div class="sh-body" id="sh-list"></div>
             </div>
         `;
         document.body.appendChild(hub);
-        
+
         const panelEl = document.getElementById('sh-panel') as HTMLElement;
-        
+        const settingsToggleBtn = document.getElementById('sh-settings-toggle-btn');
+        const globalSettings = document.getElementById('sh-global-settings');
+        const panelOpacityInput = document.getElementById('sh-panel-opacity') as HTMLInputElement;
+
+        // Settings Menu Toggle
+        if (settingsToggleBtn && globalSettings) {
+            settingsToggleBtn.addEventListener('click', () => {
+                settingsToggleBtn.classList.toggle('active');
+                globalSettings.classList.toggle('sh-expanded');
+            });
+        }
+
+        // Panel Opacity Slider
+        if (panelOpacityInput) {
+            panelOpacityInput.addEventListener('input', (e: Event) => {
+                const target = e.target as HTMLInputElement;
+                const val = parseFloat(target.value);
+                panelEl.style.opacity = val.toString();
+                try {
+                    localStorage.setItem(STORAGE_KEY_PANEL_OPACITY, val.toString());
+                } catch (err) {}
+            });
+        }
+
         function closePanel(): void {
             panelEl.classList.remove('sh-open');
             document.querySelectorAll('.sh-adv-container').forEach(el => el.classList.remove('sh-expanded'));
+            if (globalSettings) globalSettings.classList.remove('sh-expanded');
+            if (settingsToggleBtn) settingsToggleBtn.classList.remove('active');
 
             const cancelBtn = document.getElementById('sh-adv-btn-binds');
             if (cancelBtn && cancelBtn.textContent === 'Скасувати') cancelBtn.click();
-
             const editBtn = document.getElementById('sh-btn-edit-binds');
             if (editBtn && editBtn.textContent === 'Редагувати') editBtn.style.display = 'none';
         }
-        
-        const closeBtn = document.getElementById('sh-close-btn');
-        if (closeBtn) closeBtn.onclick = closePanel;
 
         document.addEventListener('mousedown', (e: MouseEvent) => { 
             const target = e.target as Node;
