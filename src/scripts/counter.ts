@@ -209,8 +209,7 @@ if (!window.__counterLoaded) {
                 observer.disconnect();
                                                 
                 setTimeout(() => {
-                    saveCount(itemCounter + 1);
-                    updateCounterUI(itemCounter);
+                    updateCounterUI(itemCounter + 1);
                     isProcessingScan = false;
                 }, 4000);
             }
@@ -226,8 +225,7 @@ if (!window.__counterLoaded) {
                 resolved = true;
                 observer.disconnect();
                 if (!document.body.contains(input)) {
-                    saveCount(itemCounter + 1);
-                    updateCounterUI(itemCounter);
+                    updateCounterUI(itemCounter + 1);
                 }
                 isProcessingScan = false;
             }

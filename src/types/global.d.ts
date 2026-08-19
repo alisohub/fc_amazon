@@ -42,7 +42,6 @@ declare global {
         updateShortcuts: (newBinds: Record<string, string[]>) => void;
         // Restores a specific F-key to its default sequence
         resetToDefault: (key: string) => void;
-        getDefaults: () => Record<string, string[]>;
     }
     
     interface OffTaskHandler extends ScriptHandler {

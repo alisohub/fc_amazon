@@ -190,7 +190,6 @@ if (!window.__bindsLoaded) {
                 currentShortcuts[key] = [...DEFAULT_SHORTCUTS[key]];
                 try { localStorage.setItem(STORAGE_KEY, JSON.stringify(currentShortcuts)); } catch (e) {}
             }
-        },
-        getDefaults: () => DEFAULT_SHORTCUTS
+        }
     };
 }

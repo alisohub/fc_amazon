@@ -459,14 +459,22 @@ else {
                     }
 
                     container.querySelectorAll('.sh-bind-key-edit').forEach(btn => {
-                        // Clicking the F-Key clears the array completely
+                        // Clicking the F-Key clears the array. If already empty, it resets to default!
                         btn.addEventListener('click', (e) => {
                             if (!isEditMode) return; 
                             const target = e.target as HTMLElement;
                             const key = target.getAttribute('data-key');
                             
                             if (key) {
-                                tempShortcuts[key] = []; 
+                                if (tempShortcuts[key].length === 0) {
+                                    handler.resetToDefault(key);
+                                    // 2. Re-sync the Hub's UI state with the engine
+                                    tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts()));
+                                } else {
+                                    // Array has items, wipe it clean
+                                    tempShortcuts[key] = []; 
+                                }
+                                
                                 handler.updateShortcuts(tempShortcuts); // Auto-save
                                 renderUI();
                             }
