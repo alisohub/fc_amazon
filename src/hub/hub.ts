@@ -6,6 +6,7 @@ if (window.__scriptHubLoaded) {
         if (panel.classList.contains('sh-open')) {
             panel.classList.remove('sh-open');
             document.querySelectorAll('.sh-adv-container').forEach(el => el.classList.remove('sh-expanded'));
+            window.dispatchEvent(new CustomEvent('sh-panel-closed'));
         } else {
             panel.classList.add('sh-open');
         }
@@ -24,11 +25,11 @@ else {
         ? 'http://localhost:3000/dist'
         : `https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/${currentBranch}/dist`;
     
-    const DEPARTMENT_CONFIG: Record<Department, { targetRate: number }> = {
-        "CRET": { targetRate: 47 },
-        "FAST": { targetRate: 100 },
-        "UG":   { targetRate: 47 },
-        "REFURB": { targetRate: 30 }
+    const DEPARTMENT_CONFIG: Record<Department, { targetRate: number, offTaskMins: number }> = {
+        "CRET": { targetRate: 47, offTaskMins: 4 },
+        "FAST": { targetRate: 100, offTaskMins: 10 },
+        "UG":   { targetRate: 47, offTaskMins: 4 },
+        "REFURB": { targetRate: 30, offTaskMins: 10 }
     };
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -92,7 +93,6 @@ else {
                 const currentCount = handler.getCount();
                 
                 // 1. Get the current department's default rate
-                const currentDep = (document.getElementById('sh-subdep-select') as HTMLSelectElement).value;
                 const configRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
                 // 2. If you have a custom rate saved, use it. Otherwise, use the configRate.
                 const targetRate = settings.targetRate !== undefined ? settings.targetRate : configRate;
@@ -262,15 +262,18 @@ else {
                 const handler = window.__offTask;
                 if (!handler) return;
 
-                const currentDep = (document.getElementById('sh-subdep-select') as HTMLSelectElement).value;
-                const defaultMins = (currentDep === 'CRET' || currentDep === 'UG') ? 4 : 10;
+                // Pull the clean default directly from our global configuration!
+                const defaultMins = DEPARTMENT_CONFIG[currentDep].offTaskMins;
 
                 const settings = handler.getSettings();
                 const timeoutMins = settings.timeoutMins !== undefined ? settings.timeoutMins : defaultMins;
                 const toteBarcode = settings.toteBarcode || '';
+                
+                // Sync the default to the background script immediately so it doesn't wait 10 mins by mistake
+                if (settings.timeoutMins === undefined) {
+                    handler.updateSettings({ timeoutMins: defaultMins });
+                }
 
-                // Notice: sh-ot-mins is now type="text" so it can hold "04:59"
-                // We added 'gap: 6px' to tighten spacing, 'min-width: 0' to prevent overflow, and a shorter placeholder
                 container.innerHTML = `
                     <div class="sh-setting-row" style="align-items: center; gap: 6px; margin-bottom: 2px;">
                         <span class="sh-emoji" title="Тара">📦</span>
@@ -279,6 +282,7 @@ else {
                         <input type="text" id="sh-ot-mins" class="sh-input sh-time-input-small" style="width: 50px; padding: 6px 2px;" value="${timeoutMins}" title="Таймер">
                     </div>
                 `;
+                
                 const toteInput = container.querySelector('#sh-ot-tote') as HTMLInputElement;
                 const minsInput = container.querySelector('#sh-ot-mins') as HTMLInputElement;
 
@@ -311,7 +315,7 @@ else {
                     if (e.key === 'Enter') minsInput.blur();
                 });
 
-                const onUpdate = (e: any) => {
+                const onUpdate = () => {
                     if (document.activeElement !== toteInput) {
                         toteInput.value = handler.getSettings().toteBarcode || '';
                     }
@@ -339,8 +343,15 @@ else {
                     minsInput.style.fontWeight = 'bold';
                 };
 
-                window.addEventListener('sh-offtask-update', onUpdate);
-                window.addEventListener('sh-offtask-tick', onTick);
+                // MEMORY LEAK FIX: Abort old event listeners on UI re-render
+                if ((container as any)._abortController) {
+                    (container as any)._abortController.abort();
+                }
+                const controller = new AbortController();
+                (container as any)._abortController = controller;
+
+                window.addEventListener('sh-offtask-update', onUpdate, { signal: controller.signal });
+                window.addEventListener('sh-offtask-tick', onTick, { signal: controller.signal });
             }
         },
         {
@@ -355,8 +366,17 @@ else {
                 if (!handler) return;
                 
                 let isEditMode = false;
-                let tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts ? handler.getShortcuts() : {}));
-                const dictionary = handler.getDictionary ? handler.getDictionary() : [];
+                
+                // DEAD CODE REMOVED: TypeScript guarantees these functions exist, no need for `?` fallbacks
+                let tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts()));
+                const dictionary = handler.getDictionary();
+
+                // MEMORY LEAK FIXED: Kill old listener on re-render
+                if ((container as any)._abortController) {
+                    (container as any)._abortController.abort();
+                }
+                const controller = new AbortController();
+                (container as any)._abortController = controller;
 
                 // Listen for panel closure to cleanly exit Edit Mode
                 window.addEventListener('sh-panel-closed', () => {
@@ -364,7 +384,7 @@ else {
                         isEditMode = false;
                         renderUI();
                     }
-                });
+                }, { signal: controller.signal });
                 
                 const renderUI = () => {
                     const keys = Object.keys(tempShortcuts);

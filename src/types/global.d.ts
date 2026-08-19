@@ -44,7 +44,11 @@ declare global {
         resetToDefault: (key: string) => void;
         getDefaults: () => Record<string, string[]>;
     }
-
+    
+    interface OffTaskHandler extends ScriptHandler {
+            getSettings: () => OffTaskSettings;
+            updateSettings: (newSettings: Partial<OffTaskSettings>) => void;
+    }
     // ==========================================
     // 2. THE WINDOW OBJECT EXTENSIONS
     // ==========================================
@@ -54,8 +58,6 @@ declare global {
     }
 
     interface Window {
-    __offTaskLoaded?: boolean;
-    __offTask?: ScriptHandler; 
         // Branch / Environment info
         __SH_BRANCH?: string;
 
@@ -64,12 +66,14 @@ declare global {
         __autoLpnLoaded?: boolean;
         __counterLoaded?: boolean;
         __bindsLoaded?: boolean;
+        __offTaskLoaded?: boolean;
         __devInspectorLoaded?: boolean;
 
         // Script Handlers (Attached to the window so the Hub can read them)
         __autoLpn?: ScriptHandler;
         __itemCounter?: CounterHandler;
         __binds?: BindsHandler;
+        __offTask?: OffTaskHandler;
         __devInspector?: ScriptHandler;
     }
 }
