@@ -273,9 +273,6 @@ else {
                 let isEditMode = false;
                 let tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts ? handler.getShortcuts() : {}));
                 const dictionary = handler.getDictionary ? handler.getDictionary() : [];
-                
-                // Tracks which input should receive focus after a re-render (for Enter key functionality)
-                let focusTarget: { key: string, idx: number } | null = null;
 
                 // Listen for panel closure to cleanly exit Edit Mode
                 window.addEventListener('sh-panel-closed', () => {
@@ -334,17 +331,6 @@ else {
                         </div>
                     `;
 
-                    // Restore focus dynamically if 'Enter' was just pressed
-                    if (focusTarget && isEditMode) {
-                        setTimeout(() => {
-                            if (focusTarget) {
-                                const inputToFocus = container.querySelector(`.sh-bind-input[data-key="${focusTarget.key}"][data-idx="${focusTarget.idx}"]`) as HTMLInputElement;
-                                if (inputToFocus) inputToFocus.focus();
-                                focusTarget = null;
-                            }
-                        }, 10); // Give the browser 10ms to paint the new DOM elements
-                    }
-
                     const advBtn = container.querySelector('#sh-adv-btn-binds') as HTMLElement;
                     const advContainer = container.querySelector('#sh-adv-container-binds') as HTMLElement;
 
@@ -359,7 +345,7 @@ else {
 
                     if (advContainer) {
                         // Clicking anywhere inside the container triggers Edit Mode
-                        advContainer.addEventListener('click', (e) => {
+                        advContainer.addEventListener('click', () => {
                             if (!isEditMode) {
                                 isEditMode = true;
                                 tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts())); 
@@ -369,7 +355,7 @@ else {
                     }
 
                     container.querySelectorAll('.sh-bind-key-edit').forEach(btn => {
-                        // Clicking the F-Key clears the array and focuses the first new empty box
+                        // Clicking the F-Key clears the array completely
                         btn.addEventListener('click', (e) => {
                             if (!isEditMode) return; 
                             const target = e.target as HTMLElement;
@@ -378,60 +364,31 @@ else {
                             if (key) {
                                 tempShortcuts[key] = []; 
                                 handler.updateShortcuts(tempShortcuts); // Auto-save
-                                focusTarget = { key, idx: 0 }; 
                                 renderUI();
                             }
                         });
                     });
 
                     container.querySelectorAll('.sh-bind-input').forEach(input => {
-                        let isProcessing = false; // Shield to prevent double-firing
+                        // Standard click-away auto-save
+                        input.addEventListener('change', (e) => {
+                            if (!isEditMode) return; 
 
-                        const saveAndRender = (target: HTMLInputElement, advanceFocus: boolean) => {
-                            if (isProcessing) return;
-                            isProcessing = true;
-
+                            const target = e.target as HTMLInputElement;
                             const key = target.getAttribute('data-key')!;
                             const idx = parseInt(target.getAttribute('data-idx')!, 10);
                             const val = target.value.trim();
 
-                            // 1. Save logic
                             if (idx === tempShortcuts[key].length) {
                                 if (val) tempShortcuts[key].push(val); 
                             } else {
                                 if (!val) tempShortcuts[key].splice(idx, 1); 
                                 else tempShortcuts[key][idx] = val; 
                             }
-                            handler.updateShortcuts(tempShortcuts);
-
-                            // 2. Focus logic
-                            if (advanceFocus && val !== "") {
-                                focusTarget = { key, idx: idx + 1 };
-                            } else {
-                                focusTarget = null;
-                            }
-
-                            // 3. Re-render
-                            renderUI();
-                        };
-
-                        input.addEventListener('keydown', (e) => {
-                            if (!isEditMode) return;
-                            const ev = e as KeyboardEvent;
                             
-                            if (ev.key === 'Enter') {
-                                ev.preventDefault();
-                                saveAndRender(ev.target as HTMLInputElement, true);
-                            } else if (ev.key === 'Escape') {
-                                ev.preventDefault();
-                                saveAndRender(ev.target as HTMLInputElement, false);
-                            }
-                        });
-
-                        // Standard click-away auto-save
-                        input.addEventListener('change', (e) => {
-                            if (!isEditMode) return; 
-                            saveAndRender(e.target as HTMLInputElement, false);
+                            // Immediately auto-save every change directly to memory/storage
+                            handler.updateShortcuts(tempShortcuts);
+                            renderUI(); 
                         });
                     });
                 };
