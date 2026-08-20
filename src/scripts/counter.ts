@@ -14,7 +14,6 @@ if (!window.__counterLoaded) {
         overlayLeft: 40,
         overlayTop: 862,
         customStartTime: null,
-        targetRate: 47, // Default fallback
     };
         
     try {

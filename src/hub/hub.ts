@@ -663,12 +663,33 @@ else {
                     currentDep = target.value;
                     localStorage.setItem('sh_hub_dep', currentDep);
                     
-                    if (window.__itemCounter) {
-                        const newConfig = DEPARTMENT_CONFIG[currentDep];
-                        if (newConfig) {
+                    const newConfig = DEPARTMENT_CONFIG[currentDep];
+                    if (newConfig) {
+                        
+                        // 1. FORCE UPDATE COUNTER (Active or Inactive)
+                        if (window.__itemCounter) {
                             window.__itemCounter.updateSettings({ targetRate: newConfig.targetRate });
                             const targetInput = document.getElementById('sh-cfg-target') as HTMLInputElement;
                             if (targetInput) targetInput.value = newConfig.targetRate.toString();
+                        } else {
+                            try {
+                                const ls = JSON.parse(localStorage.getItem('sh_item_counter_settings') || '{}');
+                                ls.targetRate = newConfig.targetRate;
+                                localStorage.setItem('sh_item_counter_settings', JSON.stringify(ls));
+                            } catch(err) {}
+                        }
+
+                        // 2. FORCE UPDATE OFF-TASK (Active or Inactive)
+                        if (window.__offTask) {
+                            window.__offTask.updateSettings({ timeoutMins: newConfig.offTaskMins });
+                            const minsInput = document.getElementById('sh-ot-mins') as HTMLInputElement;
+                            if (minsInput) minsInput.value = newConfig.offTaskMins.toString();
+                        } else {
+                            try {
+                                const ls = JSON.parse(localStorage.getItem('sh_off_task_settings') || '{}');
+                                ls.timeoutMins = newConfig.offTaskMins;
+                                localStorage.setItem('sh_off_task_settings', JSON.stringify(ls));
+                            } catch(err) {}
                         }
                     }
 
@@ -693,7 +714,6 @@ else {
                 }
             });
         }
-
         const visibleScripts = SCRIPTS.filter(script => !script.experimental || currentBranch === 'development' || currentBranch === 'ts-all-the-way');
         
         const updateMasterToggleState = (): void => {
