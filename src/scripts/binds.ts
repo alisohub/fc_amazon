@@ -15,7 +15,8 @@ if (!window.__bindsLoaded) {
         "brak": ["brak", "нет", "немає"],
         "nie": ["nie", "нет", "ні"],
         "nieprzezroczyste pudełko": ["nieprzezroczyste pudełko", "непрозрачная коробка", "непрозора коробка"],
-        "polybag": ["polybag", "полиэтиленовый мешок", "поліетиленовий пакет"]
+        "polybag": ["polybag", "полиэтиленовый мешок", "поліетиленовий пакет"],
+        "dziura": ["dziura"]
     };
 
     const DEFAULT_SHORTCUTS: Record<string, string[]> = {

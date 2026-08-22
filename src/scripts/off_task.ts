@@ -18,12 +18,19 @@ if (!window.__offTaskLoaded) {
 
     let timerStart: number | null = null;
     let lastInputValue: string = '';
+    
+    // Tracking for our 30-second warning ping
+    let hasPinged: boolean = false; 
+    let justPinged: boolean = false; 
 
     function clearAndStop(reason: 'success' | 'aborted'): void {
         settings.toteBarcode = '';
         timerStart = null;
         lastInputValue = '';
+        hasPinged = false;
+        justPinged = false;
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch(e) {}
+        
         window.dispatchEvent(new CustomEvent('sh-offtask-update', { detail: { reason } }));
     }
 
@@ -41,17 +48,49 @@ if (!window.__offTaskLoaded) {
         }
 
         const currentValue = targetInput.value;
+        
         if (currentValue !== lastInputValue) {
-            lastInputValue = currentValue;
-            timerStart = Date.now(); 
-            return;
+            if (justPinged) {
+                // Ignore the input change if it was just the system clearing our fake ping
+                lastInputValue = currentValue;
+                justPinged = false;
+            } else {
+                // The user actually typed something! Restart the timer completely.
+                lastInputValue = currentValue;
+                timerStart = Date.now(); 
+                hasPinged = false;
+                return;
+            }
         }
 
-        if (timerStart === null) timerStart = Date.now();
+        if (timerStart === null) {
+            timerStart = Date.now();
+            hasPinged = false;
+            justPinged = false;
+        }
         
         const elapsed = Date.now() - timerStart;
         const targetMins = settings.timeoutMins || 10; 
         const targetMs = targetMins * 60 * 1000;
+
+        // ==========================================
+        // FAKE PING (30 Seconds before final scan)
+        // ==========================================
+        // Ensure the timer is at least > 30 seconds to begin with so they don't overlap
+        if (!hasPinged && targetMs > 30000 && elapsed >= (targetMs - 30000)) {
+            const fakeBarcode = 't-ping'; 
+            setNativeValue(targetInput, fakeBarcode);
+            
+            const enterEvent = new KeyboardEvent('keydown', {
+                key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
+            });
+            targetInput.dispatchEvent(enterEvent);
+            
+            lastInputValue = fakeBarcode; // Update so we don't trigger a user-typing reset next tick
+            hasPinged = true; 
+            justPinged = true; 
+        }
+        // ==========================================
 
         if (elapsed >= targetMs) {
             setNativeValue(targetInput, settings.toteBarcode);
@@ -61,7 +100,6 @@ if (!window.__offTaskLoaded) {
             targetInput.dispatchEvent(enterEvent);
             clearAndStop('success');
         } else {
-            // Send the remaining time so the Hub can display it in the input box
             window.dispatchEvent(new CustomEvent('sh-offtask-tick', { 
                 detail: { remainingMs: targetMs - elapsed }
             }));
@@ -72,14 +110,17 @@ if (!window.__offTaskLoaded) {
 
     window.__offTask = {
         enable: (): void => { active = true; },
-        disable: (): void => { active = false; timerStart = null; },
+        disable: (): void => { active = false; timerStart = null; hasPinged = false; },
         isActive: (): boolean => active,
         getSettings: (): OffTaskSettings => settings,
         updateSettings: (newSettings: Partial<OffTaskSettings>): void => {
             settings = { ...settings, ...newSettings };
             try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch(e) {}
-            // Instantly restart the timer when the user edits the input box
+            
+            // Instantly restart the timer when the user edits settings
             timerStart = Date.now(); 
+            hasPinged = false;
+            justPinged = false;
         }
     };
 }
