@@ -358,156 +358,118 @@ else {
             id: 'binds',
             name: 'Бінди',
             file: 'binds.js',
-            description: 'Автоматично проклікує при натисненні.<br>Детальніше, щоб побачити всі команди',
-            excludeDeps: ['REFURB'],
+            description: 'Автоматично проклікує при натисненні.<br>Натисніть на F-кнопку для запису або на слово, щоб видалити його.',
             getHandler: () => window.__binds,
             renderSettings: (container: HTMLElement) => {
-                const handler = window.__binds;
+                const handler = window.__binds as BindsHandler;
                 if (!handler) return;
                 
-                let isEditMode = false;
-                
-                // DEAD CODE REMOVED: TypeScript guarantees these functions exist, no need for `?` fallbacks
                 let tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts()));
-                const dictionary = handler.getDictionary();
 
-                // MEMORY LEAK FIXED: Kill old listener on re-render
                 if ((container as any)._abortController) {
                     (container as any)._abortController.abort();
                 }
                 const controller = new AbortController();
                 (container as any)._abortController = controller;
-
-                // Listen for panel closure to cleanly exit Edit Mode
-                window.addEventListener('sh-panel-closed', () => {
-                    if (isEditMode) {
-                        isEditMode = false;
-                        renderUI();
-                    }
+                
+                // Keep the UI dynamically updated during recording!
+                window.addEventListener('sh-binds-update', () => {
+                    tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts()));
+                    renderUI();
                 }, { signal: controller.signal });
                 
                 const renderUI = () => {
                     const keys = Object.keys(tempShortcuts);
+                    const recordingKey = handler.getRecordingKey();
                     
                     let listItems = '';
                     if (keys.length > 0) {
                         listItems = keys.map(key => {
-                            if (isEditMode) {
-                                const seq = [...tempShortcuts[key], ""]; 
-                                const inputs = seq.map((val, idx) => `
-                                    <input type="text" class="sh-bind-input" value="${val}" data-key="${key}" data-idx="${idx}" list="sh-binds-dict" size="${val.length > 0 ? val.length + 1 : 8}" placeholder="${idx === seq.length - 1 ? '+ додати' : ''}">
-                                `).join(' <span class="sh-arrow">➔</span> ');
+                            const sequenceLabels = tempShortcuts[key];
+                            const isRecording = recordingKey === key;
+                            
+                            // Map each word to a clickable span that triggers deletion
+                            const wordsHtml = sequenceLabels.map((val: string, idx: number) => {
+                                // Extract only the first two words for cleaner UI
+                                const displayVal = val.split(/\s+/).slice(0, 2).join(' ');
+                                
+                                // Keep the full value in the title so it shows on hover
+                                return `<span class="sh-bind-del-word" data-key="${key}" data-idx="${idx}" title="Видалити: ${val}">${displayVal}</span>`;
+                            }).join(' <span class="sh-arrow">➔</span> ');
+                            
+                            const actionContent = sequenceLabels.length > 0 
+                                ? wordsHtml 
+                                : (isRecording ? '<i>Запис...</i>' : '');
 
-                                return `
-                                    <div class="sh-bind-row">
-                                        <div class="sh-bind-key sh-bind-key-edit" data-key="${key}" title="Очистити всі команди (Clear)">${key}</div>
-                                        <div class="sh-bind-action">${inputs}</div>
-                                    </div>
-                                `;
-                            } else {
-                                const sequenceLabels = tempShortcuts[key];
-                                return `
-                                    <div class="sh-bind-row">
-                                        <div class="sh-bind-key">${key}</div>
-                                        <div class="sh-bind-action">${sequenceLabels.join(' <span class="sh-arrow">➔</span> ')}</div>
-                                    </div>
-                                `;
-                            }
+                            // Add the sh-recording class dynamically
+                            const keyClasses = isRecording ? 'sh-bind-key sh-recording' : 'sh-bind-key';
+
+                            return `
+                                <div class="sh-bind-row">
+                                    <div class="${keyClasses}" data-key="${key}" title="Запис / Зупинка">${key}</div>
+                                    <div class="sh-bind-action">${actionContent}</div>
+                                </div>
+                            `;
                         }).join('');
                     } else {
                         listItems = `<div style="text-align:center; padding: 10px; font-size: 11px; color:#9aa0a6;">Наразі немає жодного бінда.</div>`;
                     }
                     
-                    const dictOptions = dictionary.map((w: string) => `<option value="${w}">`).join('');
-
                     container.innerHTML = `
-                        <datalist id="sh-binds-dict">
-                            ${dictOptions}
-                        </datalist>
                         <div id="sh-adv-container-binds" class="sh-adv-container ${container.querySelector('#sh-adv-container-binds')?.classList.contains('sh-expanded') ? 'sh-expanded' : ''}">
-                            <div class="sh-bind-list" style="cursor: ${isEditMode ? 'default' : 'pointer'};" title="${isEditMode ? '' : 'Натисніть для редагування'}">
+                            <div class="sh-bind-list">
                                 ${listItems}
                             </div>
                         </div>
-                        
                         <div class="sh-adv-toggle-wrap">
                             <span id="sh-adv-btn-binds" class="sh-adv-text" style="margin-left: auto;">Детальніше</span>
                         </div>
                     `;
 
-                    const advBtn = container.querySelector('#sh-adv-btn-binds') as HTMLElement;
-                    const advContainer = container.querySelector('#sh-adv-container-binds') as HTMLElement;
-
-                    if (advBtn && advContainer) {
-                        // Toggling the advanced container always resets to read-only mode
-                        advBtn.addEventListener('click', () => {
-                            advContainer.classList.toggle('sh-expanded');
-                            isEditMode = false;
-                            renderUI();
-                        });
-                    }
-
-                    if (advContainer) {
-                        // Clicking anywhere inside the container triggers Edit Mode
-                        advContainer.addEventListener('click', () => {
-                            if (!isEditMode) {
-                                isEditMode = true;
-                                tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts())); 
-                                renderUI();
-                            }
-                        });
-                    }
-
-                    container.querySelectorAll('.sh-bind-key-edit').forEach(btn => {
-                        // Clicking the F-Key clears the array. If already empty, it resets to default!
+                    // Listeners for recording on F-keys
+                    container.querySelectorAll('.sh-bind-key').forEach(btn => {
                         btn.addEventListener('click', (e) => {
-                            if (!isEditMode) return; 
                             const target = e.target as HTMLElement;
                             const key = target.getAttribute('data-key');
+                            if (!key) return;
+
+                            if (handler.getRecordingKey() === key) {
+                                handler.stopRecording();
+                            } else {
+                                handler.startRecording(key);
+                            }
+                        });
+                    });
+
+                    // Listeners for word deletion
+                    container.querySelectorAll('.sh-bind-del-word').forEach(wordEl => {
+                        wordEl.addEventListener('click', (e) => {
+                            const target = e.target as HTMLElement;
+                            const key = target.getAttribute('data-key');
+                            const idxStr = target.getAttribute('data-idx');
                             
-                            if (key) {
-                                if (tempShortcuts[key].length === 0) {
-                                    handler.resetToDefault(key);
-                                    // 2. Re-sync the Hub's UI state with the engine
-                                    tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts()));
-                                } else {
-                                    // Array has items, wipe it clean
-                                    tempShortcuts[key] = []; 
-                                }
-                                
-                                handler.updateShortcuts(tempShortcuts); // Auto-save
+                            // Don't let users delete words while a macro is actively recording
+                            if (key && idxStr !== null && !recordingKey) {
+                                const idx = parseInt(idxStr, 10);
+                                tempShortcuts[key].splice(idx, 1);
+                                handler.updateShortcuts(tempShortcuts); 
                                 renderUI();
                             }
                         });
                     });
 
-                    container.querySelectorAll('.sh-bind-input').forEach(input => {
-                        // Standard click-away auto-save
-                        input.addEventListener('change', (e) => {
-                            if (!isEditMode) return; 
-
-                            const target = e.target as HTMLInputElement;
-                            const key = target.getAttribute('data-key')!;
-                            const idx = parseInt(target.getAttribute('data-idx')!, 10);
-                            const val = target.value.trim();
-
-                            if (idx === tempShortcuts[key].length) {
-                                if (val) tempShortcuts[key].push(val); 
-                            } else {
-                                if (!val) tempShortcuts[key].splice(idx, 1); 
-                                else tempShortcuts[key][idx] = val; 
-                            }
-                            
-                            // Immediately auto-save every change directly to memory/storage
-                            handler.updateShortcuts(tempShortcuts);
-                            renderUI(); 
+                    const advBtn = container.querySelector('#sh-adv-btn-binds') as HTMLElement;
+                    const advContainer = container.querySelector('#sh-adv-container-binds') as HTMLElement;
+                    if (advBtn && advContainer) {
+                        advBtn.addEventListener('click', () => {
+                            advContainer.classList.toggle('sh-expanded');
                         });
-                    });
+                    }
                 };
                 
                 renderUI();
             }
-        },
+        },  
         {
             id: 'dev-inspector',
             name: 'Dev Inspector',

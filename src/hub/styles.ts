@@ -75,25 +75,11 @@ export const HUB_STYLES: string = `
     .sh-bind-key { background: #e8f0fe; color: #1a73e8; font-weight: 600; font-size: 12px; padding: 6px 10px; display: flex; align-items: center; justify-content: center; min-width: 32px; border-right: 1px solid #e8eaed; }
     .sh-bind-action { padding: 6px 10px; font-size: 11px; color: #5f6368; line-height: 1.4; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
     .sh-arrow { color: #bdc1c6; font-size: 10px; }
-    .sh-bind-input { 
-        background: #ffffff !important; 
-        border: 2px solid #9aa0a6 !important;
-        border-radius: 3px !important; 
-        padding: 2px 4px !important; 
-        margin: 0 !important;
-        font-size: 11px !important; 
-        color: #5f6368 !important; 
-        outline: none !important; 
-        text-align: center !important; 
-        font-family: inherit !important;
-        display: inline-block !important; 
-        width: auto !important; 
-        flex: 0 1 auto !important; 
-    }
-    .sh-bind-input:focus { 
-        border-color: #1a73e8 !important; 
-    }
-    .sh-bind-input::placeholder { color: #bdc1c6 !important; }
-    .sh-bind-key-edit { cursor: pointer; transition: background 0.2s, color 0.2s; }
-    .sh-bind-key-edit:hover { background: #d2e3fc; color: #174ea6; }
+    /* Click-to-delete styling */
+    .sh-bind-del-word { cursor: pointer; transition: color 0.2s, text-decoration 0.2s; }
+    .sh-bind-del-word:hover { color: #d93025; text-decoration: line-through; }
+    /* F-Key Interactions */
+    .sh-bind-key { cursor: pointer; transition: background 0.2s, color 0.2s, border-color 0.2s; }
+    .sh-bind-key:hover { background: #d2e3fc; color: #174ea6; }
+    .sh-bind-key.sh-recording { background: #fce8e6 !important; color: #d93025 !important; border-color: #d93025 !important; }
 `;

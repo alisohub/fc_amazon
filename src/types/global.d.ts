@@ -36,14 +36,14 @@ declare global {
     interface BindsHandler extends ScriptHandler {
         // Returns the current active shortcuts (e.g., F1: ["opinia", "brak", ...])
         getShortcuts: () => Record<string, string[]>;
-        // Returns the primary Polish words for the dropdowns
-        getDictionary: () => string[];
         // Saves user edits to localStorage and updates the engine
         updateShortcuts: (newBinds: Record<string, string[]>) => void;
-        // Restores a specific F-key to its default sequence
-        resetToDefault: (key: string) => void;
+        // Recording methods
+        getRecordingKey: () => string | null;
+        startRecording: (key: string) => void;
+        stopRecording: () => void;
     }
-    
+
     interface OffTaskHandler extends ScriptHandler {
             getSettings: () => OffTaskSettings;
             updateSettings: (newSettings: Partial<OffTaskSettings>) => void;
