@@ -72,14 +72,6 @@ else {
     
     const SCRIPTS: ScriptDefinition[] = [
         {
-            id: 'auto-lpn',
-            name: 'Авто-LPN',
-            file: 'auto_lpn.js',
-            description: 'Автоматично відкриває "перепризначити LPN" при скануванні LPN або будь-чого іншого, окрім тота',
-            excludeDeps: ['REFURB'],
-            getHandler: () => window.__autoLpn
-        },
-        {
             id: 'item-counter',
             name: 'Рахувальник',
             file: 'counter.js',
@@ -470,6 +462,14 @@ else {
                 renderUI();
             }
         },  
+        {
+            id: 'auto-lpn',
+            name: 'Авто-LPN',
+            file: 'auto_lpn.js',
+            description: 'Автоматично відкриває "перепризначити LPN" при скануванні LPN або будь-чого іншого, окрім тота',
+            excludeDeps: ['REFURB'],
+            getHandler: () => window.__autoLpn
+        },
         {
             id: 'dev-inspector',
             name: 'Dev Inspector',
