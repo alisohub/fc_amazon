@@ -18,17 +18,11 @@ if (!window.__offTaskLoaded) {
 
     let timerStart: number | null = null;
     let lastInputValue: string = '';
-    
-    // Tracking for our 30-second warning ping
-    let hasPinged: boolean = false; 
-    let justPinged: boolean = false; 
 
     function clearAndStop(reason: 'success' | 'aborted'): void {
         settings.toteBarcode = '';
         timerStart = null;
         lastInputValue = '';
-        hasPinged = false;
-        justPinged = false;
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch(e) {}
         
         window.dispatchEvent(new CustomEvent('sh-offtask-update', { detail: { reason } }));
@@ -41,7 +35,7 @@ if (!window.__offTaskLoaded) {
         }
 
         const targetInput = document.querySelector('input[type="text"]:not([hidden]):not([disabled])') as HTMLInputElement | null;
-
+        
         if (!targetInput || isInsideModal(targetInput) || !hasTargetLabel(targetInput.getAttribute('aria-label'))) {
             clearAndStop('aborted');
             return;
@@ -49,50 +43,23 @@ if (!window.__offTaskLoaded) {
 
         const currentValue = targetInput.value;
         
+        // If the value changes, it means the user manually typed or scanned something. Restart timer.
         if (currentValue !== lastInputValue) {
-            if (justPinged) {
-                // Ignore the input change if it was just the system clearing our fake ping
-                lastInputValue = currentValue;
-                justPinged = false;
-            } else {
-                // The user actually typed something! Restart the timer completely.
-                lastInputValue = currentValue;
-                timerStart = Date.now(); 
-                hasPinged = false;
-                return;
-            }
+            lastInputValue = currentValue;
+            timerStart = Date.now(); 
+            return;
         }
 
         if (timerStart === null) {
             timerStart = Date.now();
-            hasPinged = false;
-            justPinged = false;
         }
         
         const elapsed = Date.now() - timerStart;
         const targetMins = settings.timeoutMins || 10; 
         const targetMs = targetMins * 60 * 1000;
 
-        // ==========================================
-        // FAKE PING (30 Seconds before final scan)
-        // ==========================================
-        // Ensure the timer is at least > 30 seconds to begin with so they don't overlap
-        if (!hasPinged && targetMs > 30000 && elapsed >= (targetMs - 30000)) {
-            const fakeBarcode = 't-ping'; 
-            setNativeValue(targetInput, fakeBarcode);
-            
-            const enterEvent = new KeyboardEvent('keydown', {
-                key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
-            });
-            targetInput.dispatchEvent(enterEvent);
-            
-            lastInputValue = fakeBarcode; // Update so we don't trigger a user-typing reset next tick
-            hasPinged = true; 
-            justPinged = true; 
-        }
-        // ==========================================
-
         if (elapsed >= targetMs) {
+            // Final tote scan
             setNativeValue(targetInput, settings.toteBarcode);
             const enterEvent = new KeyboardEvent('keydown', {
                 key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
@@ -100,6 +67,7 @@ if (!window.__offTaskLoaded) {
             targetInput.dispatchEvent(enterEvent);
             clearAndStop('success');
         } else {
+            // Update the UI timer in the Hub
             window.dispatchEvent(new CustomEvent('sh-offtask-tick', { 
                 detail: { remainingMs: targetMs - elapsed }
             }));
@@ -109,8 +77,13 @@ if (!window.__offTaskLoaded) {
     setInterval(checkTick, 500);
 
     window.__offTask = {
-        enable: (): void => { active = true; },
-        disable: (): void => { active = false; timerStart = null; hasPinged = false; },
+        enable: (): void => { 
+            active = true; 
+        },
+        disable: (): void => { 
+            active = false; 
+            timerStart = null; 
+        },
         isActive: (): boolean => active,
         getSettings: (): OffTaskSettings => settings,
         updateSettings: (newSettings: Partial<OffTaskSettings>): void => {
@@ -119,8 +92,6 @@ if (!window.__offTaskLoaded) {
             
             // Instantly restart the timer when the user edits settings
             timerStart = Date.now(); 
-            hasPinged = false;
-            justPinged = false;
         }
     };
 }
