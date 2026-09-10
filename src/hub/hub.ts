@@ -15,7 +15,7 @@ if (window.__scriptHubLoaded) {
 else {
     window.__scriptHubLoaded = true;
 
-    type Branch = "main" | "development" | "ts-all-the-way" | "local";
+    type Branch = "main" | "development" | "local";
     type Department = "CRET" | "FAST" | "UG" | "REFURB";
 
     const currentBranch: Branch = (window.__SH_BRANCH as Branch) || 'main';
@@ -344,7 +344,8 @@ else {
 
                 window.addEventListener('sh-offtask-update', onUpdate, { signal: controller.signal });
                 window.addEventListener('sh-offtask-tick', onTick, { signal: controller.signal });
-            }
+            },
+            experimental: true 
         },
         {
             id: 'binds',
@@ -676,7 +677,7 @@ else {
                 }
             });
         }
-        const visibleScripts = SCRIPTS.filter(script => !script.experimental || currentBranch === 'development' || currentBranch === 'ts-all-the-way');
+        const visibleScripts = SCRIPTS.filter(script => !script.experimental || currentBranch === 'development' );
         
         const updateMasterToggleState = (): void => {
             const chkAll = document.getElementById('sh-chk-all') as HTMLInputElement;

@@ -19,6 +19,29 @@ if (!window.__bindsLoaded) {
     let isRunning: boolean = false;
     let activeTargets: string[] = []; 
     let recordingKey: string | null = null; 
+    let awaitingF9: boolean = false;
+
+    let recordingDot: HTMLElement | null = null;
+
+    function updateRecordingDot(): void {
+        if (!recordingDot) {
+            recordingDot = document.createElement('div');
+            Object.assign(recordingDot.style, {
+                position: 'fixed',
+                bottom: '10px',
+                right: '10px',
+                width: '6px',
+                height: '6px',
+                backgroundColor: '#d93025',
+                borderRadius: '50%',
+                zIndex: '999999',
+                pointerEvents: 'none',
+                display: 'none'
+            });
+            document.body.appendChild(recordingDot);
+        }
+        recordingDot.style.display = recordingKey ? 'block' : 'none';
+    }
     
     let changeObserver: MutationObserver | null = null;
     let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
@@ -163,24 +186,41 @@ if (!window.__bindsLoaded) {
     document.addEventListener('keydown', (e: KeyboardEvent) => {
         if (!active) return;
         
-        // Strictly only accept F1 through F7
+        if (e.key === 'F9') {
+            awaitingF9 = true;
+            return;
+        }
+
         const isFKey = /^F[1-7]$/.test(e.key);
+
+        if (awaitingF9) {
+            awaitingF9 = false; 
+            if (isFKey) {
+                e.preventDefault();
+                if (recordingKey === e.key) {
+                    window.__binds?.stopRecording();
+                } else {
+                    window.__binds?.startRecording(e.key);
+                }
+                return;
+            }
+        }
+
         if (!isFKey) return;
 
         if (recordingKey) {
             e.preventDefault();
             if (e.key === recordingKey) {
-                recordingKey = null; 
-                window.dispatchEvent(new CustomEvent('sh-binds-update'));
+                window.__binds?.stopRecording();
             }
             return;
         }
         
         if (currentShortcuts[e.key] && currentShortcuts[e.key].length > 0) {
-            e.preventDefault(); 
+            e.preventDefault();
             if (!isRunning) {
                 isRunning = true;
-                activeTargets = compileTargets(currentShortcuts[e.key]); 
+                activeTargets = compileTargets(currentShortcuts[e.key]);
                 processNext();
             } else {
                 stopScript();
@@ -190,7 +230,13 @@ if (!window.__bindsLoaded) {
 
     window.__binds = {
         enable: (): void => { active = true; },
-        disable: (): void => { active = false; stopScript(); recordingKey = null; window.dispatchEvent(new CustomEvent('sh-binds-update')); },
+        disable: (): void => { 
+            active = false; 
+            stopScript(); 
+            recordingKey = null; 
+            window.dispatchEvent(new CustomEvent('sh-binds-update')); 
+            updateRecordingDot(); 
+        },
         isActive: (): boolean => active,
         getShortcuts: () => currentShortcuts,
         updateShortcuts: (newBinds: Record<string, string[]>): void => {
@@ -204,10 +250,12 @@ if (!window.__bindsLoaded) {
             currentShortcuts[key] = []; 
             try { localStorage.setItem(STORAGE_KEY, JSON.stringify(currentShortcuts)); } catch (e) {}
             window.dispatchEvent(new CustomEvent('sh-binds-update'));
+            updateRecordingDot();
         },
         stopRecording: (): void => {
             recordingKey = null;
             window.dispatchEvent(new CustomEvent('sh-binds-update'));
+            updateRecordingDot();
         }
     };
 }
