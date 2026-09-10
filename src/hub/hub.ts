@@ -351,7 +351,7 @@ else {
             id: 'binds',
             name: 'Бінди',
             file: 'binds.js',
-            description: 'Автоматично проклікує при натисненні.<br>Натисніть на F-кнопку для запису або на слово, щоб видалити його.',
+            description: 'Автоматично проклікує при натисненні.<br>Натисніть на F-кнопку для запису(альтернативно F9 і F1-F7) або на слово, щоб видалити його.',
             getHandler: () => window.__binds,
             renderSettings: (container: HTMLElement) => {
                 const handler = window.__binds as BindsHandler;
