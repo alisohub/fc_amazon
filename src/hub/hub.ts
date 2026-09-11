@@ -25,11 +25,11 @@ else {
         ? 'http://localhost:3000/dist'
         : `https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/${currentBranch}/dist`;
     
-    const DEPARTMENT_CONFIG: Record<Department, { targetRate: number, offTaskMins: number }> = {
-        "CRET": { targetRate: 47, offTaskMins: 4 },
-        "FAST": { targetRate: 100, offTaskMins: 10 },
-        "UG":   { targetRate: 47, offTaskMins: 4 },
-        "REFURB": { targetRate: 30, offTaskMins: 10 }
+    const DEPARTMENT_CONFIG: Record<Department, { targetRate: number, offTaskMins: number, doubleCountMode: boolean }> = {
+        "CRET": { targetRate: 47, offTaskMins: 4, doubleCountMode: false },
+        "FAST": { targetRate: 100, offTaskMins: 10, doubleCountMode: false },
+        "UG":   { targetRate: 47, offTaskMins: 4, doubleCountMode: true },
+        "REFURB": { targetRate: 30, offTaskMins: 10, doubleCountMode: false }
     };
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -84,12 +84,17 @@ else {
                 const settings = handler.getSettings();
                 const currentCount = handler.getCount();
                 
-                // 1. Get the current department's default rate
+                // 1. Get the current department's default rate and flags
                 const configRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
+                const configDoubleCount = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].doubleCountMode : false;
+
                 // 2. If you have a custom rate saved, use it. Otherwise, use the configRate.
                 const targetRate = settings.targetRate !== undefined ? settings.targetRate : configRate;
-                
-                handler.updateSettings({ targetRate: targetRate });
+                                 
+                handler.updateSettings({ 
+                    targetRate: targetRate, 
+                    doubleCountMode: configDoubleCount 
+                });
 
                 container.innerHTML = `
                     <div class="sh-settings-divider"></div>
@@ -630,14 +635,19 @@ else {
                     if (newConfig) {
                         
                         // 1. FORCE UPDATE COUNTER (Active or Inactive)
+                        // 1. FORCE UPDATE COUNTER (Active or Inactive)
                         if (window.__itemCounter) {
-                            window.__itemCounter.updateSettings({ targetRate: newConfig.targetRate });
+                            window.__itemCounter.updateSettings({ 
+                                targetRate: newConfig.targetRate,
+                                doubleCountMode: newConfig.doubleCountMode
+                            });
                             const targetInput = document.getElementById('sh-cfg-target') as HTMLInputElement;
                             if (targetInput) targetInput.value = newConfig.targetRate.toString();
                         } else {
                             try {
                                 const ls = JSON.parse(localStorage.getItem('sh_item_counter_settings') || '{}');
                                 ls.targetRate = newConfig.targetRate;
+                                ls.doubleCountMode = newConfig.doubleCountMode;
                                 localStorage.setItem('sh_item_counter_settings', JSON.stringify(ls));
                             } catch(err) {}
                         }
