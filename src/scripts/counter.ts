@@ -214,8 +214,7 @@ if (!window.__counterLoaded) {
                 setTimeout(() => {
                     updateCounterUI(itemCounter + increment);
                     isProcessingScan = false;
-                    // alert(`${hasSticker} --- ${increment}`);
-                }, 4000);
+                }, 6000);
             }
         });
                          
@@ -232,9 +231,8 @@ if (!window.__counterLoaded) {
                     updateCounterUI(itemCounter + increment);
                 }
                 isProcessingScan = false;
-                // alert(`${hasSticker} --- ${increment}`);
             }
-        }, 4000);
+        }, 6000);
     }   
         
     function handleScan(e: KeyboardEvent): void {
