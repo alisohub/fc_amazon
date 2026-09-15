@@ -191,30 +191,34 @@ if (!window.__counterLoaded) {
         
     function verifyAndCount(input: HTMLInputElement): void {
         const initialLabel = input.getAttribute('aria-label');
+        
         if (!hasTargetLabel(initialLabel)) {
             isProcessingScan = false;
             return;
         }
 
-        // Lock in the conditions at the exact moment of the scan
+        // 1. Determine increment based on active department settings
         let increment = 1;
-        if (settings.doubleCountMode) {
-            const hasSticker = !!document.getElementById('sticker-back-hide');
-            increment = (hasSticker) ? 2 : 1;
+        if (settings.doubleCountMode && document.getElementById('sticker-back-hide')) {
+            increment = 2;
         }                
 
+        // 2. Fetch the dynamic timeout (fallback to 6000 if missing)
+        const timeoutMs = settings.scanTimeoutMs || 6000;
         let resolved = false;
                          
+        // 3. Process the scan
         setTimeout(() => {
-            if (!resolved) {
-                resolved = true;
-                if (!document.body.contains(input)) {
-                    updateCounterUI(itemCounter + increment);
-                }
-                isProcessingScan = false;
+            if (resolved) return;
+            resolved = true;
+            
+            if (!document.body.contains(input)) {
+                updateCounterUI(itemCounter + increment);
             }
-        }, 6000);
-    }   
+            
+            isProcessingScan = false;
+        }, timeoutMs);
+    }
 
 
     function handleScan(e: KeyboardEvent): void {

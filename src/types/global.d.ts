@@ -23,6 +23,7 @@ declare global {
         customStartTime: string | null;
         targetRate?: number;
         doubleCountMode?: boolean;
+        scanTimeoutMs?: number;
     }
 
     // Extended handler just for the counter script

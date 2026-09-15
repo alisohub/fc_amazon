@@ -47,6 +47,13 @@ else {
     (async () => {
         type Branch = "main" | "development" | "local";
         type Department = "FAST" | "CRET" | "UG" | "REFURB";
+
+        interface DepartmentConfig {
+            targetRate: number;
+            offTaskMins: number;
+            doubleCountMode: boolean;
+            scanTimeoutMs: number;
+        }
         
         const currentBranch: Branch = (window.__SH_BRANCH as Branch) || 'main';
         let isTrustedEnv = false;
@@ -64,11 +71,11 @@ else {
             ? 'http://localhost:3000/dist'
             : `https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/${currentBranch}/dist`;
     
-        const DEPARTMENT_CONFIG: Record<Department, { targetRate: number, offTaskMins: number, doubleCountMode: boolean }> = {
-            "FAST": { targetRate: 100, offTaskMins: 10, doubleCountMode: false },
-            "CRET": { targetRate: 47, offTaskMins: 4, doubleCountMode: false },
-            "UG":   { targetRate: 47, offTaskMins: 4, doubleCountMode: true },
-            "REFURB": { targetRate: 30, offTaskMins: 10, doubleCountMode: false }
+        const DEPARTMENT_CONFIG: Record<Department, DepartmentConfig> = {
+            "CRET": { targetRate: 47, offTaskMins: 4, doubleCountMode: false, scanTimeoutMs: 6000 },
+            "FAST": { targetRate: 100, offTaskMins: 10, doubleCountMode: false, scanTimeoutMs: 4000 },
+            "UG":   { targetRate: 47, offTaskMins: 4, doubleCountMode: true, scanTimeoutMs: 6000 },
+            "REFURB": { targetRate: 30, offTaskMins: 10, doubleCountMode: false, scanTimeoutMs: 6000 }
         };
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -124,16 +131,16 @@ else {
                     const settings = handler.getSettings();
                     const currentCount = handler.getCount();
                     
-                    // 1. Get the current department's default rate and flags
                     const configRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
                     const configDoubleCount = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].doubleCountMode : false;
+                    const configTimeout = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].scanTimeoutMs : 6000;
 
-                    // 2. If you have a custom rate saved, use it. Otherwise, use the configRate.
                     const targetRate = settings.targetRate !== undefined ? settings.targetRate : configRate;
                                      
                     handler.updateSettings({ 
                         targetRate: targetRate, 
-                        doubleCountMode: configDoubleCount 
+                        doubleCountMode: configDoubleCount,
+                        scanTimeoutMs: configTimeout
                     });
 
                     container.innerHTML = `
@@ -678,7 +685,8 @@ else {
                             if (window.__itemCounter) {
                                 window.__itemCounter.updateSettings({ 
                                     targetRate: newConfig.targetRate,
-                                    doubleCountMode: newConfig.doubleCountMode
+                                    doubleCountMode: newConfig.doubleCountMode,
+                                    scanTimeoutMs: newConfig.scanTimeoutMs
                                 });
                                 const targetInput = document.getElementById('sh-cfg-target') as HTMLInputElement;
                                 if (targetInput) targetInput.value = newConfig.targetRate.toString();
@@ -687,6 +695,7 @@ else {
                                     const ls = JSON.parse(localStorage.getItem('sh_item_counter_settings') || '{}');
                                     ls.targetRate = newConfig.targetRate;
                                     ls.doubleCountMode = newConfig.doubleCountMode;
+                                    ls.scanTimeoutMs = newConfig.scanTimeoutMs;
                                     localStorage.setItem('sh_item_counter_settings', JSON.stringify(ls));
                                 } catch(err) {}
                             }
