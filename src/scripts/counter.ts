@@ -188,6 +188,7 @@ if (!window.__counterLoaded) {
         }
     }
         
+        
     function verifyAndCount(input: HTMLInputElement): void {
         const initialLabel = input.getAttribute('aria-label');
         if (!hasTargetLabel(initialLabel)) {
@@ -196,37 +197,17 @@ if (!window.__counterLoaded) {
         }
 
         // Lock in the conditions at the exact moment of the scan
-        const hasSticker = !!document.getElementById('sticker-back-hide');
-        const increment = (settings.doubleCountMode && hasSticker) ? 2 : 1;
-                         
+        let increment = 1;
+        if (settings.doubleCountMode) {
+            const hasSticker = !!document.getElementById('sticker-back-hide');
+            increment = (hasSticker) ? 2 : 1;
+        }                
+
         let resolved = false;
-        const observer = new MutationObserver(() => {
-            if (resolved) return;
-            const isRemoved = !document.body.contains(input);
-            const isHidden = input.offsetParent === null;
-            const currentLabel = input.getAttribute('aria-label');
-            const labelChanged = !hasTargetLabel(currentLabel);
-                                     
-            if (isRemoved || isHidden || labelChanged) {
-                resolved = true;
-                observer.disconnect();
-                                                                 
-                setTimeout(() => {
-                    updateCounterUI(itemCounter + increment);
-                    isProcessingScan = false;
-                }, 6000);
-            }
-        });
-                         
-        observer.observe(input, {
-            attributes: true,
-            attributeFilter: ['aria-label', 'disabled', 'class', 'style']
-        });
                          
         setTimeout(() => {
             if (!resolved) {
                 resolved = true;
-                observer.disconnect();
                 if (!document.body.contains(input)) {
                     updateCounterUI(itemCounter + increment);
                 }
@@ -234,7 +215,8 @@ if (!window.__counterLoaded) {
             }
         }, 6000);
     }   
-        
+
+
     function handleScan(e: KeyboardEvent): void {
         if (!active) return;
         if (e.key !== 'Enter') return;
