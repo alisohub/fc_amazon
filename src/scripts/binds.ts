@@ -68,15 +68,15 @@ if (!window.__bindsLoaded) {
     // ==========================================
     document.addEventListener('click', (e: MouseEvent) => {
         if (!active || !recordingKey) return;
-        
+                 
         const clickedElement = e.target as HTMLElement;
-        if (clickedElement.closest('#sh-root')) return; 
-        
+        if (clickedElement.closest('#sh-root')) return;
+                  
         let targetP: HTMLElement | null = null;
-
         if (clickedElement.tagName.toLowerCase() === 'p') {
             targetP = clickedElement;
         } else {
+            // 1. Check direct children
             const children = clickedElement.children;
             for (let i = 0; i < children.length; i++) {
                 if (children[i].tagName.toLowerCase() === 'p') {
@@ -84,7 +84,19 @@ if (!window.__bindsLoaded) {
                     break;
                 }
             }
+            
+            // 2. Check siblings (children of the parent)
+            if (!targetP && clickedElement.parentElement) {
+                const siblings = clickedElement.parentElement.children;
+                for (let i = 0; i < siblings.length; i++) {
+                    if (siblings[i].tagName.toLowerCase() === 'p') {
+                        targetP = siblings[i] as HTMLElement;
+                        break;
+                    }
+                }
+            }
 
+            // 3. Check uncles (children of the grandparent)
             if (!targetP) {
                 const grandparent = clickedElement.parentElement?.parentElement;
                 if (grandparent) {
@@ -105,12 +117,12 @@ if (!window.__bindsLoaded) {
             if (text && currentShortcuts[recordingKey].length < 30) {
                 currentShortcuts[recordingKey].push(text);
                 try { localStorage.setItem(STORAGE_KEY, JSON.stringify(currentShortcuts)); } catch (e) {}
-                
+                                 
                 // If it reaches the 30 step limit, auto-stop recording
                 if (currentShortcuts[recordingKey].length >= 30) {
                     recordingKey = null;
                 }
-                
+                                 
                 window.dispatchEvent(new CustomEvent('sh-binds-update')); 
             }
         }
