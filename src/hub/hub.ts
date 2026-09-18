@@ -524,6 +524,14 @@ else {
                 getHandler: () => window.__autoLpn
             },
             {
+                id: 'refurb-lpn',
+                name: 'Авто-LPN',
+                file: 'auto_lpn_refurb.js',
+                description: 'Автоматично заповнює стару LPN',
+                excludeDeps: ['CRET', 'FAST', 'UG'],
+                getHandler: () => window.__refurbLpn
+            },
+            {
                 id: 'dev-inspector',
                 name: 'Dev Inspector',
                 file: 'dev_inspector.js',

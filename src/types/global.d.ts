@@ -65,6 +65,7 @@ declare global {
         // Load Trackers (The ? means they might be undefined initially)
         __scriptHubLoaded?: boolean;
         __autoLpnLoaded?: boolean;
+        __refurbLpnLoaded?: boolean;
         __counterLoaded?: boolean;
         __bindsLoaded?: boolean;
         __offTaskLoaded?: boolean;
@@ -72,6 +73,7 @@ declare global {
 
         // Script Handlers (Attached to the window so the Hub can read them)
         __autoLpn?: ScriptHandler;
+        __refurbLpn?: ScriptHandler;
         __itemCounter?: CounterHandler;
         __binds?: BindsHandler;
         __offTask?: OffTaskHandler;
