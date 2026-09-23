@@ -41,12 +41,13 @@ else {
         "49480808159cde937909eaad603911749197829c0cea7a8b68c29e63c98538c0",
         "61678f96fc810a611097d9b0bc98bc8ecb0abee7cd55f2faa19b455604dc2332",
         "2f5ae5e87d1a659e1a01e2bc2c38441bba81bb12eb39d59695b4960576012c55",
-        "004381f7f5b3ace58d7dc03a047674325acd266ddc576c273942fdb7237f7130"
+        "004381f7f5b3ace58d7dc03a047674325acd266ddc576c273942fdb7237f7130",
+        "f355a6794c9a044989a7d2e5bc1e3aa5bff909a38adfbdc68cc0433042ea84b9"
     ];
 
     (async () => {
         type Branch = "main" | "development" | "local";
-        type Department = "FAST" | "CRET" | "UG" | "REFURB";
+        type Department = "FAST" | "CRET" | "UG" | "REFURB" | "WHD";
 
         interface DepartmentConfig {
             targetRate: number;
@@ -75,7 +76,8 @@ else {
             "CRET": { targetRate: 47, offTaskMins: 4, doubleCountMode: false, scanTimeoutMs: 6000 },
             "FAST": { targetRate: 100, offTaskMins: 10, doubleCountMode: false, scanTimeoutMs: 4000 },
             "UG":   { targetRate: 47, offTaskMins: 4, doubleCountMode: true, scanTimeoutMs: 6000 },
-            "REFURB": { targetRate: 30, offTaskMins: 10, doubleCountMode: false, scanTimeoutMs: 6000 }
+            "REFURB": { targetRate: 30, offTaskMins: 10, doubleCountMode: false, scanTimeoutMs: 6000 },
+            "WHD": { targetRate: 20, offTaskMins: 5, doubleCountMode: false, scanTimeoutMs: 6000 }
         };
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -88,12 +90,14 @@ else {
             DEPARTAMENT_OPTIONS = ["FAST", "CRET"];
         } else if (gradingMode === 'CRETURN_REFURB') {
             DEPARTAMENT_OPTIONS = ["REFURB"];
+        } else if (gradingMode === 'WAREHOUSE_DEALS') {
+            DEPARTAMENT_OPTIONS = ["WHD"];
         } else {
-            DEPARTAMENT_OPTIONS = ["FAST", "CRET", "UG", "REFURB"]; 
+            DEPARTAMENT_OPTIONS = ["FAST", "CRET", "UG", "REFURB", "WHD"]; 
         }
         
         function isDepartment(value: string | null): value is Department {
-            return value === "FAST" || value === "CRET" || value === "UG" || value === "REFURB";
+            return value === "FAST" || value === "CRET" || value === "UG" || value === "REFURB" || value === "WHD";
         }
 
         const storedDep = localStorage.getItem('sh_hub_dep');
@@ -520,7 +524,7 @@ else {
                 name: 'Авто-LPN',
                 file: 'auto_lpn.js',
                 description: 'Автоматично відкриває "перепризначити LPN" при скануванні LPN або будь-чого іншого, окрім тота',
-                excludeDeps: ['REFURB'],
+                excludeDeps: ['REFURB', 'WHD'],
                 getHandler: () => window.__autoLpn
             },
             {
@@ -753,7 +757,16 @@ else {
             const updateMasterToggleState = (): void => {
                 const chkAll = document.getElementById('sh-chk-all') as HTMLInputElement;
                 if (!chkAll) return;
-                const standardScripts = visibleScripts.filter(s => !s.experimental && !s.isTrusted);
+                
+                const subDepSelect = document.getElementById('sh-sub-dep-select') as HTMLSelectElement | null;
+                const currentDep = subDepSelect ? (subDepSelect.value as Department) : "UG";
+
+                const standardScripts = visibleScripts.filter(s => {
+                    if (s.experimental) return false;
+                    if (s.excludeDeps && s.excludeDeps.includes(currentDep)) return false; // MUST NOT be excluded
+                    return true;
+                });
+
                 const checkBoxes = standardScripts.map(s => document.getElementById(`sh-chk-${s.id}`) as HTMLInputElement | null);
                 chkAll.checked = checkBoxes.length > 0 && checkBoxes.every(chk => chk && chk.checked);
             };
@@ -806,13 +819,17 @@ else {
             
             const chkAll = document.getElementById('sh-chk-all') as HTMLInputElement;
             if (chkAll) {
-                chkAll.addEventListener('change', async (e: Event) => {
-                    const target = e.target as HTMLInputElement;
-                    const turnOn = target.checked;
+                chkAll.addEventListener('change', (e) => {
+                    const turnOn = (e.target as HTMLInputElement).checked;
                     const togglePromises: Promise<void>[] = [];
                     
+                    const subDepSelect = document.getElementById('sh-sub-dep-select') as HTMLSelectElement | null;
+                    const currentDep = subDepSelect ? (subDepSelect.value as Department) : "UG";
+
                     visibleScripts.forEach(script => {
                         if (script.experimental) return; 
+                        if (script.excludeDeps && script.excludeDeps.includes(currentDep)) return; // CRITICAL: Skip if not for this department
+                        
                         const chk = document.getElementById(`sh-chk-${script.id}`) as HTMLInputElement;
                         const settingsContainer = document.getElementById(`sh-settings-${script.id}`);
                         if (chk && chk.checked !== turnOn && !chk.disabled) {
@@ -820,8 +837,14 @@ else {
                             togglePromises.push(handleToggle(script, chk, settingsContainer));
                         }
                     });
-                    await Promise.all(togglePromises);
-                    updateMasterToggleState(); 
+
+                    if (togglePromises.length > 0) {
+                        chkAll.disabled = true;
+                        Promise.all(togglePromises).finally(() => {
+                            chkAll.disabled = false;
+                            updateMasterToggleState();
+                        });
+                    }
                 });
             }
             
