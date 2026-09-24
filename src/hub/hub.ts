@@ -536,6 +536,13 @@ else {
                 getHandler: () => window.__refurbLpn
             },
             {
+                id: 'gravis-lpn',
+                name: 'Gravis для LPN',
+                file: 'gravis.js',
+                description: 'Відкриває Gravis даного товару',
+                getHandler: () => window.__gravis
+            },
+            {
                 id: 'dev-inspector',
                 name: 'Dev Inspector',
                 file: 'dev_inspector.js',

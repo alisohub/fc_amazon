@@ -69,6 +69,7 @@ declare global {
         __counterLoaded?: boolean;
         __bindsLoaded?: boolean;
         __offTaskLoaded?: boolean;
+        __gravisLoaded?: boolean;
         __devInspectorLoaded?: boolean;
 
         // Script Handlers (Attached to the window so the Hub can read them)
@@ -77,6 +78,7 @@ declare global {
         __itemCounter?: CounterHandler;
         __binds?: BindsHandler;
         __offTask?: OffTaskHandler;
+        __gravis?: ScriptHandler;
         __devInspector?: ScriptHandler;
     }
 }

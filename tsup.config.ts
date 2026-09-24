@@ -10,6 +10,7 @@ export default defineConfig({
         'binds': 'src/scripts/binds.ts',
         'counter': 'src/scripts/counter.ts',
         'off_task': 'src/scripts/off_task.ts',
+        'gravis': 'src/scripts/gravis.ts',
         'dev_inspector': 'src/scripts/dev_inspector.ts'
     },
     format: ['iife'],
