@@ -7,14 +7,20 @@ declare global {
     // 1. CORE HANDLER INTERFACES
     // ==========================================
     
-    // The base contract every script MUST follow
+    // The base contract every script MUST follow.
     interface ScriptHandler {
         enable: () => void;
         disable: () => void;
         isActive: () => boolean;
     }
 
-    // specific settings shape for the counter
+    // A specialized contract for scripts that have settings menus.
+    // Making these required here stops the Hub from throwing errors.
+    interface SettingsHandler<T> extends ScriptHandler {
+        getSettings: () => T;
+        updateSettings: (newSettings: Partial<T>) => void;
+    }
+
     interface CounterSettings {
         overlayOpacity: number;
         lunchBreak: number;
@@ -26,43 +32,40 @@ declare global {
         scanTimeoutMs?: number;
     }
 
-    // Extended handler just for the counter script
-    interface CounterHandler extends ScriptHandler {
+    // Counter gets SettingsHandler PLUS its own unique count methods
+    interface CounterHandler extends SettingsHandler<CounterSettings> {
         getCount: () => number;
         setCount: (newCount: number) => void;
-        getSettings: () => CounterSettings;
-        // Partial<> means you can pass just one setting at a time to update it
-        updateSettings: (newSettings: Partial<CounterSettings>) => void;
     }
 
     interface BindsHandler extends ScriptHandler {
-        // Returns the current active shortcuts (e.g., F1: ["opinia", "brak", ...])
         getShortcuts: () => Record<string, string[]>;
-        // Saves user edits to localStorage and updates the engine
         updateShortcuts: (newBinds: Record<string, string[]>) => void;
-        // Recording methods
         getRecordingKey: () => string | null;
         startRecording: (key: string) => void;
         stopRecording: () => void;
     }
 
-    interface OffTaskHandler extends ScriptHandler {
-            getSettings: () => OffTaskSettings;
-            updateSettings: (newSettings: Partial<OffTaskSettings>) => void;
-    }
-    // ==========================================
-    // 2. THE WINDOW OBJECT EXTENSIONS
-    // ==========================================
     interface OffTaskSettings {
         toteBarcode?: string;
         timeoutMins?: number;
     }
 
+    interface DevInspectorSettings {
+        showDetails: boolean;
+        showCSS: boolean;
+        showCoords: boolean;
+    }
+
+    // ==========================================
+    // 2. THE WINDOW OBJECT EXTENSIONS
+    // ==========================================
+    
     interface Window {
         // Branch / Environment info
         __SH_BRANCH?: string;
 
-        // Load Trackers (The ? means they might be undefined initially)
+        // Load Trackers
         __scriptHubLoaded?: boolean;
         __autoLpnLoaded?: boolean;
         __refurbLpnLoaded?: boolean;
@@ -72,13 +75,15 @@ declare global {
         __gravisLoaded?: boolean;
         __devInspectorLoaded?: boolean;
 
-        // Script Handlers (Attached to the window so the Hub can read them)
+        // Script Handlers
         __autoLpn?: ScriptHandler;
         __refurbLpn?: ScriptHandler;
         __itemCounter?: CounterHandler;
         __binds?: BindsHandler;
-        __offTask?: OffTaskHandler;
+        
+        // We pass the settings interface directly into the SettingsHandler generic
+        __offTask?: SettingsHandler<OffTaskSettings>;
+        __devInspector?: SettingsHandler<DevInspectorSettings>;
         __gravis?: ScriptHandler;
-        __devInspector?: ScriptHandler;
     }
 }

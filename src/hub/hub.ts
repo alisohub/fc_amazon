@@ -546,9 +546,54 @@ else {
                 id: 'dev-inspector',
                 name: 'Dev Inspector',
                 file: 'dev_inspector.js',
-                description: 'Клікніть на будь-який елемент, щоб побачити його HTML (Тільки для розробки).',
+                description: 'Logs detailed element data, CSS, and coordinates to the console on click.',
+                experimental: true,
                 getHandler: () => window.__devInspector,
-                experimental: true 
+                renderSettings: (container: HTMLElement) => {
+                    const handler = window.__devInspector;
+                    if (!handler || !handler.getSettings) return;
+
+                    const settings = handler.getSettings();
+
+                    // Helper to generate checkboxes
+                    // Change the type of 'key' from 'string' to 'keyof DevInspectorSettings'
+                    const createCheckbox = (id: string, labelText: string, key: keyof DevInspectorSettings) => {
+                        const wrapper = document.createElement('div');
+                        Object.assign(wrapper.style, {
+                            display: 'flex',
+                            alignItems: 'center',
+                            marginBottom: '8px'
+                        });
+
+                        const chk = document.createElement('input');
+                        chk.type = 'checkbox';
+                        chk.id = id;
+                        chk.checked = settings[key]; // The red squiggly line will disappear here
+                        chk.style.marginRight = '8px';
+
+                        const lbl = document.createElement('label');
+                        lbl.htmlFor = id;
+                        lbl.textContent = labelText;
+                        Object.assign(lbl.style, {
+                            fontSize: '13px',
+                            color: '#aab7c4',
+                            cursor: 'pointer'
+                        });
+
+                        chk.addEventListener('change', (e) => {
+                            // This will also be perfectly typed now
+                            handler.updateSettings({ [key]: (e.target as HTMLInputElement).checked });
+                        });
+
+                        wrapper.appendChild(chk);
+                        wrapper.appendChild(lbl);
+                        return wrapper;
+                    };
+
+                    container.appendChild(createCheckbox('sh-dev-details', 'Show Element Details', 'showDetails'));
+                    container.appendChild(createCheckbox('sh-dev-css', 'Show Element CSS', 'showCSS'));
+                    container.appendChild(createCheckbox('sh-dev-coords', 'Show Click Coordinates', 'showCoords'));
+                }
             }
         ];
 
