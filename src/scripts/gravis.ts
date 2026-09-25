@@ -2,7 +2,8 @@ if (!window.__gravisLoaded) {
     window.__gravisLoaded = true;
 
     let active: boolean = false;
-    const STORAGE_KEY = 'lpnForGravis';
+    const STORAGE_KEY_LPN = 'lpnForGravis';
+    const STORAGE_KEY_STATION = 'shStation';
     let keyBuffer: string = '';
 
     function handleKeydown(e: KeyboardEvent): void {
@@ -12,16 +13,16 @@ if (!window.__gravisLoaded) {
         if (e.key === 'Enter') {
             const input = e.target as HTMLInputElement;
             if (input && input.tagName.toLowerCase() === 'input') {
-                const label = (input.getAttribute('aria-label') || '').toLowerCase();
-                const isValidLabel = ['rma', 'lpn', 'nlp', 'лпн', 'нлп'].some(keyword => label.includes(keyword));
                 
-                if (isValidLabel) {
-                    const val = input.value?.trim();
-                    if (val && /^lpn[a-z0-9]+/i.test(val)) {
-                        try {
-                            localStorage.setItem(STORAGE_KEY, val);
-                        } catch (err) {}
-                    }
+                const val = input.value?.trim();
+                if (val && /^lpn[a-z0-9]+/i.test(val)) {
+                    try {
+                        localStorage.setItem(STORAGE_KEY_LPN, val);
+                    } catch (err) {}
+                } else if (val && /^ws_+/i.test(val)) {
+                    try {
+                        localStorage.setItem(STORAGE_KEY_STATION, val);
+                    } catch (err) {}
                 }
             }
             keyBuffer = ''; // Reset typing buffer
@@ -33,7 +34,7 @@ if (!window.__gravisLoaded) {
             keyBuffer += e.key.toLowerCase();
             if (keyBuffer.length > 2) keyBuffer = keyBuffer.slice(-2);
 
-            if (keyBuffer === 'gr') {
+            if (keyBuffer === 'us') {
                 // Block the shortcut if actively typing in an input (prevents scanner misfires)
                 const activeEl = document.activeElement;
                 const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
@@ -41,7 +42,7 @@ if (!window.__gravisLoaded) {
                 if (!isInput) {
                     keyBuffer = ''; // Consume the buffer
                     try {
-                        const savedLpn = localStorage.getItem(STORAGE_KEY);
+                        const savedLpn = localStorage.getItem(STORAGE_KEY_LPN);
                         if (savedLpn) {
                             window.open(`https://eu-cretfc-tools-dub.dub.proxy.amazon.com/gravis/returnUnit/${savedLpn}`, '_blank');
                         }

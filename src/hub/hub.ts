@@ -539,7 +539,7 @@ else {
                 id: 'gravis-lpn',
                 name: 'Gravis для LPN',
                 file: 'gravis.js',
-                description: 'Відкриває Gravis даного товару',
+                description: 'Напишіть gr, щоб відкрити gravis для даного товару',
                 getHandler: () => window.__gravis
             },
             {

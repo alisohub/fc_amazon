@@ -11,7 +11,7 @@ if (!window.__autoLpnLoaded) {
         'назначить новый номер lp'
     ];
 
-    const IGNORED_PREFIXES: Set<string> = new Set(['t']);
+    const IGNORED_PREFIXES: Set<string> = new Set(['t', 'w', 'c']);
     let cooldownUntil: number = 0;
     let active: boolean = false;
 
