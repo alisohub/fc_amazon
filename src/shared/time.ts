@@ -12,9 +12,8 @@ export function getEffectiveWorkTime(customStartTime: string | null, lunchBreak:
     const hours = now.getHours();
     const isNight = hours >= 17 || hours < 6;
     let shiftStart = new Date(now.getTime());
-
     let appliedCustomTime = false;
-    
+
     // Safely parse the manual HH:MM text input
     if (customStartTime && customStartTime.includes(':')) {
         const parts = customStartTime.split(':');
@@ -28,7 +27,7 @@ export function getEffectiveWorkTime(customStartTime: string | null, lunchBreak:
             }
             appliedCustomTime = true;
         }
-    } 
+    }
     
     // Default Logic if no custom time is set
     if (!appliedCustomTime) {
@@ -42,11 +41,11 @@ export function getEffectiveWorkTime(customStartTime: string | null, lunchBreak:
 
     const elapsedMs = now.getTime() - shiftStart.getTime();
     if (elapsedMs <= 0) return { ms: 0, formatted: '0h0m' };
-    
+
     let breakStart = new Date(shiftStart.getTime());
     let breakEnd = new Date(shiftStart.getTime());
     const opt = lunchBreak || 1;
-    
+
     // Break schedules
     if (isNight) {
         if (opt === 1) { breakStart.setHours(23, 20, 0, 0); breakEnd.setHours(23, 50, 0, 0); }
@@ -59,22 +58,24 @@ export function getEffectiveWorkTime(customStartTime: string | null, lunchBreak:
         else if (opt === 3) { breakStart.setHours(12, 20, 0, 0); breakEnd.setHours(12, 50, 0, 0); }
         else if (opt === 4) { breakStart.setHours(12, 50, 0, 0); breakEnd.setHours(13, 20, 0, 0); }
     }
+
+    // Mathematical overlap calculation to dynamically handle custom start times
+    const overlapStartMs = Math.max(shiftStart.getTime(), breakStart.getTime());
+    const overlapEndMs = Math.min(now.getTime(), breakEnd.getTime());
     
-    let effectiveMs = elapsedMs;
+    // If overlapEndMs is greater than overlapStartMs, the user worked during the break period.
+    // If the shift started after the break, this returns 0.
+    const breakOverlapMs = Math.max(0, overlapEndMs - overlapStartMs);
     
-    if (now >= breakStart && now < breakEnd) {
-        effectiveMs = breakStart.getTime() - shiftStart.getTime();
-    } else if (now >= breakEnd) {
-        effectiveMs = elapsedMs - (30 * 60 * 1000);
-    }
-    
+    let effectiveMs = elapsedMs - breakOverlapMs;
+
     const maxMs = 10 * 60 * 60 * 1000;
     if (effectiveMs > maxMs) effectiveMs = maxMs;
-    
+
     const totalMinutes = Math.floor(effectiveMs / (1000 * 60));
     const h = Math.floor(totalMinutes / 60);
     const m = totalMinutes % 60;
-    
+
     return { ms: effectiveMs, formatted: `${h}h${m}m` };
 }
 
