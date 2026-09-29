@@ -40,17 +40,17 @@ if (!window.__devInspectorLoaded) {
             msg += `--------------------------------\n`;
         }
 
-        // 2. Element Details
+        // 2. Element Details (Raw HTML)
         if (settings.showDetails) {
-            msg += `📝 DETAILS:\n`;
-            msg += `   ID: ${target.id || 'None'}\n`;
-            msg += `   Classes: ${target.className || 'None'}\n`;
-            msg += `   Aria-Label: ${target.getAttribute('aria-label') || 'None'}\n`;
+            msg += `📝 RAW HTML:\n`;
             
-            // Clean up the text so it doesn't create a massive wall of text in the alert
-            const rawText = target.textContent?.trim().replace(/\s+/g, ' ') || 'None';
-            const shortText = rawText.length > 60 ? rawText.substring(0, 60) + '...' : rawText;
-            msg += `   Text: "${shortText}"\n`;
+            let rawHtml = target.outerHTML || 'None';
+            // Truncate if the HTML tree is massive so it fits in the alert box
+            if (rawHtml.length > 800) {
+                rawHtml = rawHtml.substring(0, 800) + '\n...[TRUNCATED]';
+            }
+            
+            msg += `${rawHtml}\n`;
             msg += `--------------------------------\n`;
         }
 
@@ -59,7 +59,6 @@ if (!window.__devInspectorLoaded) {
             msg += `🎨 CSS:\n`;
             msg += `   Inline CSS: ${target.style.cssText || 'None'}\n`;
             
-            // Extract a few critical computed styles (since alerting 300+ properties crashes/overflows)
             const comp = window.getComputedStyle(target);
             msg += `   Display: ${comp.display}\n`;
             msg += `   Position: ${comp.position}\n`;
