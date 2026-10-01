@@ -56,7 +56,7 @@ if (!window.__bindsLoaded) {
     }
 
     function compileTargets(sequence: string[]): string[] {
-        return sequence.map(word => word.trim().toLowerCase()).filter(w => w.length > 0).reverse();
+        return sequence.map(word => word.trim().toLowerCase()).filter(w => w.length > 0);
     }
 
     function normalizeText(txt: string | null): string {
