@@ -25,7 +25,7 @@ if (!window.__counterLoaded) {
         }
     } catch (e) {}
         
-    const TOTE_REGEX: RegExp = /^[twc]s[a-z0-9]+/i;
+    const TOTE_REGEX: RegExp = /^[twc]s[a-z0-9_]+/i;
     let itemCounter: number = 0;
         
     try {
