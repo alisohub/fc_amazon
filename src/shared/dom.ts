@@ -1,18 +1,58 @@
-/**
- * Checks if a given DOM element is currently inside a visible modal or dialog.
- * This prevents our scripts from triggering actions when the user is 
- * interacting with pop-ups.
- */
+// COSNTANTS
+// ------------------------------------------
 
 const TARGET_LABELS: string[] = [
     'wprowadź pojemnik',
     'вкажіть транспортну тару',
     'введите тару'
 ];
+export const STORAGE_KEY_LPN = 'shLastLPN';
+export const STORAGE_KEY_STATION = 'shStation';
+
+// ------------------------------------------
 
 export function hasTargetLabel(labelString: string | null): boolean {
     const lowerLabel = (labelString || '').toLowerCase();
     return TARGET_LABELS.some(target => lowerLabel.includes(target));
+}
+
+export function buildInputAriaSelector(labels: string[]): string {
+    return labels.map(label => `input[aria-label="${label}"]`).join(', ');
+}
+
+export function triggerEnter(el: HTMLElement): void {
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+    el.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+}
+
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+export async function waitForElement(selector: string, timeout = 5000): Promise<HTMLElement | null> {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+        const el = document.querySelector(selector) as HTMLElement | null;
+        if (el && el.offsetParent !== null) return el;
+        await sleep(150);
+    }
+    return null;
+}
+
+export async function waitForButtonBySpans(spanTexts: string[], timeout = 5000): Promise<HTMLElement | null> {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+        const spans = Array.from(document.querySelectorAll('button span'));
+        const span = spans.find(s => {
+            const text = s.textContent?.trim();
+            return text && spanTexts.includes(text);
+        });
+        
+        if (span) {
+            const btn = span.closest('button') as HTMLElement;
+            if (btn && btn.offsetParent !== null) return btn;
+        }
+        await sleep(150);
+    }
+    return null;
 }
 
 // Forces React/Angular to acknowledge programmatic input changes

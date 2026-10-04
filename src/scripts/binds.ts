@@ -1,3 +1,6 @@
+import { triggerEnter } from "@shared/dom";
+import { normalizeText } from "@shared/utils";
+
 if (!window.__bindsLoaded) {
     window.__bindsLoaded = true;
 
@@ -57,10 +60,6 @@ if (!window.__bindsLoaded) {
 
     function compileTargets(sequence: string[]): string[] {
         return sequence.map(word => word.trim().toLowerCase()).filter(w => w.length > 0);
-    }
-
-    function normalizeText(txt: string | null): string {
-        return (txt || '').replace(/\s+/g, ' ').trim().toLowerCase();
     }
 
     // ==========================================
@@ -187,8 +186,7 @@ if (!window.__bindsLoaded) {
         enterTimer = setTimeout(() => {
             if (!domChanged) {
                 const targetEl = (document.activeElement as HTMLElement) || document.body;
-                targetEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
-                targetEl.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+                triggerEnter(targetEl);
             }
         }, 500);
         

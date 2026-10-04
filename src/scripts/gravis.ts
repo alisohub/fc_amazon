@@ -1,57 +1,45 @@
+import { STORAGE_KEY_LPN, STORAGE_KEY_STATION } from "@shared/dom";
+
 if (!window.__gravisLoaded) {
     window.__gravisLoaded = true;
 
     let active: boolean = false;
-    const STORAGE_KEY_LPN = 'lpnForGravis';
-    const STORAGE_KEY_STATION = 'shStation';
+    let isProcessing: boolean = false;
     let keyBuffer: string = '';
+
+    async function executeClearSession(): Promise<void> {
+        if (isProcessing) return; 
+        isProcessing = true;
+        try {
+        } finally {
+            return; 
+        }
+
+    }
 
     function handleKeydown(e: KeyboardEvent): void {
         if (!active) return;
 
-        // 1. Extract and store LPN on Enter
-        if (e.key === 'Enter') {
-            const input = e.target as HTMLInputElement;
-            if (input && input.tagName.toLowerCase() === 'input') {
-                
-                const val = input.value?.trim();
-                if (val && /^lpn[a-z0-9]+/i.test(val)) {
-                    try {
-                        localStorage.setItem(STORAGE_KEY_LPN, val);
-                    } catch (err) {}
-                } else if (val && /^ws_+/i.test(val)) {
-                    try {
-                        localStorage.setItem(STORAGE_KEY_STATION, val);
-                    } catch (err) {}
-                }
-            }
-            keyBuffer = ''; // Reset typing buffer
+        // 1. Exit early and reset buffer if they press space, numbers, or special keys
+        if (e.key.length !== 1 || !/[a-z]/i.test(e.key)) {
+            keyBuffer = '';
             return;
         }
 
-        // 2. Track "gr" keyboard shortcut
-        if (e.key.length === 1 && /[a-z]/i.test(e.key)) {
-            keyBuffer += e.key.toLowerCase();
-            if (keyBuffer.length > 2) keyBuffer = keyBuffer.slice(-2);
-
-            if (keyBuffer === 'us') {
-                // Block the shortcut if actively typing in an input (prevents scanner misfires)
-                const activeEl = document.activeElement;
-                const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
-
-                if (!isInput) {
-                    keyBuffer = ''; // Consume the buffer
-                    try {
-                        const savedLpn = localStorage.getItem(STORAGE_KEY_LPN);
-                        if (savedLpn) {
-                            window.open(`https://eu-cretfc-tools-dub.dub.proxy.amazon.com/gravis/returnUnit/${savedLpn}`, '_blank');
-                        }
-                    } catch (err) {}
-                }
-            }
-        } else {
-            // Reset buffer if they hit space, numbers, or special characters
+        // 2. Exit early if actively typing in an input (prevents scanner misfires)
+        const target = e.target as HTMLElement;
+        if (target && target.matches('input, textarea, [contenteditable="true"]')) {
             keyBuffer = '';
+            return;
+        }
+
+        // 3. Append the new key and slice to keep only the last 2 characters
+        keyBuffer = (keyBuffer + e.key.toLowerCase()).slice(-2);
+
+        // 4. Execute and consume buffer
+        if (keyBuffer === 'us') {
+            keyBuffer = ''; 
+            executeClearSession();
         }
     }
 
@@ -60,7 +48,7 @@ if (!window.__gravisLoaded) {
 
     window.__gravis = {
         enable: (): void => { active = true; },
-        disable: (): void => { active = false; keyBuffer = ''; },
+        disable: (): void => { active = false; keyBuffer = ''; isProcessing = false},
         isActive: (): boolean => active
     };
 }

@@ -1,3 +1,4 @@
+import { STORAGE_KEY_LPN, STORAGE_KEY_STATION } from '@shared/dom';
 import { HUB_STYLES } from './styles';
 
 if (window.__scriptHubLoaded) {
@@ -529,7 +530,7 @@ else {
             },
             {
                 id: 'refurb-lpn',
-                name: 'Авто-LPN',
+                name: 'Aвто-LPN',
                 file: 'auto_lpn_refurb.js',
                 description: 'Автоматично заповнює стару LPN',
                 excludeDeps: ['CRET', 'FAST', 'UG'],
@@ -539,14 +540,15 @@ else {
                 id: 'gravis-lpn',
                 name: 'Gravis для LPN',
                 file: 'gravis.js',
-                description: 'Напишіть gr, щоб відкрити gravis для даного товару',
+                description: 'В процесі розробки! НЕ ПРАЦЮЄ!',
+                experimental: true,
                 getHandler: () => window.__gravis
             },
             {
                 id: 'dev-inspector',
                 name: 'Dev Inspector',
                 file: 'dev_inspector.js',
-                description: 'Logs detailed element data, CSS, and coordinates to the console on click.',
+                description: '',
                 experimental: true,
                 getHandler: () => window.__devInspector,
                 renderSettings: (container: HTMLElement) => {
@@ -800,6 +802,57 @@ else {
                 });
             }
 
+            // Writes to memory each input of matched LPN and WS regex
+            document.addEventListener('keydown', (e: KeyboardEvent) => {
+                // 1. Guard Clauses
+                if (e.key !== 'Enter') return;
+                if (!window.__refurbLpnLoaded && !window.__gravisLoaded) return;
+                    
+                // 2. Grab the exact element the user just pressed Enter on
+                const input = e.target as HTMLInputElement;
+                if (!input || !input.matches('input')) return;
+
+                const val = input.value?.trim();
+                if (!val) return;
+
+                // Grab the aria-label of this specific input, standardized to lowercase
+                const currentLabel = (input.getAttribute('aria-label') || '').toLowerCase();
+
+                // Store your labels here (make sure they are lowercase for case-insensitive matching)
+                const LABELS = {
+                    // TODO: add lpn labels
+                    lpnLabels: [''], 
+                    wsLabels: ['Wprowadź stację roboczą'] 
+                };
+
+                try {
+                    // =========================================
+                    // 3. LPN INPUT HANDLING
+                    // =========================================
+                    // Check if the current input's label matches any of our defined LPN labels
+                    const isLpnInput = LABELS.lpnLabels.some(lbl => currentLabel.includes(lbl.toLowerCase())); 
+                    
+                    if (isLpnInput && /^lpn[a-z0-9]+/i.test(val)) {
+                        localStorage.setItem(STORAGE_KEY_LPN, val);
+                        return; // Stop processing once we match and save
+                    }
+
+                    // =========================================
+                    // 4. WORKSPACE (WS) INPUT HANDLING
+                    // =========================================
+                    // Check if the current input's label matches any of our defined WS labels
+                    const isWsInput = LABELS.wsLabels.some(lbl => currentLabel.includes(lbl.toLowerCase()));
+                    
+                    if (isWsInput && /^ws_+/i.test(val)) {
+                        localStorage.setItem(STORAGE_KEY_STATION, val);
+                        return; // Stop processing once we match and save
+                    }
+
+                } catch (err) {
+                    // Silently fail if localStorage is blocked
+                }
+            }, true);
+
             const visibleScripts = SCRIPTS.filter(script => {
                 if (script.experimental && !['development', 'local'].includes(currentBranch)) return false;
                 if (script.isTrusted && !isTrustedEnv) return false;
@@ -810,9 +863,6 @@ else {
                 const chkAll = document.getElementById('sh-chk-all') as HTMLInputElement;
                 if (!chkAll) return;
                 
-                const subDepSelect = document.getElementById('sh-sub-dep-select') as HTMLSelectElement | null;
-                const currentDep = subDepSelect ? (subDepSelect.value as Department) : "UG";
-
                 const standardScripts = visibleScripts.filter(s => {
                     if (s.experimental) return false;
                     if (s.excludeDeps && s.excludeDeps.includes(currentDep)) return false; // MUST NOT be excluded
@@ -875,9 +925,6 @@ else {
                     const turnOn = (e.target as HTMLInputElement).checked;
                     const togglePromises: Promise<void>[] = [];
                     
-                    const subDepSelect = document.getElementById('sh-sub-dep-select') as HTMLSelectElement | null;
-                    const currentDep = subDepSelect ? (subDepSelect.value as Department) : "UG";
-
                     visibleScripts.forEach(script => {
                         if (script.experimental) return; 
                         if (script.excludeDeps && script.excludeDeps.includes(currentDep)) return; // CRITICAL: Skip if not for this department

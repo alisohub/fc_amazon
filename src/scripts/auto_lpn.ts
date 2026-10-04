@@ -1,10 +1,12 @@
 // 1. Import our DRY utility from the shared folder
 import { isInsideModal } from '@shared/dom';
+import { normalizeText } from '@shared/utils';
 
 if (!window.__autoLpnLoaded) {
     window.__autoLpnLoaded = true;
 
     // 2. Explicitly type our constants
+    // TODO: check if text is span
     const TARGET_TEXTS: string[] = [
         'перепризначте lpn', 
         'przypisz ponownie lpn',
@@ -34,7 +36,7 @@ if (!window.__autoLpnLoaded) {
         const now: number = Date.now();
         if (now < cooldownUntil) return;
 
-        const cleanValue: string = input.value.replace(/[^\x20-\x7E]/g, '').trim().toLowerCase();
+        const cleanValue: string = normalizeText(input.value);
         if (!cleanValue) return;
 
         // 5. Cast the found element to HTMLElement so TypeScript knows it has a .click() method
@@ -44,7 +46,7 @@ if (!window.__autoLpnLoaded) {
             
             if (btnEl.disabled || htmlEl.offsetParent === null || !htmlEl.textContent) return false;
             
-            const text: string = htmlEl.textContent.toLowerCase().replace(/\s+/g, ' ');
+            const text: string = normalizeText(htmlEl.textContent);
             return TARGET_TEXTS.some(target => text.includes(target));
         }) as HTMLElement | undefined;
 

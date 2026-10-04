@@ -1,4 +1,4 @@
-import { isInsideModal, hasTargetLabel, setNativeValue } from '@shared/dom';
+import { isInsideModal, hasTargetLabel, setNativeValue, triggerEnter } from '@shared/dom';
 
 if (!window.__offTaskLoaded) {
     window.__offTaskLoaded = true;
@@ -61,10 +61,7 @@ if (!window.__offTaskLoaded) {
         if (elapsed >= targetMs) {
             // Final tote scan
             setNativeValue(targetInput, settings.toteBarcode);
-            const enterEvent = new KeyboardEvent('keydown', {
-                key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
-            });
-            targetInput.dispatchEvent(enterEvent);
+            triggerEnter(targetInput);
             clearAndStop('success');
         } else {
             // Update the UI timer in the Hub
