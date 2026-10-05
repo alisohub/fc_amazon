@@ -820,16 +820,22 @@ else {
 
                 // Store your labels here (make sure they are lowercase for case-insensitive matching)
                 const LABELS = {
-                    // TODO: add lpn labels
-                    lpnLabels: [''], 
-                    wsLabels: ['Wprowadź stację roboczą'] 
+                    lpnLabels: [
+                        // data-testid = package-input
+                        'wprowadź numer rma',
+                        // data-testid = wd-item-scan-label
+                        'wprowadź lpn lub sku',
+                        // data-testid = lpn-input-label
+                        'wprowadź lpn'
+                    ], 
+                    //data-testid = ws-input
+                    wsLabels: ['wprowadź stację roboczą'] 
                 };
 
                 try {
                     // =========================================
                     // 3. LPN INPUT HANDLING
                     // =========================================
-                    // Check if the current input's label matches any of our defined LPN labels
                     const isLpnInput = LABELS.lpnLabels.some(lbl => currentLabel.includes(lbl.toLowerCase())); 
                     
                     if (isLpnInput && /^lpn[a-z0-9]+/i.test(val)) {
@@ -840,7 +846,6 @@ else {
                     // =========================================
                     // 4. WORKSPACE (WS) INPUT HANDLING
                     // =========================================
-                    // Check if the current input's label matches any of our defined WS labels
                     const isWsInput = LABELS.wsLabels.some(lbl => currentLabel.includes(lbl.toLowerCase()));
                     
                     if (isWsInput && /^ws_+/i.test(val)) {

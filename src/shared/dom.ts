@@ -1,6 +1,7 @@
 // COSNTANTS
 // ------------------------------------------
 
+// data-testid = tote-input-label
 const TARGET_LABELS: string[] = [
     'wprowadź pojemnik',
     'вкажіть транспортну тару',

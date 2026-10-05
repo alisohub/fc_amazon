@@ -6,7 +6,7 @@ if (!window.__autoLpnLoaded) {
     window.__autoLpnLoaded = true;
 
     // 2. Explicitly type our constants
-    // TODO: check if text is span
+    // data-testid = button-reassign-lpn-id
     const TARGET_TEXTS: string[] = [
         'перепризначте lpn', 
         'przypisz ponownie lpn',
