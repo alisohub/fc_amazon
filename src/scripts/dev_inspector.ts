@@ -1,8 +1,9 @@
+import { STORAGE_KEY_DEV } from "@shared/constants";
+
 if (!window.__devInspectorLoaded) {
     window.__devInspectorLoaded = true;
 
     let active: boolean = false;
-    const STORAGE_KEY = 'sh_dev_inspector_settings';
 
     // Default settings
     let settings = {
@@ -12,7 +13,7 @@ if (!window.__devInspectorLoaded) {
     };
 
     try {
-        const saved = localStorage.getItem(STORAGE_KEY);
+        const saved = localStorage.getItem(STORAGE_KEY_DEV);
         if (saved) settings = { ...settings, ...JSON.parse(saved) };
     } catch (e) {}
 
@@ -82,7 +83,7 @@ if (!window.__devInspectorLoaded) {
         getSettings: () => settings,
         updateSettings: (newSettings: Partial<typeof settings>): void => {
             settings = { ...settings, ...newSettings };
-            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch (e) {}
+            try { localStorage.setItem(STORAGE_KEY_DEV, JSON.stringify(settings)); } catch (e) {}
         }
     };
 }

@@ -1,13 +1,9 @@
-import { buildInputAriaSelector, setNativeValue, STORAGE_KEY_LPN, STORAGE_KEY_STATION, triggerEnter, waitForButtonBySpans, waitForElement } from "@shared/dom";
+import { CLR_BTN_LBL, CNT_BTN_SPN, LPN_INPT_LBL, STORAGE_KEY_LPN, STORAGE_KEY_STATION, WS_INPT_LBL } from "@shared/constants";
+import { buildInputAriaSelector, setNativeValue,  triggerEnter, waitForButtonBySpans, waitForElement } from "@shared/dom";
 
 if (!window.__gravisLoaded) {
     window.__gravisLoaded = true;
 
-    const CLR_BTN_LBL: string = "Usuń sesję"
-    const CNT_BTN_SPN: string[] = ["Kontynuuj"]
-    const LPN_INP_LBL: string[] = ["Wprowadź LPN"]
-    const WS_INP_LBL: string[] = ["Wprowadź stację roboczą"]
-     
     let active: boolean = false;
     let isProcessing: boolean = false;
     let keyBuffer: string = '';
@@ -23,7 +19,8 @@ if (!window.__gravisLoaded) {
             const cntBtn = await waitForButtonBySpans(CNT_BTN_SPN) as HTMLButtonElement;
             if (cntBtn) cntBtn.click();
 
-            const lpnInpSlr = buildInputAriaSelector(LPN_INP_LBL);
+
+            const lpnInpSlr = buildInputAriaSelector(LPN_INPT_LBL);
             const lpnInp = await waitForElement(lpnInpSlr) as HTMLInputElement;
             if (!lpnInp) return;
 
@@ -37,7 +34,7 @@ if (!window.__gravisLoaded) {
             setNativeValue(lpnInp, savedLpn);
             triggerEnter(lpnInp);
 
-            const wsInpSlr = buildInputAriaSelector(WS_INP_LBL);
+            const wsInpSlr = buildInputAriaSelector(WS_INPT_LBL);
             const wsInp = await waitForElement(wsInpSlr) as HTMLInputElement;
             if (!wsInp) return;
 

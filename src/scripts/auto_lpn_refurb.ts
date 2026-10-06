@@ -1,4 +1,5 @@
-import { STORAGE_KEY_LPN, buildInputAriaSelector, setNativeValue, triggerEnter, waitForElement } from "@shared/dom";
+import { LPN_ASGN_NEW_BTN_SPN, LPN_OLD_LPN_INPT_LBL, STORAGE_KEY_LPN } from "@shared/constants";
+import {buildInputAriaSelector, setNativeValue, triggerEnter, waitForElement } from "@shared/dom";
 
 if (!window.__refurbLpnLoaded) {
     window.__refurbLpnLoaded = true;
@@ -7,8 +8,8 @@ if (!window.__refurbLpnLoaded) {
     let isProcessing: boolean = false;
 
     const UI_STRINGS = {
-        triggerBtn: ['Призначити новий LPN', 'Przypisz nowy LPN'],
-        oldLpnInput: ['Введіть старий LPN', 'Wprowadź stary LPN'],
+        triggerBtn: LPN_ASGN_NEW_BTN_SPN,
+        oldLpnInput: LPN_OLD_LPN_INPT_LBL
     };
 
     async function executeSequence(): Promise<void> {

@@ -1,20 +1,8 @@
-// COSNTANTS
-// ------------------------------------------
-
-// data-testid = tote-input-label
-const TARGET_LABELS: string[] = [
-    'wprowadź pojemnik',
-    'вкажіть транспортну тару',
-    'введите тару'
-];
-export const STORAGE_KEY_LPN = 'shLastLPN';
-export const STORAGE_KEY_STATION = 'shStation';
-
-// ------------------------------------------
+import { TOTE_INPT_LBL } from "./constants";
 
 export function hasTargetLabel(labelString: string | null): boolean {
     const lowerLabel = (labelString || '').toLowerCase();
-    return TARGET_LABELS.some(target => lowerLabel.includes(target));
+    return TOTE_INPT_LBL.some(target => lowerLabel.includes(target));
 }
 
 export function buildInputAriaSelector(labels: string[]): string {

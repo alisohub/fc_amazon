@@ -1,10 +1,9 @@
+import { STORAGE_KEY_BINDS } from "@shared/constants";
 import { triggerEnter } from "@shared/dom";
 import { normalizeText } from "@shared/utils";
 
 if (!window.__bindsLoaded) {
     window.__bindsLoaded = true;
-
-    const STORAGE_KEY = 'sh_binds_config';
     
     // Start completely fresh with empty arrays ONLY for F1 through F7
     let currentShortcuts: Record<string, string[]> = {
@@ -12,7 +11,7 @@ if (!window.__bindsLoaded) {
     };
 
     try {
-        const saved = localStorage.getItem(STORAGE_KEY);
+        const saved = localStorage.getItem(STORAGE_KEY_BINDS);
         if (saved) {
             currentShortcuts = { ...currentShortcuts, ...JSON.parse(saved) };
         }
@@ -115,7 +114,7 @@ if (!window.__bindsLoaded) {
             const text = normalizeText(targetP.textContent);
             if (text && currentShortcuts[recordingKey].length < 30) {
                 currentShortcuts[recordingKey].push(text);
-                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(currentShortcuts)); } catch (e) {}
+                try { localStorage.setItem(STORAGE_KEY_BINDS, JSON.stringify(currentShortcuts)); } catch (e) {}
                                  
                 // If it reaches the 30 step limit, auto-stop recording
                 if (currentShortcuts[recordingKey].length >= 30) {
@@ -251,14 +250,14 @@ if (!window.__bindsLoaded) {
         getShortcuts: () => currentShortcuts,
         updateShortcuts: (newBinds: Record<string, string[]>): void => {
             currentShortcuts = { ...newBinds };
-            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(currentShortcuts)); } catch (e) {}
+            try { localStorage.setItem(STORAGE_KEY_BINDS, JSON.stringify(currentShortcuts)); } catch (e) {}
         },
         getRecordingKey: () => recordingKey,
         startRecording: (key: string): void => {
             stopScript();
             recordingKey = key;
             currentShortcuts[key] = []; 
-            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(currentShortcuts)); } catch (e) {}
+            try { localStorage.setItem(STORAGE_KEY_BINDS, JSON.stringify(currentShortcuts)); } catch (e) {}
             window.dispatchEvent(new CustomEvent('sh-binds-update'));
             updateRecordingDot();
         },

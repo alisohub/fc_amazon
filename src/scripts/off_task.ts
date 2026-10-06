@@ -1,9 +1,8 @@
+import { STORAGE_KEY_TASK } from '@shared/constants';
 import { isInsideModal, hasTargetLabel, setNativeValue, triggerEnter } from '@shared/dom';
 
 if (!window.__offTaskLoaded) {
     window.__offTaskLoaded = true;
-
-    const STORAGE_KEY = 'sh_off_task_settings';
     
     let active: boolean = false;
     let settings: OffTaskSettings = {
@@ -12,7 +11,7 @@ if (!window.__offTaskLoaded) {
     };
 
     try {
-        const saved = localStorage.getItem(STORAGE_KEY);
+        const saved = localStorage.getItem(STORAGE_KEY_TASK);
         if (saved) settings = { ...settings, ...JSON.parse(saved) };
     } catch(e) {}
 
@@ -23,7 +22,7 @@ if (!window.__offTaskLoaded) {
         settings.toteBarcode = '';
         timerStart = null;
         lastInputValue = '';
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch(e) {}
+        try { localStorage.setItem(STORAGE_KEY_TASK, JSON.stringify(settings)); } catch(e) {}
         
         window.dispatchEvent(new CustomEvent('sh-offtask-update', { detail: { reason } }));
     }
@@ -85,7 +84,7 @@ if (!window.__offTaskLoaded) {
         getSettings: (): OffTaskSettings => settings,
         updateSettings: (newSettings: Partial<OffTaskSettings>): void => {
             settings = { ...settings, ...newSettings };
-            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch(e) {}
+            try { localStorage.setItem(STORAGE_KEY_TASK, JSON.stringify(settings)); } catch(e) {}
             
             // Instantly restart the timer when the user edits settings
             timerStart = Date.now(); 

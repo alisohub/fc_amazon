@@ -1,12 +1,9 @@
+import { STORAGE_KEY_COUNT, STORAGE_KEY_COUNTER } from '@shared/constants';
 import { isInsideModal, hasTargetLabel } from '@shared/dom';
 import { getEffectiveWorkTime, calculateUPH, calculatePercentageStr } from '@shared/time';
 if (!window.__counterLoaded) {
     window.__counterLoaded = true;
     
-        
-    const STORAGE_KEY_COUNT = 'sh_item_counter_count';
-    const STORAGE_KEY_SETTINGS = 'sh_item_counter_settings';
-        
     // Uses the CounterSettings interface we defined in global.d.ts
     let settings: CounterSettings = {
         overlayOpacity: 0.3,
@@ -17,7 +14,7 @@ if (!window.__counterLoaded) {
     };
         
     try {
-        const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
+        const savedSettings = localStorage.getItem(STORAGE_KEY_COUNTER);
         if (savedSettings) {
             const parsed = JSON.parse(savedSettings);
             // Ensure targetRate isn't overwritten incorrectly during load
@@ -130,7 +127,7 @@ if (!window.__counterLoaded) {
                 isDragging = false;
                 settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
                 settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
-                try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
+                try { localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify(settings)); } catch (e) {}
             }
         };
                 
@@ -156,7 +153,7 @@ if (!window.__counterLoaded) {
             if (changed) {
                 settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
                 settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
-                try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
+                try { localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify(settings)); } catch (e) {}
             }
         });
                 
@@ -294,12 +291,10 @@ if (!window.__counterLoaded) {
         getSettings: (): CounterSettings => settings,
         updateSettings: (newSettings: Partial<CounterSettings>): void => {
             settings = { ...settings, ...newSettings };
-            try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {}
+            try { localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify(settings)); } catch (e) {}
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay && overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString();
             updateCounterUI(itemCounter);
         }
     };
-        
-    window.__itemCounter.enable();
 }

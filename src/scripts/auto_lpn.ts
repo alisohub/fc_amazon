@@ -1,17 +1,9 @@
-// 1. Import our DRY utility from the shared folder
+import { LPN_RSGN_BTN_SPN } from '@shared/constants';
 import { isInsideModal } from '@shared/dom';
 import { normalizeText } from '@shared/utils';
 
 if (!window.__autoLpnLoaded) {
     window.__autoLpnLoaded = true;
-
-    // 2. Explicitly type our constants
-    // data-testid = button-reassign-lpn-id
-    const TARGET_TEXTS: string[] = [
-        'перепризначте lpn', 
-        'przypisz ponownie lpn',
-        'назначить новый номер lp'
-    ];
 
     const IGNORED_PREFIXES: Set<string> = new Set(['t', 'w', 'c']);
     let cooldownUntil: number = 0;
@@ -47,7 +39,7 @@ if (!window.__autoLpnLoaded) {
             if (btnEl.disabled || htmlEl.offsetParent === null || !htmlEl.textContent) return false;
             
             const text: string = normalizeText(htmlEl.textContent);
-            return TARGET_TEXTS.some(target => text.includes(target));
+            return LPN_RSGN_BTN_SPN.some(target => text.includes(target));
         }) as HTMLElement | undefined;
 
         if (!btn) return;
@@ -65,7 +57,4 @@ if (!window.__autoLpnLoaded) {
         disable: (): void => { active = false; },
         isActive: (): boolean => active
     };
-
-    // Auto-enable on load as it was in the original script
-    window.__autoLpn.enable();
 }

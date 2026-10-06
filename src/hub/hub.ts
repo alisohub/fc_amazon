@@ -1,4 +1,4 @@
-import { STORAGE_KEY_LPN, STORAGE_KEY_STATION } from '@shared/dom';
+import { STORAGE_KEY_DEP, STORAGE_KEY_LPN, STORAGE_KEY_COUNTER, STORAGE_KEY_STATION, STORAGE_KEY_TASK, PKG_INP_LBL, ITM_SCN_INPT_LBL, LPN_INPT_LBL, WS_INPT_LBL } from '@shared/constants';
 import { HUB_STYLES } from './styles';
 
 if (window.__scriptHubLoaded) {
@@ -101,13 +101,13 @@ else {
             return value === "FAST" || value === "CRET" || value === "UG" || value === "REFURB" || value === "WHD";
         }
 
-        const storedDep = localStorage.getItem('sh_hub_dep');
+        const storedDep = localStorage.getItem(STORAGE_KEY_DEP);
         let currentDep: Department = (isDepartment(storedDep) && DEPARTAMENT_OPTIONS.includes(storedDep))
             ? storedDep 
             : DEPARTAMENT_OPTIONS[0];
 
         if (storedDep !== currentDep) {
-            try { localStorage.setItem('sh_hub_dep', currentDep); } catch (e) {}
+            try { localStorage.setItem(STORAGE_KEY_DEP, currentDep); } catch (e) {}
         }
 
         interface ScriptDefinition {
@@ -742,7 +742,7 @@ else {
                     
                     if (isDepartment(target.value)) {
                         currentDep = target.value;
-                        localStorage.setItem('sh_hub_dep', currentDep);
+                        localStorage.setItem(STORAGE_KEY_DEP, currentDep);
                         
                         const newConfig = DEPARTMENT_CONFIG[currentDep];
                         if (newConfig) {
@@ -758,11 +758,11 @@ else {
                                 if (targetInput) targetInput.value = newConfig.targetRate.toString();
                             } else {
                                 try {
-                                    const ls = JSON.parse(localStorage.getItem('sh_item_counter_settings') || '{}');
+                                    const ls = JSON.parse(localStorage.getItem(STORAGE_KEY_COUNTER) || '{}');
                                     ls.targetRate = newConfig.targetRate;
                                     ls.doubleCountMode = newConfig.doubleCountMode;
                                     ls.scanTimeoutMs = newConfig.scanTimeoutMs;
-                                    localStorage.setItem('sh_item_counter_settings', JSON.stringify(ls));
+                                    localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify(ls));
                                 } catch(err) {}
                             }
 
@@ -773,9 +773,9 @@ else {
                                 if (minsInput) minsInput.value = newConfig.offTaskMins.toString();
                             } else {
                                 try {
-                                    const ls = JSON.parse(localStorage.getItem('sh_off_task_settings') || '{}');
+                                    const ls = JSON.parse(localStorage.getItem(STORAGE_KEY_TASK) || '{}');
                                     ls.timeoutMins = newConfig.offTaskMins;
-                                    localStorage.setItem('sh_off_task_settings', JSON.stringify(ls));
+                                    localStorage.setItem(STORAGE_KEY_TASK, JSON.stringify(ls));
                                 } catch(err) {}
                             }
                         }
@@ -821,22 +821,19 @@ else {
                 // Store your labels here (make sure they are lowercase for case-insensitive matching)
                 const LABELS = {
                     lpnLabels: [
-                        // data-testid = package-input
-                        'wprowadź numer rma',
-                        // data-testid = wd-item-scan-label
-                        'wprowadź lpn lub sku',
-                        // data-testid = lpn-input-label
-                        'wprowadź lpn'
+                        PKG_INP_LBL,
+                        ITM_SCN_INPT_LBL,
+                        LPN_INPT_LBL
                     ], 
-                    //data-testid = ws-input
-                    wsLabels: ['wprowadź stację roboczą'] 
+                    wsLabels: WS_INPT_LBL
                 };
+
 
                 try {
                     // =========================================
                     // 3. LPN INPUT HANDLING
                     // =========================================
-                    const isLpnInput = LABELS.lpnLabels.some(lbl => currentLabel.includes(lbl.toLowerCase())); 
+                    const isLpnInput = LABELS.lpnLabels.flat().some(lbl => currentLabel.includes(lbl.toLowerCase())); 
                     
                     if (isLpnInput && /^lpn[a-z0-9]+/i.test(val)) {
                         localStorage.setItem(STORAGE_KEY_LPN, val);
