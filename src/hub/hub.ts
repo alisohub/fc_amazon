@@ -1,4 +1,4 @@
-import { STORAGE_KEY_DEP, STORAGE_KEY_LPN, STORAGE_KEY_COUNTER, STORAGE_KEY_STATION, STORAGE_KEY_TASK, PKG_INP_LBL, ITM_SCN_INPT_LBL, LPN_INPT_LBL, WS_INPT_LBL } from '@shared/constants';
+import { STORAGE_KEY_DEP, STORAGE_KEY_LPN, STORAGE_KEY_COUNTER, STORAGE_KEY_STATION, STORAGE_KEY_TASK, PKG_INP_LBL, WD_ITM_SCN_INPT_LBL, LPN_INPT_LBL, WS_INPT_LBL } from '@shared/constants';
 import { HUB_STYLES } from './styles';
 
 if (window.__scriptHubLoaded) {
@@ -822,7 +822,7 @@ else {
                 const LABELS = {
                     lpnLabels: [
                         PKG_INP_LBL,
-                        ITM_SCN_INPT_LBL,
+                        WD_ITM_SCN_INPT_LBL,
                         LPN_INPT_LBL
                     ], 
                     wsLabels: WS_INPT_LBL
@@ -845,7 +845,7 @@ else {
                     // =========================================
                     const isWsInput = LABELS.wsLabels.some(lbl => currentLabel.includes(lbl.toLowerCase()));
                     
-                    if (isWsInput && /^ws_+/i.test(val)) {
+                    if (isWsInput && /^ws[_-]+/i.test(val)) {
                         localStorage.setItem(STORAGE_KEY_STATION, val);
                         return; // Stop processing once we match and save
                     }

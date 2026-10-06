@@ -1,5 +1,5 @@
 import { LPN_RSGN_BTN_SPN } from '@shared/constants';
-import { isInsideModal } from '@shared/dom';
+import { findButtonBySpan, isInsideModal } from '@shared/dom';
 import { normalizeText } from '@shared/utils';
 
 if (!window.__autoLpnLoaded) {
@@ -10,7 +10,7 @@ if (!window.__autoLpnLoaded) {
     let active: boolean = false;
 
     // 3. Type the event as a standard Event
-    const handleInput = (e: Event): void => {
+    const handleInput = async (e: Event): Promise<void> => {
         if (!active) return;
 
         // 4. Cast the generic target specifically to an HTML Input Element
@@ -31,22 +31,13 @@ if (!window.__autoLpnLoaded) {
         const cleanValue: string = normalizeText(input.value);
         if (!cleanValue) return;
 
-        // 5. Cast the found element to HTMLElement so TypeScript knows it has a .click() method
-        const btn = Array.from(document.querySelectorAll('button, a, div[role="button"]')).find(el => {
-            const htmlEl = el as HTMLElement;
-            const btnEl = el as HTMLButtonElement; // specifically for the .disabled check
-            
-            if (btnEl.disabled || htmlEl.offsetParent === null || !htmlEl.textContent) return false;
-            
-            const text: string = normalizeText(htmlEl.textContent);
-            return LPN_RSGN_BTN_SPN.some(target => text.includes(target));
-        }) as HTMLElement | undefined;
+        const lpn_reassign_btn = await findButtonBySpan(LPN_RSGN_BTN_SPN) as HTMLButtonElement;
 
-        if (!btn) return;
+        if (!lpn_reassign_btn || lpn_reassign_btn.disabled) return;
         cooldownUntil = now + 10000;
 
         if (!IGNORED_PREFIXES.has(cleanValue.charAt(0))) {
-            btn.click();
+            lpn_reassign_btn.click();
         }
     };
 

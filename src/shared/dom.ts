@@ -5,10 +5,6 @@ export function hasTargetLabel(labelString: string | null): boolean {
     return TOTE_INPT_LBL.some(target => lowerLabel.includes(target));
 }
 
-export function buildInputAriaSelector(labels: string[]): string {
-    return labels.map(label => `input[aria-label="${label}"]`).join(', ');
-}
-
 export function triggerEnter(el: HTMLElement): void {
     el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
     el.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
@@ -16,7 +12,7 @@ export function triggerEnter(el: HTMLElement): void {
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-export async function waitForElement(selector: string, timeout = 5000): Promise<HTMLElement | null> {
+async function findElement(selector: string, timeout = 5000): Promise<HTMLElement | null> {
     const start = Date.now();
     while (Date.now() - start < timeout) {
         const el = document.querySelector(selector) as HTMLElement | null;
@@ -26,7 +22,27 @@ export async function waitForElement(selector: string, timeout = 5000): Promise<
     return null;
 }
 
-export async function waitForButtonBySpans(spanTexts: string[], timeout = 5000): Promise<HTMLElement | null> {
+export const findButtonByLabel = (labels: string[], timeout?: number) => {
+    const selector: string = labels.map(lbl => `button["aria-label"="${lbl}"]`).join(', ');
+    return findElement(selector, timeout);
+}
+
+export const findInputByLabel = (labels: string[], timeout?: number) => {
+    const selector: string = labels.map(lbl => `input["aria-label"="${lbl}"]`).join(', ');
+    return findElement(selector, timeout);
+}
+
+export const findButtonByTestId = (testId: string, timeout?: number) => {
+    const selector: string = `button["data-testid"="${testId}"]`;
+    return findElement(selector, timeout);
+}
+
+export const findInputByTestId = (testId: string, timeout?: number) => {
+    const selector: string = `input["data-testid"="${testId}"]`;
+    return findElement(selector, timeout);
+}
+
+export async function findButtonBySpan(spanTexts: string[], timeout = 5000): Promise<HTMLElement | null> {
     const start = Date.now();
     while (Date.now() - start < timeout) {
         const spans = Array.from(document.querySelectorAll('button span'));

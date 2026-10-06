@@ -1,5 +1,5 @@
 import { CLR_BTN_LBL, CNT_BTN_SPN, LPN_INPT_LBL, STORAGE_KEY_LPN, STORAGE_KEY_STATION, WS_INPT_LBL } from "@shared/constants";
-import { buildInputAriaSelector, setNativeValue,  triggerEnter, waitForButtonBySpans, waitForElement } from "@shared/dom";
+import { setNativeValue,  triggerEnter, findButtonBySpan, findButtonByLabel, findInputByLabel } from "@shared/dom";
 
 if (!window.__gravisLoaded) {
     window.__gravisLoaded = true;
@@ -12,30 +12,27 @@ if (!window.__gravisLoaded) {
         if (isProcessing) return; 
         isProcessing = true;
         try {
-            const clrSesSlr = `button[aria-label="${CLR_BTN_LBL}"]`;
-            const clrSesBtn = await waitForElement(clrSesSlr) as HTMLButtonElement;
+            const clrSesBtn = await findButtonByLabel(CLR_BTN_LBL) as HTMLButtonElement;
             if (clrSesBtn && !clrSesBtn.disabled) clrSesBtn.click();
 
-            const cntBtn = await waitForButtonBySpans(CNT_BTN_SPN) as HTMLButtonElement;
+            const cntBtn = await findButtonBySpan(CNT_BTN_SPN) as HTMLButtonElement;
             if (cntBtn) cntBtn.click();
 
 
-            const lpnInpSlr = buildInputAriaSelector(LPN_INPT_LBL);
-            const lpnInp = await waitForElement(lpnInpSlr) as HTMLInputElement;
-            if (!lpnInp) return;
+            const lpnInp = await findInputByLabel(LPN_INPT_LBL) as HTMLInputElement;
+            if (lpnInp) {
+                const savedLpn = localStorage.getItem(STORAGE_KEY_LPN);
 
-            const savedLpn = localStorage.getItem(STORAGE_KEY_LPN);
+                if (!savedLpn) {
+                    alert("Ще жодної LPN не записано, спробуйте з наступним товаром.");
+                    return;
+                }
 
-            if (!savedLpn) {
-                alert("Ще жодної LPN не записано, спробуйте з наступним товаром.");
-                return;
+                setNativeValue(lpnInp, savedLpn);
+                triggerEnter(lpnInp);
             }
 
-            setNativeValue(lpnInp, savedLpn);
-            triggerEnter(lpnInp);
-
-            const wsInpSlr = buildInputAriaSelector(WS_INPT_LBL);
-            const wsInp = await waitForElement(wsInpSlr) as HTMLInputElement;
+            const wsInp = await findInputByLabel(WS_INPT_LBL) as HTMLInputElement;
             if (!wsInp) return;
 
             const savedWs = localStorage.getItem(STORAGE_KEY_STATION);

@@ -1,5 +1,5 @@
 import { LPN_ASGN_NEW_BTN_SPN, LPN_OLD_LPN_INPT_LBL, STORAGE_KEY_LPN } from "@shared/constants";
-import {buildInputAriaSelector, setNativeValue, triggerEnter, waitForElement } from "@shared/dom";
+import { findInputByLabel, setNativeValue, triggerEnter } from "@shared/dom";
 
 if (!window.__refurbLpnLoaded) {
     window.__refurbLpnLoaded = true;
@@ -18,8 +18,7 @@ if (!window.__refurbLpnLoaded) {
 
         try {
             // 1. Find and fill old LPN
-            const oldLpnSelector = buildInputAriaSelector(UI_STRINGS.oldLpnInput);
-            const oldLpnInput = await waitForElement(oldLpnSelector) as HTMLInputElement;
+            const oldLpnInput = await findInputByLabel(UI_STRINGS.oldLpnInput) as HTMLInputElement;
             if (!oldLpnInput) return; // Silent abort
             
             const oldLpn = localStorage.getItem(STORAGE_KEY_LPN);
