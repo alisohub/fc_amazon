@@ -5,6 +5,7 @@ export default defineConfig({
     // The key (e.g., 'hub') becomes the exact filename in the dist folder.
     entry: {
         'hub': 'src/hub/hub.ts',
+        'hub_gravis': 'src/hub/hub_gravis.ts',
         'auto_lpn': 'src/scripts/auto_lpn.ts',
         'auto_lpn_refurb': 'src/scripts/auto_lpn_refurb.ts',
         'binds': 'src/scripts/binds.ts',
