@@ -11,6 +11,7 @@ export default defineConfig({
         'counter': 'src/scripts/counter.ts',
         'off_task': 'src/scripts/off_task.ts',
         'gravis': 'src/scripts/gravis.ts',
+        'clear_session': 'src/scripts/clear_session.ts',
         'dev_inspector': 'src/scripts/dev_inspector.ts'
     },
     format: ['iife'],

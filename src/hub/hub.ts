@@ -23,14 +23,20 @@ else {
 
     async function getHashedUsername(): Promise<string | null> {
         return new Promise((resolve) => {
+            const start = Date.now();
+            
             const check = async () => {
                 const el = document.querySelector('p.user__username');
+                
                 if (el && el.textContent) {
                     resolve(await hashString(el.textContent.trim()));
+                } else if (Date.now() - start > 10000) {
+                    resolve(null);
                 } else {
                     setTimeout(check, 500);
                 }
             };
+            
             check();
         });
     }
@@ -64,7 +70,12 @@ else {
             isTrustedEnv = true;
         } else {
             const userHash = await getHashedUsername();
-            isTrustedEnv = userHash ? ALLOWED_HASHES.includes(userHash) : false;
+
+            if (!userHash) {
+                return;
+            }
+
+            isTrustedEnv = ALLOWED_HASHES.includes(userHash);
             
             if (currentBranch === 'development' && !isTrustedEnv) return;
         }
@@ -537,10 +548,18 @@ else {
                 getHandler: () => window.__refurbLpn
             },
             {
-                id: 'gravis-lpn',
-                name: 'Gravis для LPN',
+                id: 'clear-session',
+                name: 'Авто-скасуй',
+                file: 'clear_session.js',
+                description: 'Автоматично скасовує сесію при натисненні `us` на клавіатурі',
+                getHandler: () => window.__clearSession
+            },
+            {
+                id: 'gravis',
+                name: 'Gravis',
                 file: 'gravis.js',
                 description: 'В процесі розробки! НЕ ПРАЦЮЄ!',
+                excludeDeps: ['REFURB', 'WHD'],
                 experimental: true,
                 getHandler: () => window.__gravis
             },
@@ -806,7 +825,7 @@ else {
             document.addEventListener('keydown', (e: KeyboardEvent) => {
                 // 1. Guard Clauses
                 if (e.key !== 'Enter') return;
-                if (!window.__refurbLpnLoaded && !window.__gravisLoaded) return;
+                if (!window.__refurbLpnLoaded && !window.__gravisLoaded && !window.__clearSession) return;
                     
                 // 2. Grab the exact element the user just pressed Enter on
                 const input = e.target as HTMLInputElement;

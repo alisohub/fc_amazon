@@ -73,6 +73,7 @@ declare global {
         __bindsLoaded?: boolean;
         __offTaskLoaded?: boolean;
         __gravisLoaded?: boolean;
+        __clearSessionLoaded?: boolean;
         __devInspectorLoaded?: boolean;
 
         // Script Handlers
@@ -85,5 +86,6 @@ declare global {
         __offTask?: SettingsHandler<OffTaskSettings>;
         __devInspector?: SettingsHandler<DevInspectorSettings>;
         __gravis?: ScriptHandler;
+        __clearSession?: ScriptHandler;
     }
 }
