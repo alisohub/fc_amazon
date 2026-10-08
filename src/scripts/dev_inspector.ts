@@ -46,11 +46,6 @@ if (!window.__devInspectorLoaded) {
             msg += `📝 RAW HTML:\n`;
             
             let rawHtml = target.outerHTML || 'None';
-            // Truncate if the HTML tree is massive so it fits in the alert box
-            if (rawHtml.length > 800) {
-                rawHtml = rawHtml.substring(0, 800) + '\n...[TRUNCATED]';
-            }
-            
             msg += `${rawHtml}\n`;
             msg += `--------------------------------\n`;
         }
