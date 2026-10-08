@@ -14,7 +14,6 @@ if (!window.__gravisLoaded) {
         }
     }
 
-    // NEW: Safe disconnect logic that updates the Hub WITHOUT killing the tab
     function handleGravisDisconnect() {
         active = false;
         stopWindowMonitor();
@@ -26,7 +25,6 @@ if (!window.__gravisLoaded) {
         if (checkInterval) clearInterval(checkInterval);
         checkInterval = setInterval(() => {
             if (gravisWindow && gravisWindow.closed) {
-                // Use safe disconnect instead of .disable()
                 handleGravisDisconnect();
             }
         }, 500);
@@ -39,6 +37,7 @@ if (!window.__gravisLoaded) {
         }
     }
 
+    // F8: Pushes the LPN to the Gravis Tab to start the chain reaction
     document.addEventListener('keydown', (e: KeyboardEvent) => {
         if (!active || !gravisWindow || gravisWindow.closed) return;
         
@@ -56,18 +55,14 @@ if (!window.__gravisLoaded) {
     window.__gravis = {
         enable: (): void => {
             active = true;
-            
             if (!gravisWindow || gravisWindow.closed) {
-                // This reconnects to the tab. It will cause a reload.
                 gravisWindow = window.open('https://eu-cretfc-tools-dub.dub.proxy.amazon.com/gravis', 'GravisApp');
             }
             startWindowMonitor();
         },
         disable: (): void => {
-            // ONLY execute this if the user manually toggles the switch OFF
             active = false;
             stopWindowMonitor();
-            
             if (gravisWindow && !gravisWindow.closed) {
                 gravisWindow.close(); 
             }
@@ -83,15 +78,21 @@ if (!window.__gravisLoaded) {
         if (data?.type === 'GRAVIS_READY') {
             active = true;
             syncHubUI(true);
-            
             if (!gravisWindow) {
                 gravisWindow = e.source as Window;
                 startWindowMonitor();
             }
             
         } else if (data?.type === 'GRAVIS_CLOSED') {
-            // Use safe disconnect instead of .disable() so the tab survives the reload
             handleGravisDisconnect();
+            
+        // NEW: Receive the ASIN back from Gravis and alert it!
+        } else if (data?.type === 'FOUND_ASIN') {
+            if (data.payload === 'NOT_FOUND') {
+                alert('ASIN не знайдено на вкладці Gravis.'); // ASIN not found
+            } else {
+                alert(`ASIN Знайдено: ${data.payload}`);
+            }
         }
     });
 }
