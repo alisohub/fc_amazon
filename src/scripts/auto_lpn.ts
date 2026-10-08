@@ -1,5 +1,5 @@
 import { LPN_RSGN_BTN_SPN } from '@shared/constants';
-import { findButtonBySpan, isInsideModal } from '@shared/dom';
+import { isInsideModal, hasTargetLabel } from '@shared/dom'; // Removed findButtonBySpan from imports
 import { normalizeText } from '@shared/utils';
 
 if (!window.__autoLpnLoaded) {
@@ -9,21 +9,16 @@ if (!window.__autoLpnLoaded) {
     let cooldownUntil: number = 0;
     let active: boolean = false;
 
-    // 3. Type the event as a standard Event
-    const handleInput = async (e: Event): Promise<void> => {
+    const handleInput = (e: Event): void => {
         if (!active) return;
 
-        // 4. Cast the generic target specifically to an HTML Input Element
         const input = e.target as HTMLInputElement;
-
-        // Safely ignore if the input doesn't support matches (e.g., if it's a weird node)
         if (!input.matches) return;
-
-        // IGNORE inputs coming from inside the Script Hub UI
         if (input.closest('#sh-root')) return;
-
-        // Ignore non-text inputs, hidden inputs, disabled inputs, or inputs inside modals
         if (!input.matches('input:not([type="hidden"]):not([disabled])') || isInsideModal(input)) return;
+
+        const inputLabel = input.getAttribute('aria-label');
+        if (!hasTargetLabel(inputLabel)) return;
 
         const now: number = Date.now();
         if (now < cooldownUntil) return;
@@ -31,9 +26,19 @@ if (!window.__autoLpnLoaded) {
         const cleanValue: string = normalizeText(input.value);
         if (!cleanValue) return;
 
-        const lpn_reassign_btn = await findButtonBySpan(LPN_RSGN_BTN_SPN) as HTMLButtonElement;
+        const lpn_reassign_btn = Array.from(document.querySelectorAll('button, a, div[role="button"]')).find(el => {
+            const htmlEl = el as HTMLElement;
+            const btnEl = el as HTMLButtonElement; 
+            if (btnEl.disabled || htmlEl.offsetParent === null || !htmlEl.textContent) return false;
+            
+            const text = normalizeText(htmlEl.textContent);
 
-        if (!lpn_reassign_btn || lpn_reassign_btn.disabled) return;
+            const targets = LPN_RSGN_BTN_SPN.map(t => normalizeText(t));
+            return targets.some(target => text.includes(target));
+        }) as HTMLButtonElement | undefined;
+
+        if (!lpn_reassign_btn) return;
+
         cooldownUntil = now + 10000;
 
         if (!IGNORED_PREFIXES.has(cleanValue.charAt(0))) {
@@ -49,3 +54,4 @@ if (!window.__autoLpnLoaded) {
         isActive: (): boolean => active
     };
 }
+

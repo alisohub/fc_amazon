@@ -1,8 +1,9 @@
 import { TOTE_INPT_LBL } from "./constants";
+import { normalizeText } from "./utils";
 
 export function hasTargetLabel(labelString: string | null): boolean {
     const lowerLabel = (labelString || '').toLowerCase();
-    return TOTE_INPT_LBL.some(target => lowerLabel.includes(target));
+    return TOTE_INPT_LBL.some(target => lowerLabel.includes(target.toLowerCase()));
 }
 
 export function triggerEnter(el: HTMLElement): void {
@@ -23,37 +24,39 @@ async function findElement(selector: string, timeout = 5000): Promise<HTMLElemen
 }
 
 export const findButtonByLabel = (labels: string[], timeout?: number) => {
-    const selector: string = labels.map(lbl => `button["aria-label"="${lbl}"]`).join(', ');
+    const selector: string = labels.map(lbl => `button[aria-label="${lbl}" i]`).join(', ');
     return findElement(selector, timeout);
 }
 
 export const findInputByLabel = (labels: string[], timeout?: number) => {
-    const selector: string = labels.map(lbl => `input["aria-label"="${lbl}"]`).join(', ');
+    const selector: string = labels.map(lbl => `input[aria-label="${lbl}" i]`).join(', ');
     return findElement(selector, timeout);
 }
 
 export const findButtonByTestId = (testId: string, timeout?: number) => {
-    const selector: string = `button["data-testid"="${testId}"]`;
+    const selector: string = `button[data-testid="${testId}" i]`;
     return findElement(selector, timeout);
 }
 
 export const findInputByTestId = (testId: string, timeout?: number) => {
-    const selector: string = `input["data-testid"="${testId}"]`;
+    const selector: string = `input[data-testid="${testId}" i]`;
     return findElement(selector, timeout);
 }
 
 export async function findButtonBySpan(spanTexts: string[], timeout = 5000): Promise<HTMLElement | null> {
     const start = Date.now();
+
+    const normalizedSpans = spanTexts.map(span => normalizeText(span));
     while (Date.now() - start < timeout) {
         const spans = Array.from(document.querySelectorAll('button span'));
         const span = spans.find(s => {
-            const text = s.textContent?.trim();
-            return text && spanTexts.includes(text);
+            const text = normalizeText(s.textContent);
+            return text && normalizedSpans.includes(text);
         });
         
         if (span) {
-            const btn = span.closest('button') as HTMLElement;
-            if (btn && btn.offsetParent !== null) return btn;
+            const btn = span.closest('button') as HTMLButtonElement;
+            if (btn && btn.offsetParent !== null && !btn.disabled) return btn;
         }
         await sleep(150);
     }
