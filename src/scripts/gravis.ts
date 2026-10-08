@@ -14,11 +14,20 @@ if (!window.__gravisLoaded) {
         }
     }
 
+    // NEW: Safe disconnect logic that updates the Hub WITHOUT killing the tab
+    function handleGravisDisconnect() {
+        active = false;
+        stopWindowMonitor();
+        gravisWindow = null;
+        syncHubUI(false);
+    }
+
     function startWindowMonitor() {
         if (checkInterval) clearInterval(checkInterval);
         checkInterval = setInterval(() => {
             if (gravisWindow && gravisWindow.closed) {
-                window.__gravis?.disable();
+                // Use safe disconnect instead of .disable()
+                handleGravisDisconnect();
             }
         }, 500);
     }
@@ -30,7 +39,6 @@ if (!window.__gravisLoaded) {
         }
     }
 
-    // NEW: Listen for F8 to push the saved LPN to the Gravis tab
     document.addEventListener('keydown', (e: KeyboardEvent) => {
         if (!active || !gravisWindow || gravisWindow.closed) return;
         
@@ -40,7 +48,7 @@ if (!window.__gravisLoaded) {
             if (savedLpn) {
                 gravisWindow.postMessage({ type: 'SYNC_LPN', payload: savedLpn }, '*');
             } else {
-                alert("Немає збереженого LPN для відправки."); // "No saved LPN to send"
+                alert("Немає збереженого LPN для відправки.");
             }
         }
     });
@@ -50,16 +58,18 @@ if (!window.__gravisLoaded) {
             active = true;
             
             if (!gravisWindow || gravisWindow.closed) {
+                // This reconnects to the tab. It will cause a reload.
                 gravisWindow = window.open('https://eu-cretfc-tools-dub.dub.proxy.amazon.com/gravis', 'GravisApp');
             }
             startWindowMonitor();
         },
         disable: (): void => {
+            // ONLY execute this if the user manually toggles the switch OFF
             active = false;
             stopWindowMonitor();
             
             if (gravisWindow && !gravisWindow.closed) {
-                gravisWindow.close();
+                gravisWindow.close(); 
             }
             gravisWindow = null;
             syncHubUI(false);
@@ -80,7 +90,8 @@ if (!window.__gravisLoaded) {
             }
             
         } else if (data?.type === 'GRAVIS_CLOSED') {
-            window.__gravis?.disable();
+            // Use safe disconnect instead of .disable() so the tab survives the reload
+            handleGravisDisconnect();
         }
     });
 }
