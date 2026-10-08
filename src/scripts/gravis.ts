@@ -1,3 +1,5 @@
+import { STORAGE_KEY_LPN } from '@shared/constants';
+
 if (!window.__gravisLoaded) {
     window.__gravisLoaded = true;
     
@@ -27,6 +29,21 @@ if (!window.__gravisLoaded) {
             checkInterval = null;
         }
     }
+
+    // NEW: Listen for F8 to push the saved LPN to the Gravis tab
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (!active || !gravisWindow || gravisWindow.closed) return;
+        
+        if (e.key === 'F8') {
+            e.preventDefault();
+            const savedLpn = localStorage.getItem(STORAGE_KEY_LPN);
+            if (savedLpn) {
+                gravisWindow.postMessage({ type: 'SYNC_LPN', payload: savedLpn }, '*');
+            } else {
+                alert("Немає збереженого LPN для відправки."); // "No saved LPN to send"
+            }
+        }
+    });
 
     window.__gravis = {
         enable: (): void => {
