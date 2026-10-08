@@ -107,7 +107,7 @@ if (window.location.href.includes('gravis')) {
         
             const DEPARTMENT_CONFIG: Record<Department, DepartmentConfig> = {
                 "CRET": { targetRate: 47, offTaskMins: 4, doubleCountMode: false, scanTimeoutMs: 6000 },
-                "FAST": { targetRate: 100, offTaskMins: 10, doubleCountMode: false, scanTimeoutMs: 4000 },
+                "FAST": { targetRate: 80, offTaskMins: 10, doubleCountMode: false, scanTimeoutMs: 4000 },
                 "UG":   { targetRate: 47, offTaskMins: 4, doubleCountMode: true, scanTimeoutMs: 6000 },
                 "REFURB": { targetRate: 30, offTaskMins: 10, doubleCountMode: false, scanTimeoutMs: 6000 },
                 "WHD": { targetRate: 20, offTaskMins: 5, doubleCountMode: false, scanTimeoutMs: 6000 }

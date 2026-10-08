@@ -1,3 +1,4 @@
+// TODO: add data-testid constants
 // Local Storage 
 export const STORAGE_KEY_DEP = 'sh_hub_dep';
 export const STORAGE_KEY_COUNT = 'sh_item_counter_count';

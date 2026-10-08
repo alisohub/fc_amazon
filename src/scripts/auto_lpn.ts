@@ -1,7 +1,7 @@
 import { LPN_RSGN_BTN_SPN } from '@shared/constants';
 import { isInsideModal, hasTargetLabel } from '@shared/dom'; // Removed findButtonBySpan from imports
 import { normalizeText } from '@shared/utils';
-
+// TODO: add toteid finder alternative
 if (!window.__autoLpnLoaded) {
     window.__autoLpnLoaded = true;
 

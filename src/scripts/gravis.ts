@@ -3,11 +3,28 @@ if (!window.__gravisLoaded) {
     
     let active: boolean = false;
     let gravisWindow: Window | null = null;
+    let checkInterval: ReturnType<typeof setInterval> | null = null;
 
     function syncHubUI(isActive: boolean): void {
-        const chk = document.getElementById('sh-chk-gravis-lpn') as HTMLInputElement | null;
+        const chk = document.getElementById('sh-chk-gravis') as HTMLInputElement | null;
         if (chk && chk.checked !== isActive) {
             chk.checked = isActive;
+        }
+    }
+
+    function startWindowMonitor() {
+        if (checkInterval) clearInterval(checkInterval);
+        checkInterval = setInterval(() => {
+            if (gravisWindow && gravisWindow.closed) {
+                window.__gravis?.disable();
+            }
+        }, 500);
+    }
+
+    function stopWindowMonitor() {
+        if (checkInterval) {
+            clearInterval(checkInterval);
+            checkInterval = null;
         }
     }
 
@@ -15,41 +32,38 @@ if (!window.__gravisLoaded) {
         enable: (): void => {
             active = true;
             
-            // Using a named window ('GravisApp') instead of '_blank' forces the browser
-            // to reconnect to the existing tab if you accidentally closed the Main Tab.
             if (!gravisWindow || gravisWindow.closed) {
                 gravisWindow = window.open('https://eu-cretfc-tools-dub.dub.proxy.amazon.com/gravis', 'GravisApp');
             }
+            startWindowMonitor();
         },
         disable: (): void => {
             active = false;
+            stopWindowMonitor();
+            
             if (gravisWindow && !gravisWindow.closed) {
                 gravisWindow.close();
             }
             gravisWindow = null;
+            syncHubUI(false);
         },
         isActive: (): boolean => active
     };
 
-    // Main Tab Bridge Listener
     window.addEventListener('message', (e: MessageEvent) => {
         const data = e.data;
         
         if (data?.type === 'GRAVIS_READY') {
-            
-            // If Gravis was reloaded, it will send this. We should ensure the Hub is active.
             active = true;
             syncHubUI(true);
             
-            // Re-establish the window reference if the Main Tab was restarted
-            if (!gravisWindow) gravisWindow = e.source as Window;
+            if (!gravisWindow) {
+                gravisWindow = e.source as Window;
+                startWindowMonitor();
+            }
             
         } else if (data?.type === 'GRAVIS_CLOSED') {
-            
-            // Turn off the script and uncheck the Hub UI
-            active = false;
-            gravisWindow = null;
-            syncHubUI(false);
+            window.__gravis?.disable();
         }
     });
 }
