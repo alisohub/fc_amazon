@@ -12,7 +12,7 @@ export function triggerEnter(el: HTMLElement): void {
 }
 
 // TODO: add every single script finding by toteid
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+export const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 async function findElement(selector: string, timeout = 5000): Promise<HTMLElement | null> {
     const start = Date.now();

@@ -1,6 +1,4 @@
-import { setNativeValue, triggerEnter } from '@shared/dom';
-
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+import { setNativeValue, triggerEnter, sleep } from '@shared/dom';
 
 async function selectAngularDropdown(triggerSelector: string, exactOptionText: string): Promise<boolean> {
     const dropdown = document.querySelector(triggerSelector) as HTMLElement;
@@ -24,37 +22,29 @@ async function selectAngularDropdown(triggerSelector: string, exactOptionText: s
     }
 }
 
-// NEW: This will poll the page for up to 6 seconds waiting for the ASIN to load
-async function waitForAsin(timeoutMs = 6000): Promise<string | null> {
+// Timeout reduced to 2000ms (2 seconds)
+async function waitForAsin(timeoutMs = 2000): Promise<string | null> {
     const start = Date.now();
-    // Using ^ and $ ensures we only match if the string is EXACTLY the 10-character ASIN and nothing else
     const strictAsinRegex = /^([B0-9][A-Z0-9]{9})$/; 
 
     while (Date.now() - start < timeoutMs) {
-        // Since you noticed it's an anchor, we just grab all links on the page
         const links = Array.from(document.querySelectorAll('a'));
         
         for (const link of links) {
             const text = (link.textContent || '').trim().toUpperCase();
-            
-            // 1. Check if the text of the link itself is an ASIN
             const match = text.match(strictAsinRegex);
             if (match) {
                 return match[1];
             }
             
-            // 2. Fallback: Sometimes the link text is an icon or empty, 
-            // but the URL (href) contains the ASIN (e.g., amazon.com/dp/B012345678)
             const href = link.href || '';
             const hrefMatch = href.match(/\/(?:dp|product)\/([B0-9][A-Z0-9]{9})/i);
             if (hrefMatch) {
                 return hrefMatch[1].toUpperCase();
             }
         }
-        
         await sleep(250); 
     }
-    
     return null;
 }
 
@@ -66,7 +56,6 @@ function sendMessageToMain(type: string, payload: any = null): void {
 
 window.addEventListener('message', async (e: MessageEvent) => {
     if (e.source !== window.opener) return; 
-    
     const data = e.data;
     
     if (data?.type === 'SYNC_LPN') {
@@ -83,9 +72,11 @@ window.addEventListener('message', async (e: MessageEvent) => {
             setNativeValue(lpnInput, lpn);
             triggerEnter(lpnInput);
         }
-
-        // 3. WAIT for the server to load the item data, then extract the ASIN
-        const asin = await waitForAsin(6000); 
+    } 
+    
+    // Triggered independently when F8 is pressed
+    else if (data?.type === 'TRIGGER_ASIN_SEARCH') {
+        const asin = await waitForAsin(2000); 
         
         if (asin) {
             sendMessageToMain('FOUND_ASIN', asin);
