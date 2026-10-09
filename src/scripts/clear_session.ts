@@ -12,14 +12,14 @@ if (!window.__clearSessionLoaded) {
         if (isProcessing) return; 
         isProcessing = true;
         try {
-            const clrSesBtn = await findButtonByLabel(CLR_BTN_LBL) as HTMLButtonElement;
-            if (clrSesBtn && !clrSesBtn.disabled) clrSesBtn.click();
+            let clrSesBtn = findButtonByLabel(CLR_BTN_LBL) as HTMLButtonElement;
+            if (!clrSesBtn.disabled) clrSesBtn.click();
 
-            const cntBtn = await findButtonBySpan(CNT_BTN_SPN) as HTMLButtonElement;
+            const cntBtn = findButtonBySpan(CNT_BTN_SPN, 2000) as HTMLButtonElement;
             if (cntBtn) cntBtn.click();
 
 
-            const lpnInp = await findInputByLabel(LPN_INPT_LBL) as HTMLInputElement;
+            const lpnInp = await findInputByLabel(LPN_INPT_LBL, 4000) as HTMLInputElement;
             if (lpnInp) {
                 const savedLpn = localStorage.getItem(STORAGE_KEY_LPN);
 
@@ -32,7 +32,7 @@ if (!window.__clearSessionLoaded) {
                 triggerEnter(lpnInp);
             }
 
-            const wsInp = await findInputByLabel(WS_INPT_LBL) as HTMLInputElement;
+            const wsInp = await findInputByLabel(WS_INPT_LBL, 5000) as HTMLInputElement;
             if (!wsInp) return;
 
             const savedWs = localStorage.getItem(STORAGE_KEY_STATION);

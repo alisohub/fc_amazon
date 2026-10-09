@@ -1,5 +1,5 @@
-import { STORAGE_KEY_TASK } from '@shared/constants';
-import { isInsideModal, hasTargetLabel, setNativeValue, triggerEnter } from '@shared/dom';
+import { STORAGE_KEY_TASK, TOTE_INPT_LBL } from '@shared/constants';
+import { isInsideModal, setNativeValue, triggerEnter, findInputByLabel } from '@shared/dom';
 
 if (!window.__offTaskLoaded) {
     window.__offTaskLoaded = true;
@@ -27,16 +27,15 @@ if (!window.__offTaskLoaded) {
         window.dispatchEvent(new CustomEvent('sh-offtask-update', { detail: { reason } }));
     }
 
-    function checkTick(): void {
+    async function checkTick(): Promise<void> {
         if (!active || !settings.toteBarcode) {
             timerStart = null;
             return;
         }
 
-        // TODO: search using function from dom
-        const targetInput = document.querySelector('input[type="text"]:not([hidden]):not([disabled])') as HTMLInputElement | null;
+        const targetInput = findInputByLabel(TOTE_INPT_LBL) as HTMLInputElement;
         
-        if (!targetInput || isInsideModal(targetInput) || !hasTargetLabel(targetInput.getAttribute('aria-label'))) {
+        if (!targetInput || isInsideModal(targetInput)) {
             clearAndStop('aborted');
             return;
         }

@@ -1,4 +1,4 @@
-import { STORAGE_KEY_DEP, STORAGE_KEY_LPN, STORAGE_KEY_COUNTER, STORAGE_KEY_STATION, STORAGE_KEY_TASK, PKG_INP_LBL, WD_ITM_SCN_INPT_LBL, LPN_INPT_LBL, WS_INPT_LBL } from '@shared/constants';
+import { STORAGE_KEY_DEP, STORAGE_KEY_LPN, STORAGE_KEY_COUNTER, STORAGE_KEY_STATION, STORAGE_KEY_TASK, PKG_INPT_LBL, WD_ITM_SCN_INPT_LBL, LPN_INPT_LBL, WS_INPT_LBL } from '@shared/constants';
 import { HUB_STYLES } from './styles';
 
 if (window.location.href.includes('gravis')) {
@@ -107,10 +107,10 @@ if (window.location.href.includes('gravis')) {
         
             const DEPARTMENT_CONFIG: Record<Department, DepartmentConfig> = {
                 "CRET": { targetRate: 47, offTaskMins: 4, doubleCountMode: false, scanTimeoutMs: 6000 },
-                "FAST": { targetRate: 80, offTaskMins: 10, doubleCountMode: false, scanTimeoutMs: 4000 },
+                "FAST": { targetRate: 80, offTaskMins: 2, doubleCountMode: false, scanTimeoutMs: 4000 },
                 "UG":   { targetRate: 47, offTaskMins: 4, doubleCountMode: true, scanTimeoutMs: 6000 },
-                "REFURB": { targetRate: 30, offTaskMins: 10, doubleCountMode: false, scanTimeoutMs: 6000 },
-                "WHD": { targetRate: 20, offTaskMins: 5, doubleCountMode: false, scanTimeoutMs: 6000 }
+                "REFURB": { targetRate: 30, offTaskMins: 1, doubleCountMode: false, scanTimeoutMs: 6000 },
+                "WHD": { targetRate: 25, offTaskMins: 5, doubleCountMode: false, scanTimeoutMs: 6000 }
             };
 
             const urlParams = new URLSearchParams(window.location.search);
@@ -861,7 +861,7 @@ if (window.location.href.includes('gravis')) {
                     // Store your labels here (make sure they are lowercase for case-insensitive matching)
                     const LABELS = {
                         lpnLabels: [
-                            PKG_INP_LBL,
+                            PKG_INPT_LBL,
                             WD_ITM_SCN_INPT_LBL,
                             LPN_INPT_LBL
                         ], 

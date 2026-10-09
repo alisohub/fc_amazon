@@ -43,9 +43,8 @@ if (!window.__gravisLoaded) {
         if (e.key === 'F8') {
             e.preventDefault();
             
-            const asinInput = await findInputByLabel(ITM_SCN_INPT_LBL);
+            const asinInput = findInputByLabel(ITM_SCN_INPT_LBL);
             if (!asinInput) {
-                console.log("No ASIN input found on Main Hub. Skipping Gravis search.");
                 return;
             }
 
@@ -95,12 +94,12 @@ if (!window.__gravisLoaded) {
             
         } else if (data?.type === 'FOUND_ASIN') {
             if (data.payload === 'NOT_FOUND') {
-                const noBarcodeBtn = await findButtonBySpan(CHS_ITM_LST_BTN_SPN) as HTMLButtonElement;
+                const noBarcodeBtn = findButtonBySpan(CHS_ITM_LST_BTN_SPN) as HTMLButtonElement;
                 if (noBarcodeBtn && !noBarcodeBtn.disabled) {
                     noBarcodeBtn.click();
                 }
             } else {
-                const asinInput = await findInputByLabel(ITM_SCN_INPT_LBL) as HTMLInputElement;
+                const asinInput = findInputByLabel(ITM_SCN_INPT_LBL) as HTMLInputElement;
                 if (asinInput) {
                     setNativeValue(asinInput, data.payload);
                     triggerEnter(asinInput);

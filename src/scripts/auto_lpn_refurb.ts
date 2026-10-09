@@ -18,7 +18,7 @@ if (!window.__refurbLpnLoaded) {
 
         try {
             // 1. Find and fill old LPN
-            const oldLpnInput = await findInputByLabel(UI_STRINGS.oldLpnInput) as HTMLInputElement;
+            const oldLpnInput = await findInputByLabel(UI_STRINGS.oldLpnInput, 2000) as HTMLInputElement;
             if (!oldLpnInput) return; // Silent abort
             
             const oldLpn = localStorage.getItem(STORAGE_KEY_LPN);

@@ -1,7 +1,7 @@
 import { LPN_RSGN_BTN_SPN } from '@shared/constants';
-import { isInsideModal, hasTargetLabel } from '@shared/dom'; // Removed findButtonBySpan from imports
+import { isInsideModal, hasTargetLabel, findButtonBySpan } from '@shared/dom'; 
 import { normalizeText } from '@shared/utils';
-// TODO: add toteid finder alternative
+
 if (!window.__autoLpnLoaded) {
     window.__autoLpnLoaded = true;
 
@@ -26,16 +26,7 @@ if (!window.__autoLpnLoaded) {
         const cleanValue: string = normalizeText(input.value);
         if (!cleanValue) return;
 
-        const lpn_reassign_btn = Array.from(document.querySelectorAll('button, a, div[role="button"]')).find(el => {
-            const htmlEl = el as HTMLElement;
-            const btnEl = el as HTMLButtonElement; 
-            if (btnEl.disabled || htmlEl.offsetParent === null || !htmlEl.textContent) return false;
-            
-            const text = normalizeText(htmlEl.textContent);
-
-            const targets = LPN_RSGN_BTN_SPN.map(t => normalizeText(t));
-            return targets.some(target => text.includes(target));
-        }) as HTMLButtonElement | undefined;
+        const lpn_reassign_btn = findButtonBySpan(LPN_RSGN_BTN_SPN) as HTMLButtonElement;
 
         if (!lpn_reassign_btn) return;
 

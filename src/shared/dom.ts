@@ -14,11 +14,18 @@ export function triggerEnter(el: HTMLElement): void {
 // TODO: add every single script finding by toteid
 export const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-async function findElement(selector: string, timeout = 5000): Promise<HTMLElement | null> {
+function findElement(selector: string): HTMLElement | null {
+    const el = document.querySelector(selector) as HTMLElement | null;
+    if (el && el.offsetParent !== null) return el;
+    return null;
+}
+
+
+async function waitForElement(selector: string, timeout: number): Promise<HTMLElement | null> {
     const start = Date.now();
     while (Date.now() - start < timeout) {
-        const el = document.querySelector(selector) as HTMLElement | null;
-        if (el && el.offsetParent !== null) return el;
+        const el = findElement(selector);
+        if (el) return el;
         await sleep(150);
     }
     return null;
@@ -26,43 +33,54 @@ async function findElement(selector: string, timeout = 5000): Promise<HTMLElemen
 
 export const findButtonByLabel = (labels: string[], timeout?: number) => {
     const selector: string = labels.map(lbl => `button[aria-label="${lbl}" i]`).join(', ');
-    return findElement(selector, timeout);
-}
-
-export const findInputByLabel = (labels: string[], timeout?: number) => {
-    const selector: string = labels.map(lbl => `input[aria-label="${lbl}" i]`).join(', ');
-    return findElement(selector, timeout);
+    return timeout ? waitForElement(selector, timeout) : findElement(selector);
 }
 
 export const findButtonByTestId = (testId: string, timeout?: number) => {
     const selector: string = `button[data-testid="${testId}" i]`;
-    return findElement(selector, timeout);
+    return timeout ? waitForElement(selector, timeout) : findElement(selector);
 }
+
+export const findInputByLabel = (labels: string[], timeout?: number) => {
+    const selector: string = labels.map(lbl => `input[aria-label="${lbl}" i]`).join(', ');
+    return timeout ? waitForElement(selector, timeout) : findElement(selector);
+}
+
 
 export const findInputByTestId = (testId: string, timeout?: number) => {
     const selector: string = `input[data-testid="${testId}" i]`;
-    return findElement(selector, timeout);
+    return timeout ? waitForElement(selector, timeout) : findElement(selector);
 }
 
-export async function findButtonBySpan(spanTexts: string[], timeout = 5000): Promise<HTMLElement | null> {
-    const start = Date.now();
-
+function findButton(spanTexts: string[]): HTMLElement | null {
     const normalizedSpans = spanTexts.map(span => normalizeText(span));
+    const spans = Array.from(document.querySelectorAll('button span'));
+    const span = spans.find(s => {
+        const text = normalizeText(s.textContent);
+        return text && normalizedSpans.includes(text);
+    });
+    
+    if (span) {
+        const btn = span.closest('button') as HTMLButtonElement;
+        if (btn && btn.offsetParent !== null && !btn.disabled) return btn;
+    }
+    return null;
+}
+
+async function waitForButton(spanTexts: string[], timeout: number): Promise<HTMLElement | null> {
+    const start = Date.now();
     while (Date.now() - start < timeout) {
-        const spans = Array.from(document.querySelectorAll('button span'));
-        const span = spans.find(s => {
-            const text = normalizeText(s.textContent);
-            return text && normalizedSpans.includes(text);
-        });
-        
-        if (span) {
-            const btn = span.closest('button') as HTMLButtonElement;
-            if (btn && btn.offsetParent !== null && !btn.disabled) return btn;
-        }
+        const btn = findButton(spanTexts);
+        if (btn) return btn;
         await sleep(150);
     }
     return null;
 }
+
+export const findButtonBySpan = (spanTexts: string[], timeout?: number) => {
+    return timeout ? waitForButton(spanTexts, timeout) : findButton(spanTexts);
+}
+
 
 // Forces React/Angular to acknowledge programmatic input changes
 export function setNativeValue(element: HTMLInputElement, value: string): void {

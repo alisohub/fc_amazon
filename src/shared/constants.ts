@@ -1,4 +1,3 @@
-// TODO: add data-testid constants
 // TODO: add ukranian alternatives
 // Local Storage 
 export const STORAGE_KEY_DEP = 'sh_hub_dep';
@@ -16,34 +15,39 @@ export const STORAGE_KEY_STATION = 'sh_work_station';
 export const CLR_BTN_LBL: string[] = ["Usuń sesję"];
 
 // INPUT LABEL
-// data-testid = lpn-input-label
 export const LPN_INPT_LBL: string[] = ["Wprowadź LPN"];
-//data-testid = ws-input
 export const WS_INPT_LBL: string[] = ["Wprowadź stację roboczą"];
-// data-testid = package-input
-export const PKG_INP_LBL: string[] = ["Wprowadź numer rma"];
-// data-testid = wd-item-scan-label
+export const PKG_INPT_LBL: string[] = ["Wprowadź numer rma"];
 export const WD_ITM_SCN_INPT_LBL: string[] = ["Wprowadź lpn lub sku"];
-// data-testid = tote-input-label
 export const TOTE_INPT_LBL: string[] = [
     'Wprowadź pojemnik',
     'Вкажіть транспортну тару',
     'Введите тару'
 ];
+// TODO: testid
 export const LPN_OLD_LPN_INPT_LBL: string[] = ["Введіть старий LPN", "Wprowadź stary LPN"];
-// item-scan-input
 export const ITM_SCN_INPT_LBL: string[] = ["Wprowadź kod kreskowy lub SKU"];
 
-// BUTTON SPAN
+// INPUT TESTID
+export const LPN_INPT_TSTID: string = "lpn-input-label";
+export const WS_INPT_TSTID: string = "ws-input";
+export const PKG_INPT_TSTID: string = "package-input";
+export const WD_ITM_SCN_INPT_TSTID: string = "wd-item-scan-label";
+export const TOTE_INPT_TSTID : string = "tote-input-label";
+export const ITM_SCN_INPT_TSTID: string = "item-scan-input";
 
-// button-clear-session-continue-socrates
+// BUTTON SPAN
 export const CNT_BTN_SPN: string[] = ["Kontynuuj"];
-// data-testid = button-reassign-lpn-id
 export const LPN_RSGN_BTN_SPN: string[] = [
     'Перепризначте lpn', 
     'Przypisz ponownie lpn',
     'Назначить новый номер lp'
 ];
+// TODO: testid
 export const LPN_ASGN_NEW_BTN_SPN: string[] = ["Призначити новий LPN", "Przypisz nowy LPN"];
-// button-choose-item-from-the-list-socrates   
 export const CHS_ITM_LST_BTN_SPN: string[] = ["Brak dostępnych kodów kreskowych"]
+
+// BUTTON TESTID
+export const CNT_BTN_TSTID: string = "button-clear-session-continue-socrates";
+export const LPN_RSGN_BTN_TSTID: string = "button-reassign-lpn-id";
+export const CHS_ITM_LST_BTN_TSTID: string = "button-choose-item-from-the-list-socrates";
