@@ -1,4 +1,4 @@
-import { STORAGE_KEY_LPN, ITM_SCN_INPT_LBL, CHS_ITM_LST_BTN_SPN } from '@shared/constants';
+import { ITM_SCN_INPT_LBL, CHS_ITM_LST_BTN_SPN } from '@shared/constants';
 import { findInputByLabel, findButtonBySpan, setNativeValue, triggerEnter } from '@shared/dom';
 
 if (!window.__gravisLoaded) {
@@ -7,8 +7,6 @@ if (!window.__gravisLoaded) {
     let active: boolean = false;
     let gravisWindow: Window | null = null;
     let checkInterval: ReturnType<typeof setInterval> | null = null;
-    let storageMonitorInterval: ReturnType<typeof setInterval> | null = null;
-    let lastKnownLpn: string | null = localStorage.getItem(STORAGE_KEY_LPN);
 
     function syncHubUI(isActive: boolean): void {
         const chk = document.getElementById('sh-chk-gravis') as HTMLInputElement | null;
@@ -31,25 +29,11 @@ if (!window.__gravisLoaded) {
                 handleGravisDisconnect();
             }
         }, 500);
-
-        if (storageMonitorInterval) clearInterval(storageMonitorInterval);
-        lastKnownLpn = localStorage.getItem(STORAGE_KEY_LPN); 
-        storageMonitorInterval = setInterval(() => {
-            if (!active || !gravisWindow || gravisWindow.closed) return;
-            
-            const currentLpn = localStorage.getItem(STORAGE_KEY_LPN);
-            if (currentLpn && currentLpn !== lastKnownLpn) {
-                lastKnownLpn = currentLpn;
-                gravisWindow.postMessage({ type: 'SYNC_LPN', payload: currentLpn }, '*');
-            }
-        }, 250);
     }
 
     function stopWindowMonitor() {
         if (checkInterval) clearInterval(checkInterval);
-        if (storageMonitorInterval) clearInterval(storageMonitorInterval);
         checkInterval = null;
-        storageMonitorInterval = null;
     }
 
     // F8: Pre-checks for the input before waking up the Gravis tab
@@ -59,15 +43,12 @@ if (!window.__gravisLoaded) {
         if (e.key === 'F8') {
             e.preventDefault();
             
-            // 1. Look for the ASIN input field on the Main Tab first (using a short timeout if supported, e.g., 500ms)
             const asinInput = await findInputByLabel(ITM_SCN_INPT_LBL);
-            
-            // 2. If no input is found, the page isn't ready for an ASIN. Abort the search.
             if (!asinInput) {
+                console.log("No ASIN input found on Main Hub. Skipping Gravis search.");
                 return;
             }
 
-            // 3. Input exists! Now trigger Gravis to find the ASIN.
             gravisWindow.postMessage({ type: 'TRIGGER_ASIN_SEARCH' }, '*');
         }
     });
@@ -89,7 +70,13 @@ if (!window.__gravisLoaded) {
             gravisWindow = null;
             syncHubUI(false);
         },
-        isActive: (): boolean => active
+        isActive: (): boolean => active,
+        
+        sendLpn: (lpn: string): void => {
+            if (active && gravisWindow && !gravisWindow.closed) {
+                gravisWindow.postMessage({ type: 'SYNC_LPN', payload: lpn }, '*');
+            }
+        } 
     };
 
     window.addEventListener('message', async (e: MessageEvent) => {
@@ -108,13 +95,11 @@ if (!window.__gravisLoaded) {
             
         } else if (data?.type === 'FOUND_ASIN') {
             if (data.payload === 'NOT_FOUND') {
-                // ASIN not found in Gravis: click the missing barcode button
                 const noBarcodeBtn = await findButtonBySpan(CHS_ITM_LST_BTN_SPN) as HTMLButtonElement;
                 if (noBarcodeBtn && !noBarcodeBtn.disabled) {
                     noBarcodeBtn.click();
                 }
             } else {
-                // ASIN found: we query the input again to ensure we have the fresh DOM element, then paste
                 const asinInput = await findInputByLabel(ITM_SCN_INPT_LBL) as HTMLInputElement;
                 if (asinInput) {
                     setNativeValue(asinInput, data.payload);

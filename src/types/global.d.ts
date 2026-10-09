@@ -21,18 +21,10 @@ declare global {
         updateSettings: (newSettings: Partial<T>) => void;
     }
 
-    interface CounterSettings {
-        overlayOpacity: number;
-        lunchBreak: number;
-        overlayLeft: number | null;
-        overlayTop: number | null;
-        customStartTime: string | null;
-        targetRate?: number;
-        doubleCountMode?: boolean;
-        scanTimeoutMs?: number;
-    }
+    interface GravisHandler extends ScriptHandler{
+        sendLpn: (lpn: string) => void;
+    }   
 
-    // Counter gets SettingsHandler PLUS its own unique count methods
     interface CounterHandler extends SettingsHandler<CounterSettings> {
         getCount: () => number;
         setCount: (newCount: number) => void;
@@ -44,6 +36,17 @@ declare global {
         getRecordingKey: () => string | null;
         startRecording: (key: string) => void;
         stopRecording: () => void;
+    }
+
+    interface CounterSettings {
+        overlayOpacity: number;
+        lunchBreak: number;
+        overlayLeft: number | null;
+        overlayTop: number | null;
+        customStartTime: string | null;
+        targetRate?: number;
+        doubleCountMode?: boolean;
+        scanTimeoutMs?: number;
     }
 
     interface OffTaskSettings {
@@ -85,7 +88,7 @@ declare global {
         // We pass the settings interface directly into the SettingsHandler generic
         __offTask?: SettingsHandler<OffTaskSettings>;
         __devInspector?: SettingsHandler<DevInspectorSettings>;
-        __gravis?: ScriptHandler;
+        __gravis?: GravisHandler;
         __clearSession?: ScriptHandler;
     }
 }

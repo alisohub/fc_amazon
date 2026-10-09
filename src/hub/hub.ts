@@ -878,6 +878,7 @@ if (window.location.href.includes('gravis')) {
                         if (isLpnInput && /^lpn[a-z0-9]+/i.test(val)) {
                             if (localStorage.getItem(STORAGE_KEY_LPN) !== val) {
                                 localStorage.setItem(STORAGE_KEY_LPN, val);
+                                window.__gravis?.sendLpn(val);
                             }
                             return; // Stop processing once we match and save
                         }

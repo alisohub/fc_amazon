@@ -33,6 +33,7 @@ if (!window.__offTaskLoaded) {
             return;
         }
 
+        // TODO: search using function from dom
         const targetInput = document.querySelector('input[type="text"]:not([hidden]):not([disabled])') as HTMLInputElement | null;
         
         if (!targetInput || isInsideModal(targetInput) || !hasTargetLabel(targetInput.getAttribute('aria-label'))) {

@@ -5,7 +5,7 @@ async function selectAngularDropdown(triggerSelector: string, exactOptionText: s
     if (!dropdown) return false;
     
     dropdown.click();
-    await sleep(200);
+    await sleep(50);
     
     const options = Array.from(document.querySelectorAll('mat-option'));
     const targetOption = options.find(opt => {
@@ -22,8 +22,7 @@ async function selectAngularDropdown(triggerSelector: string, exactOptionText: s
     }
 }
 
-// Timeout reduced to 2000ms (2 seconds)
-async function waitForAsin(timeoutMs = 2000): Promise<string | null> {
+async function waitForAsin(timeoutMs = 1000): Promise<string | null> {
     const start = Date.now();
     const strictAsinRegex = /^([B0-9][A-Z0-9]{9})$/; 
 
@@ -64,7 +63,7 @@ window.addEventListener('message', async (e: MessageEvent) => {
 
         // 1. Select EU
         await selectAngularDropdown('.mat-select-value', 'EU');
-        await sleep(100);
+        await sleep(25);
 
         // 2. Paste the LPN and hit Enter
         const lpnInput = document.querySelector('input.mat-input-element') as HTMLInputElement;
@@ -76,7 +75,7 @@ window.addEventListener('message', async (e: MessageEvent) => {
     
     // Triggered independently when F8 is pressed
     else if (data?.type === 'TRIGGER_ASIN_SEARCH') {
-        const asin = await waitForAsin(2000); 
+        const asin = await waitForAsin(); 
         
         if (asin) {
             sendMessageToMain('FOUND_ASIN', asin);
