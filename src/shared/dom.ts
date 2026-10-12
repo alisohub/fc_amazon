@@ -11,7 +11,6 @@ export function triggerEnter(el: HTMLElement): void {
     el.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
 }
 
-// TODO: add every single script finding by toteid
 export const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 function findElement(selector: string): HTMLElement | null {

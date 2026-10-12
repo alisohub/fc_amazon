@@ -1,5 +1,7 @@
 import { setNativeValue, triggerEnter, sleep } from '@shared/dom';
 
+//TODO: alert or something to ensure the user 
+//that the script is successfully running
 async function selectAngularDropdown(triggerSelector: string, exactOptionText: string): Promise<boolean> {
     const dropdown = document.querySelector(triggerSelector) as HTMLElement;
     if (!dropdown) return false;
@@ -21,7 +23,8 @@ async function selectAngularDropdown(triggerSelector: string, exactOptionText: s
         return false;
     }
 }
-
+//TODO: after getting ASIN go to homepage 
+//to avoid getting ASIN from previous item
 async function waitForAsin(timeoutMs = 1000): Promise<string | null> {
     const start = Date.now();
     const strictAsinRegex = /^([B0-9][A-Z0-9]{9})$/; 

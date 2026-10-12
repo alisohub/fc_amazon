@@ -572,7 +572,7 @@ if (window.location.href.includes('gravis')) {
                     id: 'clear-session',
                     name: 'Авто-скасуй',
                     file: 'clear_session.js',
-                    description: 'Автоматично скасовує сесію при натисненні `us` на клавіатурі',
+                    description: 'Автоматично скасовує сесію при натисненні F9',
                     getHandler: () => window.__clearSession
                 },
                 {
