@@ -70,6 +70,7 @@ declare global {
 
         // Load Trackers
         __scriptHubLoaded?: boolean;
+        __gravisHubLoaded?: boolean;
         __autoLpnLoaded?: boolean;
         __refurbLpnLoaded?: boolean;
         __counterLoaded?: boolean;
