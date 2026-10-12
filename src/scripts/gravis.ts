@@ -1,5 +1,5 @@
-import { ITM_SCN_INPT_LBL, CHS_ITM_LST_BTN_SPN } from '@shared/constants';
-import { findInputByLabel, findButtonBySpan, setNativeValue, triggerEnter } from '@shared/dom';
+import { CHS_ITM_LST_BTN_TSTID, ITM_SCN_INPT_TSTID } from '@shared/constants';
+import { setNativeValue, triggerEnter, findInputByTestId, findButtonByTestId } from '@shared/dom';
 
 if (!window.__gravisLoaded) {
     window.__gravisLoaded = true;
@@ -43,7 +43,7 @@ if (!window.__gravisLoaded) {
         if (e.key === 'F8') {
             e.preventDefault();
             
-            const asinInput = findInputByLabel(ITM_SCN_INPT_LBL);
+            const asinInput = findInputByTestId(ITM_SCN_INPT_TSTID);
             if (!asinInput) {
                 return;
             }
@@ -94,12 +94,12 @@ if (!window.__gravisLoaded) {
             
         } else if (data?.type === 'FOUND_ASIN') {
             if (data.payload === 'NOT_FOUND') {
-                const noBarcodeBtn = findButtonBySpan(CHS_ITM_LST_BTN_SPN) as HTMLButtonElement;
+                const noBarcodeBtn = findButtonByTestId(CHS_ITM_LST_BTN_TSTID) as HTMLButtonElement;
                 if (noBarcodeBtn && !noBarcodeBtn.disabled) {
                     noBarcodeBtn.click();
                 }
             } else {
-                const asinInput = findInputByLabel(ITM_SCN_INPT_LBL) as HTMLInputElement;
+                const asinInput = findInputByTestId(ITM_SCN_INPT_TSTID) as HTMLInputElement;
                 if (asinInput) {
                     setNativeValue(asinInput, data.payload);
                     triggerEnter(asinInput);

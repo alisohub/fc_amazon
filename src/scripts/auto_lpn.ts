@@ -1,5 +1,5 @@
-import { LPN_RSGN_BTN_SPN } from '@shared/constants';
-import { isInsideModal, hasTargetLabel, findButtonBySpan } from '@shared/dom'; 
+import { LPN_RSGN_BTN_TSTID } from '@shared/constants';
+import { isInsideModal, hasTargetLabel, findButtonByTestId } from '@shared/dom'; 
 import { normalizeText } from '@shared/utils';
 
 if (!window.__autoLpnLoaded) {
@@ -26,9 +26,9 @@ if (!window.__autoLpnLoaded) {
         const cleanValue: string = normalizeText(input.value);
         if (!cleanValue) return;
 
-        const lpn_reassign_btn = findButtonBySpan(LPN_RSGN_BTN_SPN) as HTMLButtonElement;
+        const lpn_reassign_btn = findButtonByTestId(LPN_RSGN_BTN_TSTID) as HTMLButtonElement;
 
-        if (!lpn_reassign_btn) return;
+        if (!lpn_reassign_btn || lpn_reassign_btn.disabled) return;
 
         cooldownUntil = now + 10000;
 

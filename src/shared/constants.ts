@@ -51,3 +51,4 @@ export const CHS_ITM_LST_BTN_SPN: string[] = ["Brak dostępnych kodów kreskowyc
 export const CNT_BTN_TSTID: string = "button-clear-session-continue-socrates";
 export const LPN_RSGN_BTN_TSTID: string = "button-reassign-lpn-id";
 export const CHS_ITM_LST_BTN_TSTID: string = "button-choose-item-from-the-list-socrates";
+export const CLR_BTN_TSTID: string = "clear-session-icon";

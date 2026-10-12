@@ -1,5 +1,5 @@
-import { STORAGE_KEY_TASK, TOTE_INPT_LBL } from '@shared/constants';
-import { isInsideModal, setNativeValue, triggerEnter, findInputByLabel } from '@shared/dom';
+import { STORAGE_KEY_TASK, TOTE_INPT_TSTID } from '@shared/constants';
+import { findInputByTestId, isInsideModal, setNativeValue, triggerEnter } from '@shared/dom';
 
 if (!window.__offTaskLoaded) {
     window.__offTaskLoaded = true;
@@ -33,7 +33,7 @@ if (!window.__offTaskLoaded) {
             return;
         }
 
-        const targetInput = findInputByLabel(TOTE_INPT_LBL) as HTMLInputElement;
+        const targetInput = findInputByTestId(TOTE_INPT_TSTID) as HTMLInputElement;
         
         if (!targetInput || isInsideModal(targetInput)) {
             clearAndStop('aborted');
