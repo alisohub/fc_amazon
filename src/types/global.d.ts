@@ -55,11 +55,10 @@ declare global {
     }
 
     interface DevInspectorSettings {
-        showDetails: boolean;
-        showCSS: boolean;
-        showCoords: boolean;
+        htmlOutput: boolean;
+        networkWiretap: boolean;
+        wiretapOpacity: number;
     }
-
     // ==========================================
     // 2. THE WINDOW OBJECT EXTENSIONS
     // ==========================================

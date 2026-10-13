@@ -146,7 +146,7 @@ if (window.__gravisHubLoaded) {
         
         // Triggered independently when F8 is pressed
         else if (data?.type === 'TRIGGER_ASIN_SEARCH') {
-            const asin = await waitForAsin(); 
+            const asin = await waitForAsin(2000); 
             
             if (asin) {
                 sendMessageToMain('FOUND_ASIN', asin);
