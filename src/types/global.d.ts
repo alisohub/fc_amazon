@@ -8,6 +8,39 @@ declare global {
     // ==========================================
     
     // The base contract every script MUST follow.
+    type Department = "FAST" | "CRET" | "UG" | "REFURB" | "WHD";
+
+    interface DepartmentConfig {
+        targetRate: number;
+        offTaskMins: number;
+        doubleCountMode: boolean;
+        scanTimeoutMs: number;
+    }
+
+    interface ScriptDefinition {
+        id: string;
+        name: string;
+        file: string;
+        description: string;
+        getHandler: () => any;
+        renderSettings?: (container: HTMLElement) => void;
+        experimental?: boolean;
+        isTrusted?: boolean;
+        excludeDeps?: Department[];
+    }
+
+    interface ScriptDefinition {
+        id: string;
+        name: string;
+        file: string;
+        description: string;
+        getHandler: () => ScriptHandler | undefined | any;
+        renderSettings?: (container: HTMLElement) => void;
+        experimental?: boolean;
+        isTrusted?: boolean;
+        excludeDeps?: Department[]; 
+    }
+
     interface ScriptHandler {
         enable: () => void;
         disable: () => void;

@@ -1,4 +1,10 @@
-// TODO: add ukranian alternatives
+export const DEPARTMENT_CONFIG: Record<Department, DepartmentConfig> = {
+    "CRET": { targetRate: 47, offTaskMins: 4, doubleCountMode: false, scanTimeoutMs: 6000 },
+    "FAST": { targetRate: 80, offTaskMins: 2, doubleCountMode: false, scanTimeoutMs: 4000 },
+    "UG":   { targetRate: 47, offTaskMins: 4, doubleCountMode: true, scanTimeoutMs: 6000 },
+    "REFURB": { targetRate: 30, offTaskMins: 1, doubleCountMode: false, scanTimeoutMs: 6000 },
+    "WHD": { targetRate: 25, offTaskMins: 5, doubleCountMode: false, scanTimeoutMs: 6000 }
+};
 // Local Storage 
 export const STORAGE_KEY_DEP = 'sh_hub_dep';
 export const STORAGE_KEY_COUNT = 'sh_item_counter_count';
