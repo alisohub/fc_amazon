@@ -583,65 +583,6 @@ if (window.location.href.includes('gravis')) {
                     excludeDeps: ['REFURB', 'WHD'],
                     experimental: true,
                     getHandler: () => window.__gravis
-                },
-                {
-                    id: 'dev-inspector',
-                    name: 'Dev Inspector',
-                    file: 'dev_inspector.js',
-                    description: '',
-                    experimental: true,
-                    getHandler: () => window.__devInspector,
-                    renderSettings: (container: HTMLElement) => {
-                        const handler = window.__devInspector;
-                        if (!handler || !handler.getSettings) return;
-                        const settings = handler.getSettings();
-
-                        container.innerHTML = `
-                            <div class="sh-settings-divider"></div>
-                            <div class="sh-setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-                                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; color: #5f6368;">
-                                    <input type="radio" name="dev_mode" value="html" ${settings.htmlOutput ? 'checked' : ''}>
-                                    🔍 HTML Output on Press
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; color: #5f6368;">
-                                    <input type="radio" name="dev_mode" value="network" ${settings.networkWiretap ? 'checked' : ''}>
-                                    📡 Network Wiretap
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; color: #5f6368;">
-                                    <input type="radio" name="dev_mode" value="off" ${!settings.htmlOutput && !settings.networkWiretap ? 'checked' : ''}>
-                                    ❌ Off
-                                </label>
-                            </div>
-                            <div class="sh-setting-row" title="Wiretap Opacity" style="margin-top: 8px;">
-                                <span class="sh-emoji">👁️</span>
-                                <input type="range" id="sh-dev-opacity" class="sh-range" min="0.1" max="1" step="0.1" value="${settings.wiretapOpacity !== undefined ? settings.wiretapOpacity : 0.9}" />
-                            </div>
-                        `;
-
-                        // Handle Radio buttons for Mode Toggle
-                        const radios = container.querySelectorAll('input[name="dev_mode"]');
-                        radios.forEach(radio => {
-                            radio.addEventListener('change', (e) => {
-                                const val = (e.target as HTMLInputElement).value;
-                                if (val === 'html') {
-                                    handler.updateSettings({ htmlOutput: true, networkWiretap: false });
-                                } else if (val === 'network') {
-                                    handler.updateSettings({ htmlOutput: false, networkWiretap: true });
-                                } else {
-                                    handler.updateSettings({ htmlOutput: false, networkWiretap: false });
-                                }
-                            });
-                        });
-
-                        // Handle Opacity Slider
-                        const opacityInput = container.querySelector('#sh-dev-opacity') as HTMLInputElement;
-                        if (opacityInput) {
-                            opacityInput.addEventListener('input', (e) => {
-                                const val = parseFloat((e.target as HTMLInputElement).value);
-                                handler.updateSettings({ wiretapOpacity: val });
-                            });
-                        }
-                    }
                 }
             ];
 

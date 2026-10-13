@@ -5,7 +5,6 @@ export const STORAGE_KEY_COUNT = 'sh_item_counter_count';
 export const STORAGE_KEY_COUNTER = 'sh_item_counter_settings';
 export const STORAGE_KEY_TASK = 'sh_off_task_settings';
 export const STORAGE_KEY_BINDS = 'sh_binds_config';
-export const STORAGE_KEY_DEV = 'sh_dev_inspector_settings';
 export const STORAGE_KEY_LPN = 'sh_lpn';
 export const STORAGE_KEY_STATION = 'sh_work_station';
 

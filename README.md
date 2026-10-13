@@ -43,7 +43,6 @@ export default defineConfig({
         'auto_lpn': 'src/scripts/auto_lpn.ts',
         'binds': 'src/scripts/binds.ts',
         'counter': 'src/scripts/counter.ts',
-        'dev_inspector': 'src/scripts/dev_inspector.ts',
         'my_new_script': 'src/scripts/my_new_script.ts' // <-- ADD YOUR SCRIPT ENTRY HERE
     },
     format: ['iife'],

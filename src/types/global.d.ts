@@ -54,11 +54,6 @@ declare global {
         timeoutMins?: number;
     }
 
-    interface DevInspectorSettings {
-        htmlOutput: boolean;
-        networkWiretap: boolean;
-        wiretapOpacity: number;
-    }
     // ==========================================
     // 2. THE WINDOW OBJECT EXTENSIONS
     // ==========================================
@@ -77,7 +72,6 @@ declare global {
         __offTaskLoaded?: boolean;
         __gravisLoaded?: boolean;
         __clearSessionLoaded?: boolean;
-        __devInspectorLoaded?: boolean;
 
         // Script Handlers
         __autoLpn?: ScriptHandler;
@@ -87,7 +81,6 @@ declare global {
         
         // We pass the settings interface directly into the SettingsHandler generic
         __offTask?: SettingsHandler<OffTaskSettings>;
-        __devInspector?: SettingsHandler<DevInspectorSettings>;
         __gravis?: GravisHandler;
         __clearSession?: ScriptHandler;
     }
