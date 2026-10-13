@@ -1,18 +1,10 @@
-"use strict";(()=>{var _="sh_dev_inspector_settings";if(!window.__devInspectorLoaded){let i=function(o){if(!r)return;let e=o.target;if(e.closest("#sh-root"))return;(e.tagName.toLowerCase()==="a"||e.closest("a"))&&o.preventDefault();let t=`\u{1F50D} Element: <${e.tagName.toLowerCase()}>
-`;if(t+=`--------------------------------
-`,n.showCoords&&(t+=`\u{1F4CD} COORDINATES:
-`,t+=`   Client (Screen): X: ${o.clientX}, Y: ${o.clientY}
-`,t+=`   Page (Scroll):   X: ${o.pageX}, Y: ${o.pageY}
-`,t+=`--------------------------------
-`),n.showDetails){t+=`\u{1F4DD} RAW HTML:
-`;let s=e.outerHTML||"None";t+=`${s}
-`,t+=`--------------------------------
-`}if(n.showCSS){t+=`\u{1F3A8} CSS:
-`,t+=`   Inline CSS: ${e.style.cssText||"None"}
-`;let s=window.getComputedStyle(e);t+=`   Display: ${s.display}
-`,t+=`   Position: ${s.position}
-`,t+=`   Color: ${s.color}
-`,t+=`   Background: ${s.backgroundColor}
-`,t+=`   Font-Size: ${s.fontSize}
-`,t+=`--------------------------------
-`}alert(t.trim())};c=i,window.__devInspectorLoaded=!0;let r=!1,n={showDetails:!0,showCSS:!1,showCoords:!1};try{let o=localStorage.getItem(_);o&&(n={...n,...JSON.parse(o)})}catch{}document.addEventListener("click",i,!0),window.__devInspector={enable:()=>{r=!0},disable:()=>{r=!1},isActive:()=>r,getSettings:()=>n,updateSettings:o=>{n={...n,...o};try{localStorage.setItem(_,JSON.stringify(n))}catch{}}}}var c;})();
+"use strict";(()=>{var a="sh_dev_inspector_settings";if(!window.__devInspectorLoaded){let c=function(t,e){if(!s||!o.networkWiretap||e.includes("telemetry")||e.includes("metrics")||e.includes("ping"))return;let i=new Date().toLocaleTimeString(),p=document.createElement("div");p.style.borderBottom="1px solid #eee",p.style.paddingBottom="4px",p.style.marginBottom="4px",p.innerHTML=`<span style="color: #d32f2f; font-weight: bold;">[${t}]</span> <span style="color: #666;">${i}</span><br/>${e.substring(0,150)}`,n.appendChild(p),n.scrollTop=n.scrollHeight},_=function(t){if(!s||!o.htmlOutput)return;let e=t.target;e.closest("#sh-root")||e===n||n.contains(e)||((e.tagName.toLowerCase()==="a"||e.closest("a"))&&t.preventDefault(),alert(`\u{1F50D} HTML OUTPUT:
+
+${e.outerHTML.substring(0,1e3)}`))},r=function(){s&&o.networkWiretap?(n.style.display="block",n.style.background=`rgba(255, 255, 255, ${o.wiretapOpacity})`):n.style.display="none"};d=c,u=_,g=r,window.__devInspectorLoaded=!0;let s=!1,o={htmlOutput:!1,networkWiretap:!1,wiretapOpacity:.9};try{let t=localStorage.getItem(a);t&&(o={...o,...JSON.parse(t)})}catch{}let n=document.createElement("div");n.style.cssText=`
+        position: fixed; top: 20px; left: 20px; width: 450px; height: 350px;
+        background: rgba(255, 255, 255, ${o.wiretapOpacity}); color: #333;
+        font-family: monospace; font-size: 12px; padding: 12px;
+        overflow-y: auto; z-index: 9999999; border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid #ccc;
+        pointer-events: auto; display: none; white-space: pre-wrap;
+    `,n.innerHTML='<strong style="color: #1a73e8;">\u{1F4E1} NETWORK WIRETAP ACTIVE</strong><br/><br/>',document.body.appendChild(n);let l=window.fetch;window.fetch=async function(...t){if(s&&o.networkWiretap){let e=typeof t[0]=="string"?t[0]:t[0].url,i=t[1]?.method||"GET";c(i,e)}return l.apply(this,t)};let T=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(t,e,...i){return s&&o.networkWiretap&&c(t,e.toString()),T.call(this,t,e,...i)},document.addEventListener("click",_,!0),window.__devInspector={enable:()=>{s=!0,r()},disable:()=>{s=!1,r()},isActive:()=>s,getSettings:()=>o,updateSettings:t=>{t.htmlOutput&&!o.htmlOutput&&(t.networkWiretap=!1),t.networkWiretap&&!o.networkWiretap&&(t.htmlOutput=!1),o={...o,...t};try{localStorage.setItem(a,JSON.stringify(o))}catch{}r()}},r()}var d,u,g;})();
