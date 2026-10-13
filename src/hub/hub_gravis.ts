@@ -95,6 +95,22 @@ async function waitForAsin(timeoutMs = 1000): Promise<string | null> {
     return null;
 }
 
+function scrubStaleAsins(): void {
+    const strictAsinRegex = /^([B0-9][A-Z0-9]{9})$/; 
+    const links = Array.from(document.querySelectorAll('a'));
+    
+    for (const link of links) {
+        const text = (link.textContent || '').trim().toUpperCase();
+        const href = link.href || '';
+        
+        // If the link text or URL contains an ASIN, nuke it
+        if (text.match(strictAsinRegex) || href.match(/\/(?:dp|product)\/([B0-9][A-Z0-9]{9})/i)) {
+            link.textContent = 'Not Available';
+            link.removeAttribute('href');
+        }
+    }
+}
+
 function sendMessageToMain(type: string, payload: any = null): void {
     if (window.opener) {
         window.opener.postMessage({ type, payload }, '*');
@@ -114,6 +130,8 @@ if (window.__gravisHubLoaded) {
             const lpn = data.payload;
             if (!lpn) return;
 
+            scrubStaleAsins();
+
             // 1. Select EU
             await selectAngularDropdown('.mat-select-value', 'EU');
             await sleep(50);
@@ -132,14 +150,6 @@ if (window.__gravisHubLoaded) {
             
             if (asin) {
                 sendMessageToMain('FOUND_ASIN', asin);
-                
-                // 2. Scrub the old ASIN from the DOM so we can't read it twice
-                const links = Array.from(document.querySelectorAll('a'));
-                for (const link of links) {
-                    if (link.textContent?.includes(asin)) {
-                        link.textContent = 'Not Available'; 
-                    }
-                }
             } else {
                 sendMessageToMain('FOUND_ASIN', 'NOT_FOUND');
             }
