@@ -1,4 +1,4 @@
-import { CLR_BTN_TSTID, CNT_BTN_TSTID, LPN_INPT_TSTID, STORAGE_KEY_LPN, STORAGE_KEY_STATION, WS_INPT_TSTID } from "@shared/constants";
+import { CNT_BTN_TSTID, LPN_INPT_TSTID, STORAGE_KEY_LPN, STORAGE_KEY_STATION, WS_INPT_TSTID } from "@shared/constants";
 import { setNativeValue,  triggerEnter, findButtonByTestId, findInputByTestId } from "@shared/dom";
 
 if (!window.__clearSessionLoaded) {
@@ -11,72 +11,68 @@ if (!window.__clearSessionLoaded) {
     async function executeClearSession(): Promise<void> {
         if (isProcessing) return; 
         isProcessing = true;
+
         try {
-            let clrSesBtn = findButtonByTestId(CLR_BTN_TSTID) as HTMLButtonElement;
-            if (clrSesBtn && !clrSesBtn.disabled) clrSesBtn.click();
+            await fetch("/api/session/startClearSession", {
+                method: "POST",
+                headers: {
+                    "accept": "application/json",
+                    "content-type": "application/json"
+                },
+                body: "{}"
+            });
 
             const cntBtn = await findButtonByTestId(CNT_BTN_TSTID, 2000) as HTMLButtonElement;
             if (cntBtn && !cntBtn.disabled) cntBtn.click();
 
-
             const lpnInp = await findInputByTestId(LPN_INPT_TSTID, 4000) as HTMLInputElement;
             if (lpnInp) {
                 const savedLpn = localStorage.getItem(STORAGE_KEY_LPN);
-
                 if (!savedLpn) {
-                    alert("Ще жодної LPN не записано, спробуйте з наступним товаром.");
+                    alert("Żadna LPN nie została zapisana.");
                     return;
                 }
-
                 setNativeValue(lpnInp, savedLpn);
                 triggerEnter(lpnInp);
             }
 
             const wsInp = await findInputByTestId(WS_INPT_TSTID, 5000) as HTMLInputElement;
             if (!wsInp) return;
-
             const savedWs = localStorage.getItem(STORAGE_KEY_STATION);
-
             if (!savedWs) {
-                alert("Робоча станція ще не була записана, спробуйте з наступним товаром.");
+                alert("Stacja robocza nie została zapisana.");
                 return;
             }
-
             setNativeValue(wsInp, savedWs);
             triggerEnter(wsInp);
+
         } finally {
             isProcessing = false;
         }
-
     }
 
     function handleKeydown(e: KeyboardEvent): void {
         if (!active) return;
-
-        // 1. Exit early and reset buffer if they press space, numbers, or special keys
+        
         if (e.key.length !== 1 || !/[a-z]/i.test(e.key)) {
             keyBuffer = '';
             return;
         }
-
-        // 2. Exit early if actively typing in an input (prevents scanner misfires)
+        
         const target = e.target as HTMLElement;
         if (target && target.matches('input, textarea, [contenteditable="true"]')) {
             keyBuffer = '';
             return;
         }
-
-        // 3. Append the new key and slice to keep only the last 2 characters
+        
         keyBuffer = (keyBuffer + e.key.toLowerCase()).slice(-2);
-
-        // 4. Execute and consume buffer
+        
         if (keyBuffer === 'us') {
             keyBuffer = ''; 
             executeClearSession();
         }
     }
 
-    // Use capturing phase (true) to ensure global interception
     document.addEventListener('keydown', handleKeydown, true);
 
     window.__clearSession = {
