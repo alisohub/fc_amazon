@@ -282,8 +282,7 @@ if (window.location.href.includes('gravis')) {
                                 if (window.__itemCounter) {
                                     window.__itemCounter.updateSettings({ 
                                         targetRate: newConfig.targetRate,
-                                        doubleCountMode: newConfig.doubleCountMode,
-                                        scanTimeoutMs: newConfig.scanTimeoutMs
+                                        doubleCountMode: newConfig.doubleCountMode
                                     });
                                     const targetInput = document.getElementById('sh-cfg-target') as HTMLInputElement;
                                     if (targetInput) targetInput.value = newConfig.targetRate.toString();
@@ -292,7 +291,6 @@ if (window.location.href.includes('gravis')) {
                                         const ls = JSON.parse(localStorage.getItem(STORAGE_KEY_COUNTER) || '{}');
                                         ls.targetRate = newConfig.targetRate;
                                         ls.doubleCountMode = newConfig.doubleCountMode;
-                                        ls.scanTimeoutMs = newConfig.scanTimeoutMs;
                                         localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify(ls));
                                     } catch(err) {}
                                 }

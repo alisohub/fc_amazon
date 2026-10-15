@@ -14,7 +14,6 @@ declare global {
         targetRate: number;
         offTaskMins: number;
         doubleCountMode: boolean;
-        scanTimeoutMs: number;
     }
 
     interface ScriptDefinition {
@@ -79,7 +78,6 @@ declare global {
         customStartTime: string | null;
         targetRate?: number;
         doubleCountMode?: boolean;
-        scanTimeoutMs?: number;
     }
 
     interface OffTaskSettings {

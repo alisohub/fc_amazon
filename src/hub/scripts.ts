@@ -18,14 +18,12 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                 
                 const configRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
                 const configDoubleCount = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].doubleCountMode : false;
-                const configTimeout = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].scanTimeoutMs : 6000;
 
                 const targetRate = settings.targetRate !== undefined ? settings.targetRate : configRate;
                                  
                 handler.updateSettings({ 
                     targetRate: targetRate, 
                     doubleCountMode: configDoubleCount,
-                    scanTimeoutMs: configTimeout
                 });
 
                 container.innerHTML = `
