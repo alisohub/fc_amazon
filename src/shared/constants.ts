@@ -13,6 +13,7 @@ export const STORAGE_KEY_TASK = 'sh_off_task_settings';
 export const STORAGE_KEY_BINDS = 'sh_binds_config';
 export const STORAGE_KEY_LPN = 'sh_lpn';
 export const STORAGE_KEY_STATION = 'sh_work_station';
+export const STORAGE_KEY_DBL_COUNT_ID = 'sh_double_count_pid';
 
 
 // BUTTON LABEL

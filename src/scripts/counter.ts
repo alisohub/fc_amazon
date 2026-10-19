@@ -1,4 +1,4 @@
-import { STORAGE_KEY_COUNT, STORAGE_KEY_COUNTER } from '@shared/constants';
+import { STORAGE_KEY_COUNT, STORAGE_KEY_COUNTER, STORAGE_KEY_DBL_COUNT_ID } from '@shared/constants';
 import { getEffectiveWorkTime, calculateUPH, calculatePercentageStr } from '@shared/time';
 
 if (!window.__counterLoaded) {
@@ -161,17 +161,8 @@ if (!window.__counterLoaded) {
         }
     }
 
-    function checkAndIncrement() {
-        if (!active) return;
-        let increment = 1;
-        if (settings.doubleCountMode && document.getElementById('sticker-back-hide')) {
-            increment = 2;
-        }
-        updateCounterUI(itemCounter + increment);
-    }
-
-    // ==========================================
-    // XHR NETWORK INTERCEPTOR
+// ==========================================
+    // XHR NETWORK INTERCEPTOR (WITH DEBUG LOGS)
     // ==========================================
     const originalOpen = XMLHttpRequest.prototype.open;
     const originalSend = XMLHttpRequest.prototype.send;
@@ -182,16 +173,6 @@ if (!window.__counterLoaded) {
     };
 
     XMLHttpRequest.prototype.send = function(body: Document | XMLHttpRequestBodyInit | null) {
-        if (typeof body === "string") {
-            try {
-                (this as any).__requestBody = JSON.parse(body);
-            } catch {
-                (this as any).__requestBody = null;
-            }
-        } else {
-            (this as any).__requestBody = null;
-        }
-
         this.addEventListener("load", function () {
             if (!active) return;
 
@@ -200,28 +181,64 @@ if (!window.__counterLoaded) {
                 return;
             }
 
-            const requestBody = (this as any).__requestBody;
-            if (requestBody?.action?.name !== "SCAN_CONTAINER_IDENTIFIER") {
-                return;
-            }
-
             try {
                 const responseBody = typeof this.response === "string"
                     ? JSON.parse(this.response)
                     : this.response;
 
-                if (responseBody?.isDone === true) {
-                    checkAndIncrement();
+                if (!responseBody) {
+                    return;
+                }
+
+                // Handle cases where actionPayload might be a stringified JSON string
+                let payload = responseBody.actionPayload;
+                if (typeof payload === "string") {
+                    try {
+                        payload = JSON.parse(payload);
+                    } catch (e) {
+                    }
+                }
+
+                const pid = responseBody.processManagerId || payload?.processManagerId;
+
+                // 1. Check and store processManagerId in localStorage if in doubleCountMode
+                if (settings.doubleCountMode) {
+                    if (
+                        payload?.listingConditionEvaluated === true &&
+                        payload?.decantedUnit === true &&
+                        payload?.sellable === true &&
+                        typeof pid === "string"
+                    ) {
+                        try {
+                            localStorage.setItem(STORAGE_KEY_DBL_COUNT_ID, pid);
+                        } catch (e) {}
+                    }                 
+                } 
+
+                // 2. Increment count when process is done
+                if (responseBody.isDone === true) {
+                    let increment = 1;
+                    try {
+                        const savedPid = localStorage.getItem(STORAGE_KEY_DBL_COUNT_ID);
+                        if (
+                            settings.doubleCountMode &&
+                            savedPid !== null &&
+                            pid === savedPid
+                        ) {
+                            increment = 2;
+                            localStorage.removeItem(STORAGE_KEY_DBL_COUNT_ID);
+                        }
+                    } catch (e) {
+                    }
+
+                    updateCounterUI(itemCounter + increment);
                 }
             } catch (error) {
-                // Silently handle parse failures
             }
         });
 
         return originalSend.call(this, body);
     };
-
-    // ==========================================
 
     document.addEventListener('keydown', (e: KeyboardEvent) => {
         if (!active) return;
