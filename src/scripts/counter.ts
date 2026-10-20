@@ -107,6 +107,8 @@ if (!window.__counterLoaded) {
             }
         };
 
+        //TODO FIX resize
+
         overlay.addEventListener('mousedown', dragStart as EventListener);
         document.addEventListener('mousemove', dragMove as EventListener);
         document.addEventListener('mouseup', dragEnd);

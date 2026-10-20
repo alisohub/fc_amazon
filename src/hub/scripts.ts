@@ -1,5 +1,33 @@
 import { DEPARTMENT_CONFIG } from "@shared/constants";
-// TODO hidden settings by def
+
+function createSettingsDrawer(
+    renderBody: (content: HTMLElement, signal: AbortSignal) => void
+): (container: HTMLElement) => void {
+    return (container: HTMLElement) => {
+        if ((container as any)._abortController) {
+            (container as any)._abortController.abort();
+        }
+        const controller = new AbortController();
+        (container as any)._abortController = controller;
+
+        container.innerHTML = `
+            <div class="sh-adv-container"></div>
+            <div class="sh-adv-toggle-wrap">
+                <span class="sh-adv-text">Налаштування</span>
+            </div>
+        `;
+
+        const content = container.querySelector('.sh-adv-container') as HTMLElement;
+        const toggleBtn = container.querySelector('.sh-adv-text') as HTMLElement;
+
+        toggleBtn.addEventListener('click', () => {
+            content.classList.toggle('sh-expanded');
+        }, { signal: controller.signal });
+
+        renderBody(content, controller.signal);
+    };
+}
+
 export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinition[] => {
     return [
         {
@@ -8,26 +36,24 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             file: 'counter.js',
             description: 'Рахує пачки, можете сховати з екрану за допомогою F10. Виставте перерву.',
             getHandler: () => window.__itemCounter,
-            renderSettings: (container: HTMLElement) => {
+            renderSettings: createSettingsDrawer((content) => {
                 const handler = window.__itemCounter;
                 if (!handler) return;
-                
+
                 const currentDep = getCurrentDep();
                 const settings = handler.getSettings();
                 const currentCount = handler.getCount();
-                
+
                 const configRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
                 const configDoubleCount = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].doubleCountMode : false;
-
                 const targetRate = settings.targetRate !== undefined ? settings.targetRate : configRate;
-                                 
-                handler.updateSettings({ 
-                    targetRate: targetRate, 
+
+                handler.updateSettings({
+                    targetRate: targetRate,
                     doubleCountMode: configDoubleCount,
                 });
 
-                container.innerHTML = `
-                    <div class="sh-settings-divider"></div>
+                content.innerHTML = `
                     <div class="sh-setting-row" title="Options & Manual Edit">
                         <span class="sh-emoji">🍴</span>
                         <div class="sh-opt-group">
@@ -43,41 +69,33 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                         <span class="sh-emoji">👻</span>
                         <input type="range" id="sh-cfg-opacity" class="sh-range" min="0" max="1" step="0.05" value="${settings.overlayOpacity}" />
                     </div>
-                    
-                    <div id="sh-adv-container-item-counter" class="sh-adv-container">
-                        <div class="sh-setting-row" title="Target Rate">
-                            <span class="sh-emoji">🎯</span>
-                            <input type="number" id="sh-cfg-target" class="sh-input sh-flex-1" min="0" value="${targetRate}" placeholder="Необхідна норма" />
-                        </div>
-                        
-                        <div class="sh-setting-row sh-mt-8 sh-space-between" title="Власний час початку зміни">
-                            <div class="sh-flex-center-gap">
-                                <span class="sh-emoji">⏱️</span>
-                                <input type="text" id="sh-cfg-start-time" class="sh-input sh-time-input-small" value="${settings.customStartTime || ''}" placeholder="14:30" maxlength="5" />
-                            </div>
-                            <div class="sh-flex-gap">
-                                <button id="sh-btn-start-now" class="sh-time-btn">Зараз</button>
-                                <button id="sh-btn-start-reset" class="sh-time-btn">Скинути</button>
-                            </div>
-                        </div>
+                    <div class="sh-setting-row" title="Target Rate">
+                        <span class="sh-emoji">🎯</span>
+                        <input type="number" id="sh-cfg-target" class="sh-input sh-flex-1" min="0" value="${targetRate}" placeholder="Необхідна норма" />
                     </div>
-                    
-                    <div class="sh-adv-toggle-wrap">
-                        <span id="sh-adv-btn-item-counter" class="sh-adv-text">Розширені</span>
+                    <div class="sh-setting-row sh-mt-8 sh-space-between" title="Власний час початку зміни" style="margin-bottom: 0;">
+                        <div class="sh-flex-center-gap">
+                            <span class="sh-emoji">⏱️</span>
+                            <input type="text" id="sh-cfg-start-time" class="sh-input sh-time-input-small" value="${settings.customStartTime || ''}" placeholder="14:30" maxlength="5" />
+                        </div>
+                        <div class="sh-flex-gap">
+                            <button id="sh-btn-start-now" class="sh-time-btn">Зараз</button>
+                            <button id="sh-btn-start-reset" class="sh-time-btn">Скинути</button>
+                        </div>
                     </div>
                 `;
 
-                container.querySelectorAll('.sh-opt-btn').forEach(btn => {
+                content.querySelectorAll('.sh-opt-btn').forEach(btn => {
                     btn.addEventListener('click', (e: Event) => {
                         const target = e.target as HTMLElement;
-                        container.querySelectorAll('.sh-opt-btn').forEach(b => b.classList.remove('active'));
+                        content.querySelectorAll('.sh-opt-btn').forEach(b => b.classList.remove('active'));
                         target.classList.add('active');
                         const val = parseInt(target.getAttribute('data-val') || '1', 10);
                         handler.updateSettings({ lunchBreak: val });
                     });
                 });
 
-                const countInput = container.querySelector('#sh-cfg-count') as HTMLInputElement;
+                const countInput = content.querySelector('#sh-cfg-count') as HTMLInputElement;
                 if (countInput) {
                     countInput.addEventListener('input', (e: Event) => {
                         const target = e.target as HTMLInputElement;
@@ -91,7 +109,7 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                     });
                 }
 
-                const opacityInput = container.querySelector('#sh-cfg-opacity') as HTMLInputElement;
+                const opacityInput = content.querySelector('#sh-cfg-opacity') as HTMLInputElement;
                 if (opacityInput) {
                     opacityInput.addEventListener('input', (e: Event) => {
                         const target = e.target as HTMLInputElement;
@@ -100,7 +118,7 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                     });
                 }
 
-                const targetInput = container.querySelector('#sh-cfg-target') as HTMLInputElement;
+                const targetInput = content.querySelector('#sh-cfg-target') as HTMLInputElement;
                 if (targetInput) {
                     targetInput.addEventListener('input', (e: Event) => {
                         const target = e.target as HTMLInputElement;
@@ -110,22 +128,24 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                     });
                 }
 
-                const timeInput = container.querySelector('#sh-cfg-start-time') as HTMLInputElement;
-                const btnNow = container.querySelector('#sh-btn-start-now') as HTMLButtonElement;
-                const btnReset = container.querySelector('#sh-btn-start-reset') as HTMLButtonElement;
+                const timeInput = content.querySelector('#sh-cfg-start-time') as HTMLInputElement;
+                const btnNow = content.querySelector('#sh-btn-start-now') as HTMLButtonElement;
+                const btnReset = content.querySelector('#sh-btn-start-reset') as HTMLButtonElement;
+
                 if (timeInput && btnNow && btnReset) {
                     timeInput.addEventListener('input', (e: Event) => {
                         const target = e.target as HTMLInputElement;
                         const inputEvent = e as InputEvent;
-                        let digits = target.value.replace(/\D/g, '').split('');
+                        const digits = target.value.replace(/\D/g, '').split('');
                         let out = '';
+
                         if (digits.length > 0) {
-                            let d = digits.shift()!;
-                            if (d >= '3') out += '0' + d; 
+                            const d = digits.shift()!;
+                            if (d >= '3') out += '0' + d;
                             else out += d;
                         }
                         if (digits.length > 0 && out.length === 1) {
-                            let d = digits.shift()!;
+                            const d = digits.shift()!;
                             if (out[0] === '2' && d >= '4') {
                                 out = '0' + out[0];
                                 digits.unshift(d);
@@ -139,19 +159,21 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                             }
                         }
                         if (digits.length > 0) {
-                            let d = digits.shift()!;
-                            if (d >= '6') out += '0' + d; 
+                            const d = digits.shift()!;
+                            if (d >= '6') out += '0' + d;
                             else out += d;
                         }
                         if (digits.length > 0 && out.length === 4) {
-                            let d = digits.shift()!;
+                            const d = digits.shift()!;
                             out += d;
                         }
+
                         target.value = out;
+
                         if (out.length === 5 && out.match(/^\d{2}:\d{2}$/)) {
                             handler.updateSettings({ customStartTime: out });
                         } else if (out === '') {
-                            handler.updateSettings({ customStartTime: null }); 
+                            handler.updateSettings({ customStartTime: null });
                         }
                     });
 
@@ -169,23 +191,15 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                         handler.updateSettings({ customStartTime: null });
                     });
                 }
-
-                const advBtn = container.querySelector('#sh-adv-btn-item-counter') as HTMLElement;
-                const advContainer = container.querySelector('#sh-adv-container-item-counter') as HTMLElement;
-                if (advBtn && advContainer) {
-                    advBtn.addEventListener('click', () => {
-                        advContainer.classList.toggle('sh-expanded');
-                    });
-                }
-            }
+            })
         },
         {
             id: 'off-task',
-            name: 'Авто-Прибиття (Off-Task)',
+            name: 'Авто-Введення (Off-Task)',
             file: 'off_task.js',
             description: 'Натисніть Alt+O, щоб задати час та відсканувати тот для авто-прибиття.',
             experimental: true,
-            getHandler: () => window.__offTask,
+            getHandler: () => window.__offTask
         },
         {
             id: 'binds',
@@ -193,48 +207,30 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             file: 'binds.js',
             description: 'Автоматично проклікує при натисненні.<br>Натисніть на F-кнопку для запису(альтернативно F9 і F1-F7) або на слово, щоб видалити його.',
             getHandler: () => window.__binds,
-            renderSettings: (container: HTMLElement) => {
+            renderSettings: createSettingsDrawer((content, signal) => {
                 const handler = window.__binds as BindsHandler;
                 if (!handler) return;
-                
+
                 let tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts()));
 
-                if ((container as any)._abortController) {
-                    (container as any)._abortController.abort();
-                }
-                const controller = new AbortController();
-                (container as any)._abortController = controller;
-                
-                // Keep the UI dynamically updated during recording!
-                window.addEventListener('sh-binds-update', () => {
-                    tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts()));
-                    renderUI();
-                }, { signal: controller.signal });
-                
                 const renderUI = () => {
                     const keys = Object.keys(tempShortcuts);
                     const recordingKey = handler.getRecordingKey();
-                    
-                    let listItems = '';
-                    if (keys.length > 0) {
-                        listItems = keys.map(key => {
+
+                    const listItems = keys.length > 0
+                        ? keys.map(key => {
                             const sequenceLabels = tempShortcuts[key];
                             const isRecording = recordingKey === key;
-                            
-                            // Map each word to a clickable span that triggers deletion
+
                             const wordsHtml = sequenceLabels.map((val: string, idx: number) => {
-                                // Extract only the first two words for cleaner UI
                                 const displayVal = val.split(/\s+/).slice(0, 2).join(' ');
-                                
-                                // Keep the full value in the title so it shows on hover
                                 return `<span class="sh-bind-del-word" data-key="${key}" data-idx="${idx}" title="Видалити: ${val}">${displayVal}</span>`;
                             }).join(' <span class="sh-arrow">➔</span> ');
-                            
-                            const actionContent = sequenceLabels.length > 0 
-                                ? wordsHtml 
+
+                            const actionContent = sequenceLabels.length > 0
+                                ? wordsHtml
                                 : (isRecording ? '<i>Запис...</i>' : '');
 
-                            // Add the sh-recording class dynamically
                             const keyClasses = isRecording ? 'sh-bind-key sh-recording' : 'sh-bind-key';
 
                             return `
@@ -243,29 +239,16 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                                     <div class="sh-bind-action">${actionContent}</div>
                                 </div>
                             `;
-                        }).join('');
-                    } else {
-                        listItems = `<div style="text-align:center; padding: 10px; font-size: 11px; color:#9aa0a6;">Наразі немає жодного бінда.</div>`;
-                    }
-                    
-                    container.innerHTML = `
-                        <div id="sh-adv-container-binds" class="sh-adv-container ${container.querySelector('#sh-adv-container-binds')?.classList.contains('sh-expanded') ? 'sh-expanded' : ''}">
-                            <div class="sh-bind-list">
-                                ${listItems}
-                            </div>
-                        </div>
-                        <div class="sh-adv-toggle-wrap">
-                            <span id="sh-adv-btn-binds" class="sh-adv-text" style="margin-left: auto;">Детальніше</span>
-                        </div>
-                    `;
+                        }).join('')
+                        : `<div style="text-align:center; padding: 10px; font-size: 11px; color:#9aa0a6;">Наразі немає жодного бінда.</div>`;
 
-                    // Listeners for recording on F-keys
-                    container.querySelectorAll('.sh-bind-key').forEach(btn => {
+                    content.innerHTML = `<div class="sh-bind-list">${listItems}</div>`;
+
+                    content.querySelectorAll('.sh-bind-key').forEach(btn => {
                         btn.addEventListener('click', (e) => {
                             const target = e.target as HTMLElement;
                             const key = target.getAttribute('data-key');
                             if (!key) return;
-
                             if (handler.getRecordingKey() === key) {
                                 handler.stopRecording();
                             } else {
@@ -274,35 +257,30 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                         });
                     });
 
-                    // Listeners for word deletion
-                    container.querySelectorAll('.sh-bind-del-word').forEach(wordEl => {
+                    content.querySelectorAll('.sh-bind-del-word').forEach(wordEl => {
                         wordEl.addEventListener('click', (e) => {
                             const target = e.target as HTMLElement;
                             const key = target.getAttribute('data-key');
                             const idxStr = target.getAttribute('data-idx');
-                            
-                            // Don't let users delete words while a macro is actively recording
+
                             if (key && idxStr !== null && !recordingKey) {
                                 const idx = parseInt(idxStr, 10);
                                 tempShortcuts[key].splice(idx, 1);
-                                handler.updateShortcuts(tempShortcuts); 
+                                handler.updateShortcuts(tempShortcuts);
                                 renderUI();
                             }
                         });
                     });
-
-                    const advBtn = container.querySelector('#sh-adv-btn-binds') as HTMLElement;
-                    const advContainer = container.querySelector('#sh-adv-container-binds') as HTMLElement;
-                    if (advBtn && advContainer) {
-                        advBtn.addEventListener('click', () => {
-                            advContainer.classList.toggle('sh-expanded');
-                        });
-                    }
                 };
-                
+
+                window.addEventListener('sh-binds-update', () => {
+                    tempShortcuts = JSON.parse(JSON.stringify(handler.getShortcuts()));
+                    renderUI();
+                }, { signal });
+
                 renderUI();
-            }
-        },  
+            })
+        },
         {
             id: 'auto-lpn',
             name: 'Авто-LPN',
@@ -330,8 +308,13 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             id: 'gravis',
             name: 'Gravis',
             file: 'gravis.js',
-            description: 'Якщо штрих-код товару доступний в Gravis\nавтоматично вставляє його у відповідне поле при натиснені F8.\nПри відкритті вкладки з Gravis активуйте скрипт в ній також.',
+            description: 'Якщо штрих-код товару доступний в Gravis автоматично вставляє його у відповідне поле при натисненні F8. При відкритті вкладки з Gravis активуйте скрипт в ній також.',
             excludeDeps: ['REFURB', 'WHD'],
             getHandler: () => window.__gravis
         }
-]};
+    ];
+};
+
+
+
+

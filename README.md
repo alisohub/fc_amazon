@@ -34,28 +34,13 @@ if (!window.__myNewScriptLoaded) {
 
 ## 2. Register the Script in the Build Config
 
-Open `tsup.config.ts` and add your new script entry point to the `entry` object. This ensures `tsup` bundles and compiles your code into the `dist/` folder:
+Open `hub.ts` and add your new script as an import. This ensures `tsup` bundles and compiles your code into the `hub.js`:
 
 ```typescript
-export default defineConfig({
-    entry: {
-        'hub': 'src/hub/hub.ts',
-        'auto_lpn': 'src/scripts/auto_lpn.ts',
-        'binds': 'src/scripts/binds.ts',
-        'counter': 'src/scripts/counter.ts',
-        'my_new_script': 'src/scripts/my_new_script.ts' // <-- ADD YOUR SCRIPT ENTRY HERE
-    },
-    format: ['iife'],
-    outDir: 'dist',
-    clean: true,
-    minify: true,
-    bundle: true,
-    outExtension() {
-        return {
-            js: '.js',
-        };
-    },
-});
+import '../scripts/auto_lpn';
+import '../scripts/counter';
+import '../scripts/gravis';
+import '../scripts/my_new_script'; // <-- ADD YOUR SCRIPT ENTRY HERE
 
 ```
 
@@ -87,19 +72,25 @@ declare global {
 
 ## 4. Add the Script Definition to the Hub
 
-Open `src/hub/hub.ts` and add your script definition to the `SCRIPTS` array. This automatically provisions its UI card, master toggle switch, and optional settings panel:
+Open `src/hub/scripts.ts` and add your script definition to the `SCRIPTS` array. This automatically provisions its UI card, master toggle switch, and optional settings panel:
 
 ```typescript
     const SCRIPTS: ScriptDefinition[] = [
         // ... existing scripts ...
         {
-            id: 'my-new-script',
-            name: 'My New Script',
-            file: 'my_new_script.js',
-            description: 'Short description detailing what this automation script performs.',
-            getHandler: () => window.__myNewScript,
-            // Optional: Include renderSettings(container: HTMLElement) if your script requires custom configuration UI elements.
-            // experimental: true // Uncomment if the script should only display in development environments.
+            id: 'my-script',
+            name: 'My Script',
+            file: 'my_script.js',
+            description: 'Description here.',
+            getHandler: () => window.__myScript,
+            renderSettings: createSettingsDrawer((content, signal) => {
+                content.innerHTML = `
+                    <div class="sh-setting-row">
+                        <!-- Custom inputs here -->
+                    </div>
+                `;
+                // Attach listeners (use { signal } for any window/document listeners)
+            })
         }
     ];
 
