@@ -6,13 +6,6 @@ export default defineConfig({
     entry: {
         'hub': 'src/hub/hub.ts',
         'hub_gravis': 'src/hub/hub_gravis.ts',
-        'auto_lpn': 'src/scripts/auto_lpn.ts',
-        'auto_lpn_refurb': 'src/scripts/auto_lpn_refurb.ts',
-        'binds': 'src/scripts/binds.ts',
-        'counter': 'src/scripts/counter.ts',
-        'off_task': 'src/scripts/off_task.ts',
-        'gravis': 'src/scripts/gravis.ts',
-        'clear_session': 'src/scripts/clear_session.ts'
     },
     format: ['iife'],
     outDir: 'dist',

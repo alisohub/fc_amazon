@@ -24,20 +24,7 @@ declare global {
         getHandler: () => any;
         renderSettings?: (container: HTMLElement) => void;
         experimental?: boolean;
-        isTrusted?: boolean;
         excludeDeps?: Department[];
-    }
-
-    interface ScriptDefinition {
-        id: string;
-        name: string;
-        file: string;
-        description: string;
-        getHandler: () => ScriptHandler | undefined | any;
-        renderSettings?: (container: HTMLElement) => void;
-        experimental?: boolean;
-        isTrusted?: boolean;
-        excludeDeps?: Department[]; 
     }
 
     interface ScriptHandler {

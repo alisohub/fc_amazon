@@ -281,7 +281,6 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                 window.addEventListener('sh-offtask-update', onUpdate, { signal: controller.signal });
                 window.addEventListener('sh-offtask-tick', onTick, { signal: controller.signal });
             },
-            isTrusted: true 
         },
         {
             id: 'binds',
