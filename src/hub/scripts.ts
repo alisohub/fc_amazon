@@ -1,5 +1,5 @@
 import { DEPARTMENT_CONFIG } from "@shared/constants";
-
+// TODO hidden settings by def
 export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinition[] => {
     return [
         {
@@ -181,106 +181,11 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
         },
         {
             id: 'off-task',
-            name: 'Авто-Введення (Off-Task)',
+            name: 'Авто-Прибиття (Off-Task)',
             file: 'off_task.js',
-            description: 'Автоматично прибиває до тота через зазначений час.',
+            description: 'Натисніть Alt+O, щоб задати час та відсканувати тот для авто-прибиття.',
+            experimental: true,
             getHandler: () => window.__offTask,
-            renderSettings: (container: HTMLElement) => {
-                const handler = window.__offTask;
-                if (!handler) return;
-
-                // Pull the clean default directly from our global configuration!
-                const currentDep = getCurrentDep();
-                const defaultMins = DEPARTMENT_CONFIG[currentDep].offTaskMins;
-
-                const settings = handler.getSettings();
-                const timeoutMins = settings.timeoutMins !== undefined ? settings.timeoutMins : defaultMins;
-                const toteBarcode = settings.toteBarcode || '';
-                
-                // Sync the default to the background script immediately so it doesn't wait 10 mins by mistake
-                if (settings.timeoutMins === undefined) {
-                    handler.updateSettings({ timeoutMins: defaultMins });
-                }
-
-                container.innerHTML = `
-                    <div class="sh-setting-row" style="align-items: center; gap: 6px; margin-bottom: 2px;">
-                        <span class="sh-emoji" title="Тара">📦</span>
-                        <input type="text" id="sh-ot-tote" class="sh-input sh-flex-1" style="min-width: 0;" value="${toteBarcode}" placeholder="ts... (пусто=вимк)" autocomplete="off">
-                        <span class="sh-emoji" title="Хвилини">⏱️</span>
-                        <input type="text" id="sh-ot-mins" class="sh-input sh-time-input-small" style="width: 50px; padding: 6px 2px;" value="${timeoutMins}" title="Таймер">
-                    </div>
-                `;
-                
-                const toteInput = container.querySelector('#sh-ot-tote') as HTMLInputElement;
-                const minsInput = container.querySelector('#sh-ot-mins') as HTMLInputElement;
-
-                toteInput.addEventListener('input', (e) => {
-                    const val = (e.target as HTMLInputElement).value.trim();
-                    handler.updateSettings({ toteBarcode: val });
-                    // Reset minute box to default setting visually if deactivated
-                    if (!val) minsInput.value = handler.getSettings().timeoutMins?.toString() || defaultMins.toString();
-                });
-
-                // When user finishes typing in the timer box and clicks away or hits Enter
-                minsInput.addEventListener('change', (e) => {
-                    const val = (e.target as HTMLInputElement).value.trim();
-                    let newMins = defaultMins;
-
-                    // Parse MM:SS or raw numbers
-                    if (val.includes(':')) {
-                        const parts = val.split(':');
-                        newMins = parseInt(parts[0] || '0', 10) + (parseInt(parts[1] || '0', 10) / 60);
-                    } else {
-                        const parsed = parseFloat(val);
-                        if (!isNaN(parsed) && parsed > 0) newMins = parsed;
-                    }
-
-                    handler.updateSettings({ timeoutMins: newMins });
-                });
-
-                // Prevent Enter key from doing anything weird while editing the timer
-                minsInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') minsInput.blur();
-                });
-
-                const onUpdate = () => {
-                    if (document.activeElement !== toteInput) {
-                        toteInput.value = handler.getSettings().toteBarcode || '';
-                    }
-                    if (document.activeElement !== minsInput) {
-                        minsInput.value = handler.getSettings().timeoutMins?.toString() || defaultMins.toString();
-                        minsInput.style.color = ''; // Reset color
-                    }
-                };
-
-                const onTick = (e: any) => {
-                    // IF THE USER IS CLICKED INTO THE BOX, DO NOT UPDATE IT (LET THEM TYPE!)
-                    if (document.activeElement === minsInput) return;
-                    
-                    if (!handler.getSettings().toteBarcode) return;
-                    
-                    const totalSec = Math.ceil(e.detail.remainingMs / 1000);
-                    const m = Math.floor(totalSec / 60);
-                    const s = String(totalSec % 60).padStart(2, '0');
-                    
-                    // Update the input box to show the live countdown!
-                    minsInput.value = `${m}:${s}`;
-                    
-                    // Turn text red if under 30 seconds
-                    minsInput.style.color = totalSec <= 30 ? '#d93025' : '#1a73e8';
-                    minsInput.style.fontWeight = 'bold';
-                };
-
-                // MEMORY LEAK FIX: Abort old event listeners on UI re-render
-                if ((container as any)._abortController) {
-                    (container as any)._abortController.abort();
-                }
-                const controller = new AbortController();
-                (container as any)._abortController = controller;
-
-                window.addEventListener('sh-offtask-update', onUpdate, { signal: controller.signal });
-                window.addEventListener('sh-offtask-tick', onTick, { signal: controller.signal });
-            },
         },
         {
             id: 'binds',

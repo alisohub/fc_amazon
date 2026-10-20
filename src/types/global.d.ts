@@ -67,11 +67,6 @@ declare global {
         doubleCountMode?: boolean;
     }
 
-    interface OffTaskSettings {
-        toteBarcode?: string;
-        timeoutMins?: number;
-    }
-
     // ==========================================
     // 2. THE WINDOW OBJECT EXTENSIONS
     // ==========================================
@@ -98,7 +93,7 @@ declare global {
         __binds?: BindsHandler;
         
         // We pass the settings interface directly into the SettingsHandler generic
-        __offTask?: SettingsHandler<OffTaskSettings>;
+        __offTask?: ScriptHandler;
         __gravis?: GravisHandler;
         __clearSession?: ScriptHandler;
     }

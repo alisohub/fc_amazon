@@ -1,4 +1,4 @@
-import { STORAGE_KEY_DEP, STORAGE_KEY_LPN, STORAGE_KEY_COUNTER, STORAGE_KEY_STATION, STORAGE_KEY_TASK, PKG_INPT_TSTID, WD_ITM_SCN_INPT_TSTID, LPN_INPT_TSTID, WS_INPT_TSTID, DEPARTMENT_CONFIG } from '@shared/constants';
+import { STORAGE_KEY_DEP, STORAGE_KEY_LPN, STORAGE_KEY_COUNTER, STORAGE_KEY_STATION, PKG_INPT_TSTID, WD_ITM_SCN_INPT_TSTID, LPN_INPT_TSTID, WS_INPT_TSTID, DEPARTMENT_CONFIG } from '@shared/constants';
 import { HUB_STYLES } from './styles';
 import { getScriptsConfig } from './scripts';
 
@@ -226,19 +226,6 @@ if (window.location.href.includes('gravis')) {
                                     ls.targetRate = newConfig.targetRate;
                                     ls.doubleCountMode = newConfig.doubleCountMode;
                                     localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify(ls));
-                                } catch(err) {}
-                            }
-
-                            // 2. FORCE UPDATE OFF-TASK (Active or Inactive)
-                            if (window.__offTask) {
-                                window.__offTask.updateSettings({ timeoutMins: newConfig.offTaskMins });
-                                const minsInput = document.getElementById('sh-ot-mins') as HTMLInputElement;
-                                if (minsInput) minsInput.value = newConfig.offTaskMins.toString();
-                            } else {
-                                try {
-                                    const ls = JSON.parse(localStorage.getItem(STORAGE_KEY_TASK) || '{}');
-                                    ls.timeoutMins = newConfig.offTaskMins;
-                                    localStorage.setItem(STORAGE_KEY_TASK, JSON.stringify(ls));
                                 } catch(err) {}
                             }
                         }

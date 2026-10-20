@@ -108,3 +108,39 @@ export function isInsideModal(el: HTMLElement): boolean {
     
     return false;
 }
+
+export function setStatusDot(id: string, color: string, visible: boolean): void {
+    let container = document.getElementById('sh-status-dots');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'sh-status-dots';
+        Object.assign(container.style, {
+            position: 'fixed',
+            bottom: '10px',
+            right: '10px',
+            display: 'flex',
+            gap: '6px',
+            zIndex: '999999',
+            pointerEvents: 'none'
+        });
+        document.body.appendChild(container);
+    }
+
+    const dotId = `sh-dot-${id}`;
+    let dot = document.getElementById(dotId);
+
+    if (!dot) {
+        dot = document.createElement('div');
+        dot.id = dotId;
+        Object.assign(dot.style, {
+            width: '6px',
+            height: '6px',
+            borderRadius: '50%',
+            display: 'none'
+        });
+        container.appendChild(dot);
+    }
+
+    dot.style.backgroundColor = color;
+    dot.style.display = visible ? 'block' : 'none';
+}

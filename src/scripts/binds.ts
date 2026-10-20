@@ -1,5 +1,5 @@
 import { STORAGE_KEY_BINDS } from "@shared/constants";
-import { triggerEnter } from "@shared/dom";
+import { setStatusDot, triggerEnter } from "@shared/dom";
 import { normalizeText } from "@shared/utils";
 
 if (!window.__bindsLoaded) {
@@ -23,26 +23,8 @@ if (!window.__bindsLoaded) {
     let recordingKey: string | null = null; 
     let awaitingF9: boolean = false;
 
-    let recordingDot: HTMLElement | null = null;
-
     function updateRecordingDot(): void {
-        if (!recordingDot) {
-            recordingDot = document.createElement('div');
-            Object.assign(recordingDot.style, {
-                position: 'fixed',
-                bottom: '10px',
-                right: '10px',
-                width: '6px',
-                height: '6px',
-                backgroundColor: '#d93025',
-                borderRadius: '50%',
-                zIndex: '999999',
-                pointerEvents: 'none',
-                display: 'none'
-            });
-            document.body.appendChild(recordingDot);
-        }
-        recordingDot.style.display = recordingKey ? 'block' : 'none';
+        setStatusDot('binds', '#d93025', Boolean(recordingKey));
     }
     
     let changeObserver: MutationObserver | null = null;
