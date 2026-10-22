@@ -19,7 +19,7 @@ if (!window.__clearSessionLoaded) {
             if (cntBtn && !cntBtn.disabled) cntBtn.click();
 
 
-            const lpnInp = await findInputByTestId(LPN_INPT_TSTID, 4000) as HTMLInputElement;
+            const lpnInp = await findInputByTestId(LPN_INPT_TSTID, 1000) as HTMLInputElement;
             if (lpnInp) {
                 const savedLpn = localStorage.getItem(STORAGE_KEY_LPN);
 
@@ -32,7 +32,7 @@ if (!window.__clearSessionLoaded) {
                 triggerEnter(lpnInp);
             }
 
-            const wsInp = await findInputByTestId(WS_INPT_TSTID, 5000) as HTMLInputElement;
+            const wsInp = await findInputByTestId(WS_INPT_TSTID, 3000) as HTMLInputElement;
             if (!wsInp) return;
 
             const savedWs = localStorage.getItem(STORAGE_KEY_STATION);

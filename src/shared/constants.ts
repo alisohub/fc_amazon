@@ -30,7 +30,6 @@ export const TOTE_INPT_LBL: string[] = [
     'Вкажіть транспортну тару',
     'Введите тару'
 ];
-// TODO: testid
 export const LPN_OLD_LPN_INPT_LBL: string[] = ["Введіть старий LPN", "Wprowadź stary LPN"];
 export const ITM_SCN_INPT_LBL: string[] = ["Wprowadź kod kreskowy lub SKU"];
 
@@ -41,6 +40,7 @@ export const PKG_INPT_TSTID: string = "package-input";
 export const WD_ITM_SCN_INPT_TSTID: string = "wd-item-scan-label";
 export const TOTE_INPT_TSTID : string = "tote-input-label";
 export const ITM_SCN_INPT_TSTID: string = "item-scan-input";
+export const LPN_OLD_LPN_INPT_TSTID : string = "scan-old-lpn-input";
 
 // BUTTON SPAN
 export const CNT_BTN_SPN: string[] = ["Kontynuuj"];
@@ -49,12 +49,12 @@ export const LPN_RSGN_BTN_SPN: string[] = [
     'Przypisz ponownie lpn',
     'Назначить новый номер lp'
 ];
-// TODO: testid
-export const LPN_ASGN_NEW_BTN_SPN: string[] = ["Призначити новий LPN", "Przypisz nowy LPN"];
+// TODO: 
+export const LPN_ASGN_NEW_BTN_SPN: string[] = ["Призначити новий LPN", "Przypisz nowy LPN"];    
 export const CHS_ITM_LST_BTN_SPN: string[] = ["Brak dostępnych kodów kreskowych"]
 
-// BUTTON TESTID
 export const CNT_BTN_TSTID: string = "button-clear-session-continue-socrates";
 export const LPN_RSGN_BTN_TSTID: string = "button-reassign-lpn-id";
 export const CHS_ITM_LST_BTN_TSTID: string = "button-choose-item-from-the-list-socrates";
 export const CLR_BTN_TSTID: string = "clear-session-icon";
+export const LPN_ASGN_NEW_BTN_TSTID: string = "button-assign-new-lpn-link-socrates";

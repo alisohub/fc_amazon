@@ -124,11 +124,17 @@ if (!window.__offTaskLoaded) {
                     input.focus();
                     return;
                 }
+
+                const targetInput = findInputByTestId(TOTE_INPT_TSTID) as HTMLInputElement | null;
+                if (!targetInput || isInsideModal(targetInput)) {
+                    closePopup();
+                    return;
+                }
+
                 timeoutMins = pendingMins;
                 toteBarcode = scannedTote;
                 timerStart = Date.now();
 
-                const targetInput = findInputByTestId(TOTE_INPT_TSTID) as HTMLInputElement | null;
                 lastInputValue = targetInput ? targetInput.value : '';
 
                 closePopup();

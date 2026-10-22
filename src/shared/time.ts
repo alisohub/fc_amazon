@@ -95,3 +95,13 @@ export function calculatePercentageStr(uphString: string, targetRate: number): s
     if (targetRate <= 0) return "---%";
     return ((parseFloat(uphString) / targetRate) * 100).toFixed(1) + "%";
 }
+
+export function calculateFreeTime(itemCount: number, effectiveMs: number, targetRate: number): string {
+    if (targetRate <= 0) return "0 min";
+    
+    const earnedHours = itemCount / targetRate;       
+    const hoursWorked = effectiveMs / (1000 * 60 * 60);        
+    const freeTimeMins = Math.floor((earnedHours - hoursWorked) * 60);      
+    
+    return freeTimeMins <= 0 ? '0 min' : `${freeTimeMins} min`;     
+}

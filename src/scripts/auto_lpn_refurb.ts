@@ -1,5 +1,5 @@
-import { LPN_ASGN_NEW_BTN_SPN, LPN_OLD_LPN_INPT_LBL, STORAGE_KEY_LPN } from "@shared/constants";
-import { findInputByLabel, setNativeValue, triggerEnter } from "@shared/dom";
+import { LPN_ASGN_NEW_BTN_SPN, LPN_OLD_LPN_INPT_TSTID, STORAGE_KEY_LPN } from "@shared/constants";
+import { findInputByTestId, setNativeValue, triggerEnter } from "@shared/dom";
 
 if (!window.__refurbLpnLoaded) {
     window.__refurbLpnLoaded = true;
@@ -9,7 +9,7 @@ if (!window.__refurbLpnLoaded) {
 
     const UI_STRINGS = {
         triggerBtn: LPN_ASGN_NEW_BTN_SPN,
-        oldLpnInput: LPN_OLD_LPN_INPT_LBL
+        oldLpnInput: LPN_OLD_LPN_INPT_TSTID
     };
 
     async function executeSequence(): Promise<void> {
@@ -18,7 +18,7 @@ if (!window.__refurbLpnLoaded) {
 
         try {
             // 1. Find and fill old LPN
-            const oldLpnInput = await findInputByLabel(UI_STRINGS.oldLpnInput, 2000) as HTMLInputElement;
+            const oldLpnInput = await findInputByTestId(UI_STRINGS.oldLpnInput, 2000) as HTMLInputElement;
             if (!oldLpnInput) return; // Silent abort
             
             const oldLpn = localStorage.getItem(STORAGE_KEY_LPN);
@@ -42,6 +42,7 @@ if (!window.__refurbLpnLoaded) {
         
         let isTrigger = false;
         const directText = target.textContent?.trim();
+        //TODO: change to testid    
         const childText = target.querySelector('span')?.textContent?.trim();
 
         // Check if the clicked target (or its child span) matches any of our trigger strings

@@ -225,9 +225,9 @@ if (window.__gravisHubLoaded) {
             // 2. Paste the LPN, hit Enter, and fire up the state-driven request watcher
             const lpnInput = document.querySelector('input.mat-input-element') as HTMLInputElement;
             if (lpnInput) {
+                startLpnRequestWatch(lpn);
                 setNativeValue(lpnInput, lpn);
                 triggerEnter(lpnInput);
-                startLpnRequestWatch(lpn);
             }
         } 
         

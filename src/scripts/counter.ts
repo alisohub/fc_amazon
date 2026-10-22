@@ -1,8 +1,5 @@
 import { STORAGE_KEY_COUNT, STORAGE_KEY_COUNTER, STORAGE_KEY_DBL_COUNT_ID } from '@shared/constants';
-import { getEffectiveWorkTime, calculateUPH, calculatePercentageStr } from '@shared/time';
-
-// Buffer Time ("Chill Timer"): If the associate is at 115% of target rate, 
-// display +14m buffer (the exact amount of time they could stop scanning right now and still remain at 100.0% UPH).
+import { getEffectiveWorkTime, calculateUPH, calculatePercentageStr, calculateFreeTime } from '@shared/time';
 
 if (!window.__counterLoaded) {
     window.__counterLoaded = true;
@@ -64,6 +61,7 @@ if (!window.__counterLoaded) {
         const timeData = getEffectiveWorkTime(settings.customStartTime, settings.lunchBreak);
         const currentUPH = calculateUPH(itemCounter, timeData.ms);
         const currentPct = calculatePercentageStr(currentUPH, settings.targetRate || 47);
+        const currentFT = calculateFreeTime(itemCounter, timeData.ms, settings.targetRate || 47);
 
         overlay.innerHTML = `
             <span id="sh-overlay-count">${itemCounter}</span>
@@ -72,6 +70,8 @@ if (!window.__counterLoaded) {
             <span id="sh-overlay-pct" style="margin-left:2px;">(${currentPct})</span>
             <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
             <span id="sh-overlay-time">${timeData.formatted}</span>
+            <span style="color:#aab7c4; font-weight:normal; margin: 0 4px;">|</span>
+            <span id="sh-overlay-free-time">${currentFT}</span>
         `;
 
         overlay.addEventListener('mouseenter', () => { if (overlayVisible && overlay) overlay.style.opacity = '1'; });
@@ -97,8 +97,12 @@ if (!window.__counterLoaded) {
             if ('touches' in e && e.cancelable) e.preventDefault();
             const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
             const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-            overlay.style.left = `${initialLeft + (clientX - startX)}px`;
-            overlay.style.top = `${initialTop + (clientY - startY)}px`;
+            
+            const rect = overlay.getBoundingClientRect();
+            const newX = Math.max(0, Math.min(initialLeft + (clientX - startX), window.innerWidth - rect.width));
+            const newY = Math.max(0, Math.min(initialTop + (clientY - startY), window.innerHeight - rect.height));
+            overlay.style.left = `${newX}px`;
+            overlay.style.top = `${newY}px`;
         };
 
         const dragEnd = (): void => {
@@ -109,8 +113,6 @@ if (!window.__counterLoaded) {
                 try { localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify(settings)); } catch (e) {}
             }
         };
-
-        //TODO FIX resize
 
         overlay.addEventListener('mousedown', dragStart as EventListener);
         document.addEventListener('mousemove', dragMove as EventListener);
@@ -150,6 +152,7 @@ if (!window.__counterLoaded) {
 
         const timeData = getEffectiveWorkTime(settings.customStartTime, settings.lunchBreak);
         const currentUPH = calculateUPH(count, timeData.ms);
+        const currentFT = calculateFreeTime(itemCounter, timeData.ms, settings.targetRate || 47);
 
         const overlayUPH = document.getElementById('sh-overlay-uph');
         if (overlayUPH) overlayUPH.textContent = `${currentUPH}/h`;
@@ -159,6 +162,9 @@ if (!window.__counterLoaded) {
 
         const overlayTime = document.getElementById('sh-overlay-time');
         if (overlayTime) overlayTime.textContent = timeData.formatted;
+
+        const overlayFreeTime = document.getElementById('sh-overlay-free-time');
+        if (overlayFreeTime) overlayFreeTime.textContent = currentFT;
 
         const hubInput = document.getElementById('sh-cfg-count') as HTMLInputElement | null;
         if (hubInput && document.activeElement !== hubInput) {
@@ -280,15 +286,19 @@ if (!window.__counterLoaded) {
         if (active && overlayVisible) {
             const timeData = getEffectiveWorkTime(settings.customStartTime, settings.lunchBreak);
             const currentUPH = calculateUPH(itemCounter, timeData.ms);
+            const currentFT = calculateFreeTime(itemCounter, timeData.ms, settings.targetRate || 47);
             
             const uphEl = document.getElementById('sh-overlay-uph');
             if (uphEl) uphEl.textContent = `${currentUPH}/h`;
             
             const pctEl = document.getElementById('sh-overlay-pct');
             if (pctEl) pctEl.textContent = `(${calculatePercentageStr(currentUPH, settings.targetRate || 47)})`;
-            
+
             const timeEl = document.getElementById('sh-overlay-time');
             if (timeEl) timeEl.textContent = timeData.formatted;
+
+            const ftEl = document.getElementById('sh-ftElme');
+            if (ftEl) ftEl.textContent = currentFT;
         }
     }, 60000);
 
