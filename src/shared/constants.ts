@@ -49,7 +49,6 @@ export const LPN_RSGN_BTN_SPN: string[] = [
     'Przypisz ponownie lpn',
     'Назначить новый номер lp'
 ];
-// TODO: 
 export const LPN_ASGN_NEW_BTN_SPN: string[] = ["Призначити новий LPN", "Przypisz nowy LPN"];    
 export const CHS_ITM_LST_BTN_SPN: string[] = ["Brak dostępnych kodów kreskowych"]
 
