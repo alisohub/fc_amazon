@@ -12,7 +12,6 @@ declare global {
 
     interface DepartmentConfig {
         targetRate: number;
-        offTaskMins: number;
         doubleCountMode: boolean;
     }
 
@@ -40,7 +39,7 @@ declare global {
         updateSettings: (newSettings: Partial<T>) => void;
     }
 
-    interface GravisHandler extends ScriptHandler{
+    interface GravisHandler extends ScriptHandler {
         sendLpn: (lpn: string) => void;
     }   
 

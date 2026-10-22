@@ -144,3 +144,51 @@ export function setStatusDot(id: string, color: string, visible: boolean): void 
     dot.style.backgroundColor = color;
     dot.style.display = visible ? 'block' : 'none';
 }
+
+export function showInitializationToast(scriptName: string, message: string): void {
+    if (document.getElementById('sh-script-toast')) return;
+
+    const toast = document.createElement('div');
+    toast.id = 'sh-script-toast';
+    
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background-color: #323232;
+        color: rgba(255, 255, 255, 0.87);
+        padding: 14px 16px;
+        border-radius: 4px;
+        box-shadow: 0px 3px 5px -1px rgba(0, 0, 0, 0.2), 
+                    0px 6px 10px 0px rgba(0, 0, 0, 0.14), 
+                    0px 1px 18px 0px rgba(0, 0, 0, 0.12);
+        font-family: Roboto, "Helvetica Neue", sans-serif;
+        z-index: 999999;
+        opacity: 0;
+        transform: scale(0.95);
+        transition: opacity 150ms cubic-bezier(0, 0, 0.2, 1), transform 150ms cubic-bezier(0, 0, 0.2, 1);
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 250px;
+    `;
+
+    toast.innerHTML = `
+        <div style="font-size: 14px; font-weight: 500;">${scriptName}</div>
+        <div style="font-size: 12px; color: rgba(255, 255, 255, 0.6);">${message}</div>
+    `;
+
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'scale(1)';
+    });
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'scale(0.95)';
+        setTimeout(() => toast.remove(), 150); 
+    }, 3500);
+}

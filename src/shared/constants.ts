@@ -1,9 +1,9 @@
 export const DEPARTMENT_CONFIG: Record<Department, DepartmentConfig> = {
-    "CRET": { targetRate: 47, offTaskMins: 4, doubleCountMode: false},
-    "FAST": { targetRate: 80, offTaskMins: 2, doubleCountMode: false},
-    "UG":   { targetRate: 47, offTaskMins: 4, doubleCountMode: true},
-    "REFURB": { targetRate: 30, offTaskMins: 1, doubleCountMode: false},
-    "WHD": { targetRate: 25, offTaskMins: 5, doubleCountMode: false}
+    "CRET": { targetRate: 47, doubleCountMode: false},
+    "FAST": { targetRate: 80, doubleCountMode: false},
+    "UG":   { targetRate: 47, doubleCountMode: true},
+    "REFURB": { targetRate: 30, doubleCountMode: false},
+    "WHD": { targetRate: 25, doubleCountMode: false}
 };
 // Local Storage 
 export const STORAGE_KEY_DEP = 'sh_hub_dep';

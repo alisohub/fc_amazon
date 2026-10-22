@@ -1,6 +1,9 @@
 import { STORAGE_KEY_COUNT, STORAGE_KEY_COUNTER, STORAGE_KEY_DBL_COUNT_ID } from '@shared/constants';
 import { getEffectiveWorkTime, calculateUPH, calculatePercentageStr } from '@shared/time';
 
+// Buffer Time ("Chill Timer"): If the associate is at 115% of target rate, 
+// display +14m buffer (the exact amount of time they could stop scanning right now and still remain at 100.0% UPH).
+
 if (!window.__counterLoaded) {
     window.__counterLoaded = true;
 

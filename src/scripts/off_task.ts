@@ -1,5 +1,5 @@
 import { TOTE_INPT_TSTID } from '@shared/constants';
-import { findInputByTestId, isInsideModal, setNativeValue, setStatusDot, triggerEnter } from '@shared/dom';
+import { findInputByTestId, isInsideModal, setNativeValue, setStatusDot, showInitializationToast, triggerEnter } from '@shared/dom';
 
 if (!window.__offTaskLoaded) {
     window.__offTaskLoaded = true;
@@ -132,6 +132,7 @@ if (!window.__offTaskLoaded) {
                 lastInputValue = targetInput ? targetInput.value : '';
 
                 closePopup();
+                showInitializationToast('Старт OFF_TASK', `Прибиття тота ${toteBarcode} через ${timeoutMins} хв`)
                 setStatusDot(DOT_ID, DOT_GREEN, true);
             }
         };
