@@ -198,7 +198,6 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             name: 'Авто-Введення (Off-Task)',
             file: 'off_task.js',
             description: 'Натисніть Alt+O, щоб задати час та відсканувати тот для авто-прибиття.',
-            experimental: true,
             getHandler: () => window.__offTask
         },
         {
@@ -308,7 +307,7 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             id: 'gravis',
             name: 'Gravis',
             file: 'gravis.js',
-            description: 'Якщо штрих-код товару доступний в Gravis автоматично вставляє його у відповідне поле при натисненні F8. При відкритті вкладки з Gravis активуйте скрипт в ній також.',
+            description: 'Якщо штрих-код товару доступний в Gravis автоматично вставляє його у відповідне поле при натисненні F8 або при скануванні тієї самої LPN. При відкритті вкладки з Gravis активуйте скрипт в ній також.',
             excludeDeps: ['REFURB', 'WHD'],
             getHandler: () => window.__gravis
         }

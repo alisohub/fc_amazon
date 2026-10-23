@@ -55,6 +55,7 @@ if (window.location.href.includes('gravis')) {
         const urlParams = new URLSearchParams(window.location.search);
         const gradingMode = urlParams.get('gradingMode');
         
+        // TODO add ps
         let DEPARTAMENT_OPTIONS: Department[] = [];
         if (gradingMode === 'CRETURN_PRIMARY_GRADING') {
             DEPARTAMENT_OPTIONS = ["UG"];

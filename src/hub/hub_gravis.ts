@@ -1,7 +1,9 @@
+import { READY_STATE } from '@shared/constants';
 import { setNativeValue, triggerEnter, sleep, showInitializationToast } from '@shared/dom';
 
 const STRICT_ASIN_REGEX = /^([B0-9][A-Z0-9]{9})$/i;
 let debugEnabled = false;
+let currentReadyState = READY_STATE.NOT_STARTED;
 
 function gLog(...args: any[]): void {
     if (!debugEnabled) return;
@@ -11,10 +13,8 @@ function gLog(...args: any[]): void {
 async function selectAngularDropdown(triggerSelector: string, exactOptionText: string): Promise<boolean> {
     const dropdown = document.querySelector(triggerSelector) as HTMLElement;
     if (!dropdown) return false;
-    
     dropdown.click();
-    await sleep(100);
-    
+    await sleep(25);
     const options = Array.from(document.querySelectorAll('mat-option'));
     const targetOption = options.find(opt => {
         const text = (opt.textContent || '').trim().toLowerCase();
@@ -44,15 +44,22 @@ if (window.__gravisHubLoaded) {
     let currentLpn: string = '';
 
     function handleParsedPayload(rawText: string | object | null): void {
-        if (!rawText) return;
+        if (!rawText) {
+            currentReadyState = READY_STATE.NOT_FOUND;
+            return;
+        }
 
         let responseBody: any = rawText;
         if (typeof rawText === 'string') {
             const trimmed = rawText.trim();
-            if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) return;
+            if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
+                currentReadyState = READY_STATE.NOT_FOUND;
+                return;
+            }
             try {
                 responseBody = JSON.parse(trimmed);
             } catch {
+                currentReadyState = READY_STATE.NOT_FOUND;
                 return;
             }
         }
@@ -63,7 +70,11 @@ if (window.__gravisHubLoaded) {
             const asin = item?.returnUnitProductAttributes?.asin;
 
             gLog('Parsed array payload:', { unitId, asin, currentLpn });
-            if (!unitId || !asin) return;
+
+            if (!unitId || !asin) {
+                currentReadyState = READY_STATE.NOT_FOUND;
+                return;
+            }
 
             const isAsinValid = STRICT_ASIN_REGEX.test(asin);
             const isLpnMatching = !currentLpn || unitId.toLowerCase() === currentLpn;
@@ -71,23 +82,58 @@ if (window.__gravisHubLoaded) {
             if (isLpnMatching && isAsinValid) {
                 storedAsin = asin.toUpperCase();
                 gLog('Stored valid ASIN:', storedAsin);
+            } else {
+                currentReadyState = READY_STATE.NOT_FOUND;
             }
+        } else {
+            // Empty array [] or no return unit data found for this LPN
+            currentReadyState = READY_STATE.NOT_FOUND;
         }
     }
 
+    const originalOpen = XMLHttpRequest.prototype.open;
     const originalSend = XMLHttpRequest.prototype.send;
 
+    XMLHttpRequest.prototype.open = function(method: string, url: string | URL, ...rest: any[]) {
+        (this as any).__targetUrl = String(url);
+        return (originalOpen as any).call(this, method, url, ...rest);
+    };
+
     XMLHttpRequest.prototype.send = function(body?: Document | XMLHttpRequestBodyInit | null) {
+        const targetUrl = String((this as any).__targetUrl || '');
+        const lowerUrl = targetUrl.toLowerCase();
+
+        // Only track XHRs that are actually calling getReturnUnitData
+        const isReturnUnitReq = lowerUrl.includes('getreturnunitdata');
+
+        if (isReturnUnitReq) {
+            // As soon as the request is sent, mark state as IN_PROGRESS
+            if (!currentLpn || lowerUrl.includes(currentLpn) || lowerUrl.includes(encodeURIComponent(currentLpn))) {
+                currentReadyState = READY_STATE.IN_PROGRESS;
+                gLog('getReturnUnitData request started -> IN_PROGRESS');
+            }
+        }
+
         this.addEventListener('readystatechange', function () {
+            if (!isReturnUnitReq) return; // Ignore unrelated background XHRs!
+
             if (this.readyState === 4) {
                 try {
-                    const raw = (this.responseType === '' || this.responseType === 'text')
-                        ? this.responseText
-                        : this.response;
-                    handleParsedPayload(raw);
-                } catch {}
+                    if (!currentLpn || lowerUrl.includes(currentLpn) || lowerUrl.includes(encodeURIComponent(currentLpn))) {
+                        const raw = (this.responseType === '' || this.responseType === 'text')
+                            ? this.responseText
+                            : this.response;
+                        handleParsedPayload(raw);
+                    } else {
+                        gLog('TargetUrl LPN mismatch -> NOT_FOUND', { lowerUrl, currentLpn });
+                        currentReadyState = READY_STATE.NOT_FOUND;
+                    }
+                } catch {
+                    currentReadyState = READY_STATE.NOT_FOUND;
+                }
             }
         });
+
         return originalSend.call(this, body);
     };
 
@@ -102,33 +148,35 @@ if (window.__gravisHubLoaded) {
             const lpn = data.payload;
             if (!lpn) return;
 
+            // Reset state for the new LPN and mark as IN_PROGRESS while dropdown & input run
             storedAsin = null;
             currentLpn = lpn.trim().toLowerCase();
+            currentReadyState = READY_STATE.IN_PROGRESS;
             gLog('SYNC_LPN received:', currentLpn);
 
             await selectAngularDropdown('.mat-select-value', 'EU');
-            await sleep(50);
-
             const lpnInput = document.querySelector('input.mat-input-element') as HTMLInputElement;
             if (lpnInput) {
                 setNativeValue(lpnInput, lpn);
                 triggerEnter(lpnInput);
+            } else {
+                currentReadyState = READY_STATE.NOT_FOUND;
             }
         } else if (data?.type === 'TRIGGER_ASIN_SEARCH') {
-            gLog('TRIGGER_ASIN_SEARCH received, storedAsin:', storedAsin);
+            gLog('TRIGGER_ASIN_SEARCH received:', { storedAsin, currentReadyState });
             if (storedAsin) {
                 const asinToSend = storedAsin;
                 storedAsin = null;
+                currentReadyState = READY_STATE.NOT_FOUND;
                 sendMessageToMain('FOUND_ASIN', asinToSend);
             } else {
-                sendMessageToMain('FOUND_ASIN', 'NOT_FOUND');
+                sendMessageToMain('FOUND_ASIN', currentReadyState);
             }
         }
     });
 
     showInitializationToast('Gravis Automation', 'v1.0.5 Успішно запущений');
     sendMessageToMain('GRAVIS_READY');
-
     window.addEventListener('beforeunload', () => {
         sendMessageToMain('GRAVIS_CLOSED');
     });

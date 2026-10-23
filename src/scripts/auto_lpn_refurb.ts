@@ -40,6 +40,7 @@ if (!window.__refurbLpnLoaded) {
         }
     }
 
+    // TODO find by testid
     document.addEventListener('click', (e: MouseEvent) => {
         if (!active) return;
 

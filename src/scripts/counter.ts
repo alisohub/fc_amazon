@@ -5,6 +5,8 @@ import { debugLog } from '@shared/utils';
 if (!window.__counterLoaded) {
     window.__counterLoaded = true;
 
+    //TODO appear on cursor
+    //TODO storage sync
     let settings: CounterSettings = {
         overlayOpacity: 0.3,
         lunchBreak: 1,

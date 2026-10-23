@@ -17,6 +17,12 @@ export const STORAGE_KEY_DBL_COUNT_ID = 'sh_double_count_pid';
 export const STORAGE_KEY_DEBUG = 'sh_debug_config';
 
 
+export const READY_STATE = {
+    NOT_STARTED: "NOT_STARTED",
+    IN_PROGRESS: "IN_PROGRESS",
+    NOT_FOUND: "NOT_FOUND"
+};
+
 // BUTTON LABEL
 export const CLR_BTN_LBL: string[] = ["Usuń sesję"];
 
