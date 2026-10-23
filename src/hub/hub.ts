@@ -1,4 +1,5 @@
 import { STORAGE_KEY_DEP, STORAGE_KEY_LPN, STORAGE_KEY_COUNTER, STORAGE_KEY_STATION, PKG_INPT_TSTID, WD_ITM_SCN_INPT_TSTID, LPN_INPT_TSTID, WS_INPT_TSTID, DEPARTMENT_CONFIG } from '@shared/constants';
+import { debugLog, getDebugConfig, setDebugFlag, isDevEnv, DebugScope } from '@shared/utils';
 import { HUB_STYLES } from './styles';
 import { getScriptsConfig } from './scripts';
 
@@ -19,6 +20,7 @@ if (window.location.href.includes('gravis')) {
             : `https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/${currentBranch}/dist/hub_gravis.js`;
         
         try {
+            debugLog('gravis', 'Fetching Gravis Hub from:', url);
             const response = await fetch(url);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const code = await response.text();
@@ -30,7 +32,6 @@ if (window.location.href.includes('gravis')) {
             alert(`⚠️ Failed to load Gravis Hub: ${err}`);
         }
     })();
-
 } else {
     if (window.__scriptHubLoaded) {
         const panel = document.getElementById('sh-panel');
@@ -39,18 +40,18 @@ if (window.location.href.includes('gravis')) {
                 panel.classList.remove('sh-open');
                 document.querySelectorAll('.sh-adv-container').forEach(el => el.classList.remove('sh-expanded'));
                 window.dispatchEvent(new CustomEvent('sh-panel-closed'));
+                debugLog('hub', 'Hub panel closed via re-invocation');
             } else {
                 panel.classList.add('sh-open');
+                debugLog('hub', 'Hub panel opened via re-invocation');
             }
         }
     } 
     else {
         window.__scriptHubLoaded = true;
-
         type Branch = "main" | "development" | "local";
         
         const currentBranch: Branch = (window.__SH_BRANCH as Branch) || 'main';
-
         const urlParams = new URLSearchParams(window.location.search);
         const gradingMode = urlParams.get('gradingMode');
         
@@ -80,6 +81,8 @@ if (window.location.href.includes('gravis')) {
             try { localStorage.setItem(STORAGE_KEY_DEP, currentDep); } catch (e) {}
         }
 
+        debugLog('hub', 'Initialized Hub', { currentBranch, gradingMode, currentDep });
+
         const SCRIPTS = getScriptsConfig(() => currentDep);
 
         async function handleToggle(scriptObj: ScriptDefinition, checkbox: HTMLInputElement, settingsContainer: HTMLElement | null): Promise<void> {
@@ -87,18 +90,21 @@ if (window.location.href.includes('gravis')) {
             const handler = scriptObj.getHandler();
 
             if (!handler) {
-                alert(`⚠️ Не вдалось завантажити ${scriptObj.name}`);
+                debugLog('hub', `Handler missing for script: ${scriptObj.id}`);
+                alert(`⚠️ Не вдалося завантажити ${scriptObj.name}`);
                 checkbox.checked = false;
                 return;
             }
 
             if (isChecked) {
+                debugLog('hub', `Enabling script: ${scriptObj.id}`);
                 handler.enable();
                 if (scriptObj.renderSettings && settingsContainer) {
                     settingsContainer.style.display = 'block';
                     scriptObj.renderSettings(settingsContainer);
                 }
             } else {
+                debugLog('hub', `Disabling script: ${scriptObj.id}`);
                 handler.disable();
                 if (settingsContainer) {
                     settingsContainer.style.display = 'none';
@@ -126,6 +132,32 @@ if (window.location.href.includes('gravis')) {
                     if (!isNaN(parsed) && parsed >= 0.1 && parsed <= 1) panelOpacity = parsed;
                 }
             } catch (e) {}
+
+            const debugCfg = getDebugConfig();
+            const debugScopes: { key: DebugScope; label: string }[] = [
+                { key: 'hub', label: 'Hub Core' },
+                { key: 'item-counter', label: 'Counter' },
+                { key: 'off-task', label: 'Off-Task' },
+                { key: 'binds', label: 'Binds' },
+                { key: 'auto-lpn', label: 'Auto-LPN' },
+                { key: 'refurb-lpn', label: 'Refurb-LPN' },
+                { key: 'clear-session', label: 'Clear Session' },
+                { key: 'gravis', label: 'Gravis' }
+            ];
+
+            const debugSectionHtml = isDevEnv() ? `
+                <div class="sh-debug-section">
+                    <div class="sh-global-settings-title">🐞 Debug Logs (Dev)</div>
+                    <div class="sh-debug-grid">
+                        ${debugScopes.map(s => `
+                            <label class="sh-debug-item">
+                                <input type="checkbox" class="sh-debug-chk" data-scope="${s.key}" ${debugCfg[s.key] ? 'checked' : ''} />
+                                <span>${s.label}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : '';
 
             const hub = document.createElement('div');
             hub.id = 'sh-root';
@@ -155,6 +187,7 @@ if (window.location.href.includes('gravis')) {
                             <span class="sh-emoji">👁️</span>
                             <input type="range" id="sh-panel-opacity" class="sh-range" min="0.1" max="1" step="0.05" value="${panelOpacity}" />
                         </div>
+                        ${debugSectionHtml}
                     </div>
                     <div class="sh-body" id="sh-list"></div>
                 </div>
@@ -166,7 +199,6 @@ if (window.location.href.includes('gravis')) {
             const globalSettings = document.getElementById('sh-global-settings');
             const panelOpacityInput = document.getElementById('sh-panel-opacity') as HTMLInputElement;
 
-            // Settings Menu Toggle
             if (settingsToggleBtn && globalSettings) {
                 settingsToggleBtn.addEventListener('click', () => {
                     settingsToggleBtn.classList.toggle('active');
@@ -174,7 +206,6 @@ if (window.location.href.includes('gravis')) {
                 });
             }
 
-            // Panel Opacity Slider
             if (panelOpacityInput) {
                 panelOpacityInput.addEventListener('input', (e: Event) => {
                     const target = e.target as HTMLInputElement;
@@ -186,12 +217,23 @@ if (window.location.href.includes('gravis')) {
                 });
             }
 
+            // Debug Checkboxes Listeners
+            hub.querySelectorAll('.sh-debug-chk').forEach(chk => {
+                chk.addEventListener('change', (e: Event) => {
+                    const target = e.target as HTMLInputElement;
+                    const scope = target.getAttribute('data-scope') as DebugScope | null;
+                    if (scope) {
+                        setDebugFlag(scope, target.checked);
+                        console.log(`%c[SH:${scope}]`, 'color: #1a73e8; font-weight: bold;', `Debug logging ${target.checked ? 'ENABLED' : 'DISABLED'}`);
+                    }
+                });
+            });
+
             function closePanel(): void {
                 panelEl.classList.remove('sh-open');
                 document.querySelectorAll('.sh-adv-container').forEach(el => el.classList.remove('sh-expanded'));
                 if (globalSettings) globalSettings.classList.remove('sh-expanded');
                 if (settingsToggleBtn) settingsToggleBtn.classList.remove('active');
-
                 window.dispatchEvent(new CustomEvent('sh-panel-closed'));
             }
 
@@ -208,11 +250,10 @@ if (window.location.href.includes('gravis')) {
                     if (isDepartment(target.value)) {
                         currentDep = target.value;
                         localStorage.setItem(STORAGE_KEY_DEP, currentDep);
+                        debugLog('hub', `Department changed to: ${currentDep}`);
                         
                         const newConfig = DEPARTMENT_CONFIG[currentDep];
                         if (newConfig) {
-                            
-                            // 1. FORCE UPDATE COUNTER (Active or Inactive)
                             if (window.__itemCounter) {
                                 window.__itemCounter.updateSettings({ 
                                     targetRate: newConfig.targetRate,
@@ -235,8 +276,6 @@ if (window.location.href.includes('gravis')) {
                             if (card) {
                                 if (script.excludeDeps?.includes(currentDep)) {
                                     card.style.display = 'none';
-                                    
-                                    // Safely turn the script off if it is currently running
                                     const handler = script.getHandler();
                                     const chk = document.getElementById(`sh-chk-${script.id}`) as HTMLInputElement | null;
                                     if (handler && handler.isActive()) {
@@ -252,23 +291,17 @@ if (window.location.href.includes('gravis')) {
                 });
             }
 
-            // Writes to memory each input of matched LPN and WS regex
             document.addEventListener('keydown', (e: KeyboardEvent) => {
-                // 1. Guard Clauses
                 if (e.key !== 'Enter') return;
                 if (!window.__refurbLpnLoaded && !window.__gravisLoaded && !window.__clearSession) return;
                     
-                // 2. Grab the exact element the user just pressed Enter on
                 const input = e.target as HTMLInputElement;
                 if (!input || !input.matches('input')) return;
 
                 const val = input.value?.trim();
                 if (!val) return;
 
-                // Grab the aria-label of this specific input, standardized to lowercase
                 const currentTestId = (input.getAttribute('data-testid') || '').toLowerCase();
-
-                // Store your labels here (make sure they are lowercase for case-insensitive matching)
                 const LABELS = {
                     lpnTestId: [
                         PKG_INPT_TSTID,
@@ -278,33 +311,28 @@ if (window.location.href.includes('gravis')) {
                     wsTestId: WS_INPT_TSTID
                 };
 
-
                 try {
-                    // =========================================
-                    // 3. LPN INPUT HANDLING
-                    // =========================================
-                    const isLpnInput = LABELS.lpnTestId.some(tstid => currentTestId.includes(tstid.toLowerCase())); 
+                    const isLpnInput = LABELS.lpnTestId.some(tstid => currentTestId.includes(tstid.toLowerCase()));
                     
                     if (isLpnInput && /^lpn[a-z0-9]+/i.test(val)) {
+                        debugLog('hub', `LPN scan detected on [${currentTestId}]: ${val}`);
                         if (localStorage.getItem(STORAGE_KEY_LPN) !== val) {
                             localStorage.setItem(STORAGE_KEY_LPN, val);
+                            debugLog('hub', `Saved new LPN to localStorage & syncing to Gravis: ${val}`);
                             window.__gravis?.sendLpn(val);
                         }
-                        return; // Stop processing once we match and save
+                        return;
                     }
 
-                    // =========================================
-                    // 4. WORKSPACE (WS) INPUT HANDLING
-                    // =========================================
                     const isWsInput = currentTestId.includes(LABELS.wsTestId);
                     
                     if (isWsInput && /^ws[_-]+/i.test(val)) {
+                        debugLog('hub', `Workstation scan detected on [${currentTestId}]: ${val}`);
                         localStorage.setItem(STORAGE_KEY_STATION, val);
-                        return; // Stop processing once we match and save
+                        return;
                     }
-
                 } catch (err) {
-                    // Silently fail if localStorage is blocked
+                    debugLog('hub', 'Error handling LPN/WS keydown:', err);
                 }
             }, true);
 
@@ -312,14 +340,14 @@ if (window.location.href.includes('gravis')) {
                 if (script.experimental && !['development', 'local'].includes(currentBranch)) return false;
                 return true;
             });
-                     
+            
             const updateMasterToggleState = (): void => {
                 const chkAll = document.getElementById('sh-chk-all') as HTMLInputElement;
                 if (!chkAll) return;
                 
                 const standardScripts = visibleScripts.filter(s => {
                     if (s.experimental) return false;
-                    if (s.excludeDeps && s.excludeDeps.includes(currentDep)) return false; // MUST NOT be excluded
+                    if (s.excludeDeps && s.excludeDeps.includes(currentDep)) return false;
                     return true;
                 });
 
@@ -340,6 +368,7 @@ if (window.location.href.includes('gravis')) {
                     if (script.excludeDeps?.includes(currentDep)) {
                         card.style.display = 'none';
                     }
+
                     card.innerHTML = `
                         <div class="sh-card-top">
                             <div class="sh-card-info">
@@ -377,11 +406,12 @@ if (window.location.href.includes('gravis')) {
             if (chkAll) {
                 chkAll.addEventListener('change', (e) => {
                     const turnOn = (e.target as HTMLInputElement).checked;
+                    debugLog('hub', `Master toggle clicked: ${turnOn}`);
                     const togglePromises: Promise<void>[] = [];
                     
                     visibleScripts.forEach(script => {
                         if (script.experimental) return; 
-                        if (script.excludeDeps && script.excludeDeps.includes(currentDep)) return; // CRITICAL: Skip if not for this department
+                        if (script.excludeDeps && script.excludeDeps.includes(currentDep)) return;
                         
                         const chk = document.getElementById(`sh-chk-${script.id}`) as HTMLInputElement;
                         const settingsContainer = document.getElementById(`sh-settings-${script.id}`);

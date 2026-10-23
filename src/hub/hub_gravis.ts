@@ -1,6 +1,12 @@
 import { setNativeValue, triggerEnter, sleep, showInitializationToast } from '@shared/dom';
 
 const STRICT_ASIN_REGEX = /^([B0-9][A-Z0-9]{9})$/i;
+let debugEnabled = false;
+
+function gLog(...args: any[]): void {
+    if (!debugEnabled) return;
+    console.log('%c[SH:gravis-tab]', 'color: #1a73e8; font-weight: bold;', ...args);
+}
 
 async function selectAngularDropdown(triggerSelector: string, exactOptionText: string): Promise<boolean> {
     const dropdown = document.querySelector(triggerSelector) as HTMLElement;
@@ -56,6 +62,7 @@ if (window.__gravisHubLoaded) {
             const unitId = item?.returnUnitId;
             const asin = item?.returnUnitProductAttributes?.asin;
 
+            gLog('Parsed array payload:', { unitId, asin, currentLpn });
             if (!unitId || !asin) return;
 
             const isAsinValid = STRICT_ASIN_REGEX.test(asin);
@@ -63,6 +70,7 @@ if (window.__gravisHubLoaded) {
 
             if (isLpnMatching && isAsinValid) {
                 storedAsin = asin.toUpperCase();
+                gLog('Stored valid ASIN:', storedAsin);
             }
         }
     }
@@ -77,9 +85,7 @@ if (window.__gravisHubLoaded) {
                         ? this.responseText
                         : this.response;
                     handleParsedPayload(raw);
-                } catch {
-                    // Ignore DOMException if responseText is accessed on a non-text responseType
-                }
+                } catch {}
             }
         });
         return originalSend.call(this, body);
@@ -89,29 +95,30 @@ if (window.__gravisHubLoaded) {
         if (e.source !== window.opener) return;
         const data = e.data;
 
-        if (data?.type === 'SYNC_LPN') {
+        if (data?.type === 'SET_DEBUG') {
+            debugEnabled = Boolean(data.payload);
+            gLog('Debug mode enabled for Gravis tab');
+        } else if (data?.type === 'SYNC_LPN') {
             const lpn = data.payload;
             if (!lpn) return;
 
             storedAsin = null;
             currentLpn = lpn.trim().toLowerCase();
+            gLog('SYNC_LPN received:', currentLpn);
 
-            // 1. Select EU
             await selectAngularDropdown('.mat-select-value', 'EU');
             await sleep(50);
 
-            // 2. Paste the LPN and hit Enter
             const lpnInput = document.querySelector('input.mat-input-element') as HTMLInputElement;
             if (lpnInput) {
                 setNativeValue(lpnInput, lpn);
                 triggerEnter(lpnInput);
             }
-        }
-        // Triggered when F8 is pressed in the main window
-        else if (data?.type === 'TRIGGER_ASIN_SEARCH') {
+        } else if (data?.type === 'TRIGGER_ASIN_SEARCH') {
+            gLog('TRIGGER_ASIN_SEARCH received, storedAsin:', storedAsin);
             if (storedAsin) {
                 const asinToSend = storedAsin;
-                storedAsin = null; // Consume & clear so subsequent F8 presses send NOT_FOUND
+                storedAsin = null;
                 sendMessageToMain('FOUND_ASIN', asinToSend);
             } else {
                 sendMessageToMain('FOUND_ASIN', 'NOT_FOUND');

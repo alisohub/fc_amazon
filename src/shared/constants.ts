@@ -14,10 +14,10 @@ export const STORAGE_KEY_BINDS = 'sh_binds_config';
 export const STORAGE_KEY_LPN = 'sh_lpn';
 export const STORAGE_KEY_STATION = 'sh_work_station';
 export const STORAGE_KEY_DBL_COUNT_ID = 'sh_double_count_pid';
+export const STORAGE_KEY_DEBUG = 'sh_debug_config';
 
 
 // BUTTON LABEL
-// clear-session-icon
 export const CLR_BTN_LBL: string[] = ["Usuń sesję"];
 
 // INPUT LABEL
@@ -52,6 +52,7 @@ export const LPN_RSGN_BTN_SPN: string[] = [
 export const LPN_ASGN_NEW_BTN_SPN: string[] = ["Призначити новий LPN", "Przypisz nowy LPN"];    
 export const CHS_ITM_LST_BTN_SPN: string[] = ["Brak dostępnych kodów kreskowych"]
 
+// BUTTON TESTID
 export const CNT_BTN_TSTID: string = "button-clear-session-continue-socrates";
 export const LPN_RSGN_BTN_TSTID: string = "button-reassign-lpn-id";
 export const CHS_ITM_LST_BTN_TSTID: string = "button-choose-item-from-the-list-socrates";

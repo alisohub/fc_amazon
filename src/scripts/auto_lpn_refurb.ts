@@ -1,5 +1,6 @@
 import { LPN_ASGN_NEW_BTN_SPN, LPN_OLD_LPN_INPT_TSTID, STORAGE_KEY_LPN } from "@shared/constants";
 import { findInputByTestId, setNativeValue, triggerEnter } from "@shared/dom";
+import { debugLog } from "@shared/utils";
 
 if (!window.__refurbLpnLoaded) {
     window.__refurbLpnLoaded = true;
@@ -15,37 +16,38 @@ if (!window.__refurbLpnLoaded) {
     async function executeSequence(): Promise<void> {
         if (isProcessing) return;
         isProcessing = true;
+        debugLog('refurb-lpn', 'Starting old LPN auto-fill sequence');
 
         try {
-            // 1. Find and fill old LPN
             const oldLpnInput = await findInputByTestId(UI_STRINGS.oldLpnInput, 2000) as HTMLInputElement;
-            if (!oldLpnInput) return; // Silent abort
+            if (!oldLpnInput) {
+                debugLog('refurb-lpn', 'Old LPN input not found within 2000ms');
+                return;
+            }
             
             const oldLpn = localStorage.getItem(STORAGE_KEY_LPN);
             if (!oldLpn) {
+                debugLog('refurb-lpn', 'No saved LPN in localStorage');
                 alert("Жодна LPN ще не була записана, спробуйте з наступним товаром");
                 return;
             }
 
+            debugLog('refurb-lpn', `Filling old LPN input with: ${oldLpn}`);
             setNativeValue(oldLpnInput, oldLpn);
             triggerEnter(oldLpnInput);
-
         } finally {
-            // This guarantees the lock is ALWAYS released, even if we hit a silent return above
             isProcessing = false;
         }
     }
 
     document.addEventListener('click', (e: MouseEvent) => {
         if (!active) return;
+
         const target = e.target as HTMLElement;
-        
         let isTrigger = false;
         const directText = target.textContent?.trim();
-        //TODO: change to testid    
         const childText = target.querySelector('span')?.textContent?.trim();
 
-        // Check if the clicked target (or its child span) matches any of our trigger strings
         if (target.tagName.toLowerCase() === 'span' && directText && UI_STRINGS.triggerBtn.includes(directText)) {
             isTrigger = true;
         } else if (childText && UI_STRINGS.triggerBtn.includes(childText)) {
@@ -53,14 +55,14 @@ if (!window.__refurbLpnLoaded) {
         }
 
         if (isTrigger) {
-            // Give the browser 100ms to process the native click event before launching our sequence
+            debugLog('refurb-lpn', 'Assign New LPN button click detected');
             setTimeout(executeSequence, 100); 
         }
     }, true);
 
     window.__refurbLpn = {
-        enable: (): void => { active = true; },
-        disable: (): void => { active = false; isProcessing = false; },
+        enable: (): void => { active = true; debugLog('refurb-lpn', 'Enabled'); },
+        disable: (): void => { active = false; isProcessing = false; debugLog('refurb-lpn', 'Disabled'); },
         isActive: (): boolean => active
     };
 }

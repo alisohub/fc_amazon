@@ -41,7 +41,8 @@ declare global {
 
     interface GravisHandler extends ScriptHandler {
         sendLpn: (lpn: string) => void;
-    }   
+        setDebug?: (enabled: boolean) => void;
+    }
 
     interface CounterHandler extends SettingsHandler<CounterSettings> {
         getCount: () => number;

@@ -82,4 +82,9 @@ export const HUB_STYLES: string = `
     .sh-bind-key { cursor: pointer; transition: background 0.2s, color 0.2s, border-color 0.2s; }
     .sh-bind-key:hover { background: #d2e3fc; color: #174ea6; }
     .sh-bind-key.sh-recording { background: #fce8e6 !important; color: #d93025 !important; border-color: #d93025 !important; }
+    /* Debug Settings Grid (Dev Only) */
+    .sh-debug-section { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #dadce0; }
+    .sh-debug-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+    .sh-debug-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #3c4043; cursor: pointer; user-select: none; }
+    .sh-debug-item input[type="checkbox"] { accent-color: #1a73e8; cursor: pointer; margin: 0; }
 `;

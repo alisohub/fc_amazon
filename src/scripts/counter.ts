@@ -1,5 +1,6 @@
 import { STORAGE_KEY_COUNT, STORAGE_KEY_COUNTER, STORAGE_KEY_DBL_COUNT_ID } from '@shared/constants';
 import { getEffectiveWorkTime, calculateUPH, calculatePercentageStr, calculateFreeTime } from '@shared/time';
+import { debugLog } from '@shared/utils';
 
 if (!window.__counterLoaded) {
     window.__counterLoaded = true;
@@ -110,6 +111,7 @@ if (!window.__counterLoaded) {
                 isDragging = false;
                 settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
                 settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
+                debugLog('item-counter', 'Overlay position saved:', { left: settings.overlayLeft, top: settings.overlayTop });
                 try { localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify(settings)); } catch (e) {}
             }
         };
@@ -136,6 +138,7 @@ if (!window.__counterLoaded) {
             if (changed) {
                 settings.overlayLeft = parseInt(overlay.style.left, 10) || 0;
                 settings.overlayTop = parseInt(overlay.style.top, 10) || 0;
+                debugLog('item-counter', 'Overlay clamped on window resize:', { left: settings.overlayLeft, top: settings.overlayTop });
                 try { localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify(settings)); } catch (e) {}
             }
         });
@@ -146,7 +149,6 @@ if (!window.__counterLoaded) {
 
     function updateCounterUI(count: number): void {
         saveCount(count);
-
         const overlayCount = document.getElementById('sh-overlay-count');
         if (overlayCount) overlayCount.textContent = count.toString();
 
@@ -170,6 +172,7 @@ if (!window.__counterLoaded) {
         if (hubInput && document.activeElement !== hubInput) {
             hubInput.value = count === 0 ? '' : count.toString();
         }
+        debugLog('item-counter', 'Counter UI updated:', { count, currentUPH, time: timeData.formatted, freeTime: currentFT });
     }
 
     const originalOpen = XMLHttpRequest.prototype.open;
@@ -204,29 +207,27 @@ if (!window.__counterLoaded) {
                     ? JSON.parse(this.response)
                     : this.response;
 
-                if (!responseBody) {
-                    return;
-                }
+                if (!responseBody) return;
 
-                // Handle cases where response actionPayload might be a stringified JSON string
                 let resPayload = responseBody.actionPayload;
                 if (typeof resPayload === "string") {
-                    try {
-                        resPayload = JSON.parse(resPayload);
-                    } catch (e) {}
+                    try { resPayload = JSON.parse(resPayload); } catch (e) {}
                 }
 
                 const requestBody = (this as any).__requestBody;
                 let reqPayload = requestBody?.actionPayload;
                 if (typeof reqPayload === "string") {
-                    try {
-                        reqPayload = JSON.parse(reqPayload);
-                    } catch (e) {}
+                    try { reqPayload = JSON.parse(reqPayload); } catch (e) {}
                 }
 
                 const pid = responseBody.processManagerId || resPayload?.processManagerId || requestBody?.processManagerId;
+                debugLog('item-counter', 'Intercepted /api/executeProcess:', {
+                    action: requestBody?.action?.name,
+                    status: this.status,
+                    pid,
+                    isInputScanned: reqPayload?.isInputScanned
+                });
 
-                // 1. Check and store processManagerId in localStorage if in doubleCountMode
                 if (settings.doubleCountMode) {
                     if (
                         resPayload?.listingConditionEvaluated === true &&
@@ -234,13 +235,13 @@ if (!window.__counterLoaded) {
                         resPayload?.sellable === true &&
                         typeof pid === "string"
                     ) {
+                        debugLog('item-counter', 'Double-count eligible unit detected, saving PID:', pid);
                         try {
                             localStorage.setItem(STORAGE_KEY_DBL_COUNT_ID, pid);
                         } catch (e) {}
                     }
                 }
 
-                // 2. Increment count when container scan request succeeds with 200
                 if (
                     this.status === 200 &&
                     requestBody?.action?.name === "SCAN_CONTAINER_IDENTIFIER" &&
@@ -256,12 +257,15 @@ if (!window.__counterLoaded) {
                         ) {
                             increment = 2;
                             localStorage.removeItem(STORAGE_KEY_DBL_COUNT_ID);
+                            debugLog('item-counter', 'Matched double-count PID! Incrementing by 2');
                         }
                     } catch (e) {}
 
+                    debugLog('item-counter', `Container scan succeeded! Incrementing count by +${increment}`);
                     updateCounterUI(itemCounter + increment);
                 }
             } catch (error) {
+                debugLog('item-counter', 'Error parsing executeProcess XHR:', error);
             }
         });
 
@@ -273,6 +277,7 @@ if (!window.__counterLoaded) {
         if (e.key === 'F10') {
             e.preventDefault();
             overlayVisible = !overlayVisible;
+            debugLog('item-counter', 'F10 pressed, overlayVisible:', overlayVisible);
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay) {
                 overlay.style.opacity = overlayVisible ? settings.overlayOpacity.toString() : '0';
@@ -297,7 +302,7 @@ if (!window.__counterLoaded) {
             const timeEl = document.getElementById('sh-overlay-time');
             if (timeEl) timeEl.textContent = timeData.formatted;
 
-            const ftEl = document.getElementById('sh-ftElme');
+            const ftEl = document.getElementById('sh-overlay-free-time');
             if (ftEl) ftEl.textContent = currentFT;
         }
     }, 60000);
@@ -307,12 +312,14 @@ if (!window.__counterLoaded) {
     window.__itemCounter = {
         enable: (): void => {
             active = true;
+            debugLog('item-counter', 'Enabled');
             const overlay = createOrGetOverlay();
             if (overlay) overlay.style.display = overlayVisible ? 'block' : 'none';
             updateCounterUI(itemCounter);
         },
         disable: (): void => {
             active = false;
+            debugLog('item-counter', 'Disabled');
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay) overlay.style.display = 'none';
         },
@@ -322,6 +329,7 @@ if (!window.__counterLoaded) {
         getSettings: (): CounterSettings => settings,
         updateSettings: (newSettings: Partial<CounterSettings>): void => {
             settings = { ...settings, ...newSettings };
+            debugLog('item-counter', 'Settings updated:', settings);
             try { localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify(settings)); } catch (e) {}
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay && overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString();

@@ -1,11 +1,10 @@
 import { STORAGE_KEY_BINDS } from "@shared/constants";
 import { setStatusDot, triggerEnter } from "@shared/dom";
-import { normalizeText } from "@shared/utils";
+import { normalizeText, debugLog } from "@shared/utils";
 
 if (!window.__bindsLoaded) {
     window.__bindsLoaded = true;
     
-    // Start completely fresh with empty arrays ONLY for F1 through F7
     let currentShortcuts: Record<string, string[]> = {
         'F1': [], 'F2': [], 'F3': [], 'F4': [], 'F5': [], 'F6': [], 'F7': []
     };
@@ -32,6 +31,7 @@ if (!window.__bindsLoaded) {
     let enterTimer: ReturnType<typeof setTimeout> | undefined;
 
     function stopScript(): void {
+        if (isRunning) debugLog('binds', 'Stopping bind playback');
         isRunning = false;
         activeTargets = [];
         if (changeObserver) changeObserver.disconnect();
@@ -43,20 +43,17 @@ if (!window.__bindsLoaded) {
         return sequence.map(word => word.trim().toLowerCase()).filter(w => w.length > 0);
     }
 
-    // ==========================================
-    // LIVE RECORDING LOGIC
-    // ==========================================
     document.addEventListener('click', (e: MouseEvent) => {
         if (!active || !recordingKey) return;
-                 
+        
         const clickedElement = e.target as HTMLElement;
-        if (clickedElement.closest('#sh-root')) return;
-                  
+        if (clickedElement.closest('#sh-root')) return; 
+        
         let targetP: HTMLElement | null = null;
+
         if (clickedElement.tagName.toLowerCase() === 'p') {
             targetP = clickedElement;
         } else {
-            // 1. Check direct children
             const children = clickedElement.children;
             for (let i = 0; i < children.length; i++) {
                 if (children[i].tagName.toLowerCase() === 'p') {
@@ -64,8 +61,6 @@ if (!window.__bindsLoaded) {
                     break;
                 }
             }
-            
-            // 2. Check siblings (children of the parent)
             if (!targetP && clickedElement.parentElement) {
                 const siblings = clickedElement.parentElement.children;
                 for (let i = 0; i < siblings.length; i++) {
@@ -75,8 +70,6 @@ if (!window.__bindsLoaded) {
                     }
                 }
             }
-
-            // 3. Check uncles (children of the grandparent)
             if (!targetP) {
                 const grandparent = clickedElement.parentElement?.parentElement;
                 if (grandparent) {
@@ -91,35 +84,29 @@ if (!window.__bindsLoaded) {
             }
         }
 
-        // Only record the click if the <p> actually belongs to an answer card
         if (targetP && targetP.closest('.answer-card')) {
             const text = normalizeText(targetP.textContent);
             if (text && currentShortcuts[recordingKey].length < 30) {
                 currentShortcuts[recordingKey].push(text);
+                debugLog('binds', `Recorded step for [${recordingKey}]: "${text}"`);
                 try { localStorage.setItem(STORAGE_KEY_BINDS, JSON.stringify(currentShortcuts)); } catch (e) {}
-                                 
-                // If it reaches the 30 step limit, auto-stop recording
+                
                 if (currentShortcuts[recordingKey].length >= 30) {
                     recordingKey = null;
                 }
-                                 
+                
                 window.dispatchEvent(new CustomEvent('sh-binds-update')); 
             }
         }
     }, true);
 
-    // ==========================================
-    // PLAYBACK LOGIC
-    // ==========================================
     function findAnswer(textList: string[]): { element: HTMLElement, matchedText: string } | null {
-        // Exclusively search inside .answer-card elements
         const paragraphs = Array.from(document.querySelectorAll<HTMLElement>('.answer-card p'))
             .filter(p => p.offsetWidth > 0 && p.offsetHeight > 0);
 
         for (let target of textList) {
             for (let p of paragraphs) {
                 const pText = normalizeText(p.textContent);
-                // 100% strict exact matching only
                 if (pText === target) {
                     return { element: p, matchedText: target }; 
                 }
@@ -136,6 +123,7 @@ if (!window.__bindsLoaded) {
 
         const actionMatch = findAnswer(activeTargets);
         if (actionMatch) {
+            debugLog('binds', `Matched answer card: "${actionMatch.matchedText}", clicking`);
             const matchIndex = activeTargets.indexOf(actionMatch.matchedText);
             if (matchIndex > -1) activeTargets.splice(matchIndex, 1);
             actionMatch.element.click();
@@ -143,7 +131,7 @@ if (!window.__bindsLoaded) {
             return;
         }
         
-        // Stops gracefully if the paragraph is absent
+        debugLog('binds', 'No matching answer card found for remaining targets:', activeTargets);
         stopScript();
     }
 
@@ -153,6 +141,7 @@ if (!window.__bindsLoaded) {
         clearTimeout(enterTimer);
         
         let domChanged = false;
+
         changeObserver = new MutationObserver(() => {
             if (domChanged) return;
             domChanged = true;
@@ -166,6 +155,7 @@ if (!window.__bindsLoaded) {
         
         enterTimer = setTimeout(() => {
             if (!domChanged) {
+                debugLog('binds', 'No DOM change after 500ms, triggering Enter key');
                 const targetEl = (document.activeElement as HTMLElement) || document.body;
                 triggerEnter(targetEl);
             }
@@ -179,6 +169,7 @@ if (!window.__bindsLoaded) {
         
         if (e.key === 'F9') {
             awaitingF9 = true;
+            debugLog('binds', 'F9 pressed, awaiting F1-F7 to toggle recording');
             return;
         }
 
@@ -212,6 +203,7 @@ if (!window.__bindsLoaded) {
             if (!isRunning) {
                 isRunning = true;
                 activeTargets = compileTargets(currentShortcuts[e.key]);
+                debugLog('binds', `Starting playback for [${e.key}]:`, activeTargets);
                 processNext();
             } else {
                 stopScript();
@@ -220,9 +212,10 @@ if (!window.__bindsLoaded) {
     }, true);
 
     window.__binds = {
-        enable: (): void => { active = true; },
+        enable: (): void => { active = true; debugLog('binds', 'Enabled'); },
         disable: (): void => { 
             active = false; 
+            debugLog('binds', 'Disabled');
             stopScript(); 
             recordingKey = null; 
             window.dispatchEvent(new CustomEvent('sh-binds-update')); 
@@ -232,6 +225,7 @@ if (!window.__bindsLoaded) {
         getShortcuts: () => currentShortcuts,
         updateShortcuts: (newBinds: Record<string, string[]>): void => {
             currentShortcuts = { ...newBinds };
+            debugLog('binds', 'Shortcuts updated:', currentShortcuts);
             try { localStorage.setItem(STORAGE_KEY_BINDS, JSON.stringify(currentShortcuts)); } catch (e) {}
         },
         getRecordingKey: () => recordingKey,
@@ -239,11 +233,13 @@ if (!window.__bindsLoaded) {
             stopScript();
             recordingKey = key;
             currentShortcuts[key] = []; 
+            debugLog('binds', `Started recording on [${key}]`);
             try { localStorage.setItem(STORAGE_KEY_BINDS, JSON.stringify(currentShortcuts)); } catch (e) {}
             window.dispatchEvent(new CustomEvent('sh-binds-update'));
             updateRecordingDot();
         },
         stopRecording: (): void => {
+            debugLog('binds', `Stopped recording on [${recordingKey}]`);
             recordingKey = null;
             window.dispatchEvent(new CustomEvent('sh-binds-update'));
             updateRecordingDot();

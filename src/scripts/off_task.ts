@@ -1,5 +1,6 @@
 import { TOTE_INPT_TSTID } from '@shared/constants';
 import { findInputByTestId, isInsideModal, setNativeValue, setStatusDot, showInitializationToast, triggerEnter } from '@shared/dom';
+import { debugLog } from '@shared/utils';
 
 if (!window.__offTaskLoaded) {
     window.__offTaskLoaded = true;
@@ -34,6 +35,7 @@ if (!window.__offTaskLoaded) {
     }
 
     function stopCountdown(): void {
+        if (timerStart !== null) debugLog('off-task', 'Countdown stopped');
         timeoutMins = null;
         toteBarcode = '';
         timerStart = null;
@@ -49,6 +51,7 @@ if (!window.__offTaskLoaded) {
     function openPopup(): void {
         closePopup();
         stopCountdown();
+        debugLog('off-task', 'Opened Off-Task popup');
 
         let step: 1 | 2 = 1;
         let pendingMins: number = 0;
@@ -113,6 +116,7 @@ if (!window.__offTaskLoaded) {
                 }
                 pendingMins = parsed;
                 step = 2;
+                debugLog('off-task', `Step 1 complete: ${pendingMins} mins. Waiting for tote scan.`);
                 input.value = '';
                 input.style.borderColor = '#dadce0';
                 input.placeholder = 'Відскануйте тот';
@@ -127,6 +131,7 @@ if (!window.__offTaskLoaded) {
 
                 const targetInput = findInputByTestId(TOTE_INPT_TSTID) as HTMLInputElement | null;
                 if (!targetInput || isInsideModal(targetInput)) {
+                    debugLog('off-task', 'Target tote input missing or inside modal, aborting timer start');
                     closePopup();
                     return;
                 }
@@ -134,16 +139,15 @@ if (!window.__offTaskLoaded) {
                 timeoutMins = pendingMins;
                 toteBarcode = scannedTote;
                 timerStart = Date.now();
-
                 lastInputValue = targetInput ? targetInput.value : '';
 
+                debugLog('off-task', `Timer started: tote="${toteBarcode}", duration=${timeoutMins}m`);
                 closePopup();
-                showInitializationToast('Старт OFF_TASK', `Прибиття тота ${toteBarcode} через ${timeoutMins} хв`)
+                showInitializationToast('Старт OFF_TASK', `Прибиття тота ${toteBarcode} через ${timeoutMins} хв`);
                 setStatusDot(DOT_ID, DOT_GREEN, true);
             }
         };
 
-        // Prevent keystrokes inside the popup from triggering Socrates or other scripts
         ['keydown', 'keyup', 'keypress', 'input'].forEach(evtType => {
             wrapper.addEventListener(evtType, (e: Event) => e.stopPropagation());
         });
@@ -175,12 +179,9 @@ if (!window.__offTaskLoaded) {
 
     document.addEventListener('keydown', (e: KeyboardEvent) => {
         if (!active) return;
-
-        // Use e.code === 'KeyO' so Alt+O works regardless of Ukrainian/Polish/English layout
         if (e.altKey && (e.code === 'KeyO' || e.key.toLowerCase() === 'o')) {
             e.preventDefault();
             e.stopPropagation();
-
             if (document.getElementById(POPUP_ID)) {
                 closePopup();
             } else {
@@ -196,13 +197,14 @@ if (!window.__offTaskLoaded) {
 
         const targetInput = findInputByTestId(TOTE_INPT_TSTID) as HTMLInputElement | null;
         if (!targetInput || isInsideModal(targetInput)) {
+            debugLog('off-task', 'Tote input disappeared or modal opened during countdown, stopping');
             stopCountdown();
             return;
         }
 
         const currentValue = targetInput.value;
-        // Restart countdown if user manually scans/types into the tote field
         if (currentValue !== lastInputValue) {
+            debugLog('off-task', 'User activity detected in tote input, resetting countdown timer');
             lastInputValue = currentValue;
             timerStart = Date.now();
             return;
@@ -212,6 +214,7 @@ if (!window.__offTaskLoaded) {
         const targetMs = timeoutMins * 60 * 1000;
 
         if (elapsed >= targetMs) {
+            debugLog('off-task', `Countdown finished! Submitting tote: ${toteBarcode}`);
             setNativeValue(targetInput, toteBarcode);
             triggerEnter(targetInput);
             stopCountdown();
@@ -223,9 +226,11 @@ if (!window.__offTaskLoaded) {
     window.__offTask = {
         enable: (): void => {
             active = true;
+            debugLog('off-task', 'Enabled');
         },
         disable: (): void => {
             active = false;
+            debugLog('off-task', 'Disabled');
             closePopup();
             stopCountdown();
         },
