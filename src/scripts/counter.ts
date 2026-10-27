@@ -5,13 +5,12 @@ import { debugLog } from '@shared/utils';
 if (!window.__counterLoaded) {
     window.__counterLoaded = true;
 
-    //TODO appear on cursor
     //TODO storage sync
     let settings: CounterSettings = {
-        overlayOpacity: 0.3,
+        overlayOpacity: 0.4,
         lunchBreak: 1,
         overlayLeft: 40,
-        overlayTop: 862,
+        overlayTop: 2,
         customStartTime: null,
     };
 
@@ -57,8 +56,8 @@ if (!window.__counterLoaded) {
             overlay.style.top = `${settings.overlayTop}px`;
             overlay.style.right = 'auto'; overlay.style.bottom = 'auto';
         } else {
-            overlay.style.left = '40px'; overlay.style.top = '862px';
-            overlay.style.right = 'auto'; overlay.style.bottom = 'auto';
+            overlay.style.left = '40px'; overlay.style.top = 'auto';
+            overlay.style.right = 'auto'; overlay.style.bottom = '8px';
         }
 
         const timeData = getEffectiveWorkTime(settings.customStartTime, settings.lunchBreak);

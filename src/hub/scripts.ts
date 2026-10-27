@@ -198,6 +198,7 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             name: 'Авто-Введення (Off-Task)',
             file: 'off_task.js',
             description: 'Натисніть Alt+O, щоб задати час та відсканувати тот для авто-прибиття.',
+            excludeDeps: ["PS"],
             getHandler: () => window.__offTask
         },
         {
@@ -285,7 +286,7 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             name: 'Авто-LPN',
             file: 'auto_lpn.js',
             description: 'Автоматично відкриває "перепризначити LPN" при скануванні LPN або будь-чого іншого, окрім тота',
-            excludeDeps: ['REFURB', 'WHD'],
+            excludeDeps: ['REFURB', 'WHD', 'PS'],
             getHandler: () => window.__autoLpn
         },
         {
@@ -293,7 +294,7 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             name: 'Aвто-LPN',
             file: 'auto_lpn_refurb.js',
             description: 'Автоматично заповнює стару LPN',
-            excludeDeps: ['CRET', 'FAST', 'UG'],
+            excludeDeps: ['CRET', 'FAST', 'UG', 'PS'],
             getHandler: () => window.__refurbLpn
         },
         {
@@ -301,6 +302,7 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             name: 'Авто-скасуй',
             file: 'clear_session.js',
             description: 'Автоматично скасовує сесію при натисненні `us` на клавіатурі.',
+            excludeDeps: ['PS'],
             getHandler: () => window.__clearSession
         },
         {
@@ -308,7 +310,7 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             name: 'Gravis',
             file: 'gravis.js',
             description: 'Якщо штрих-код товару доступний в Gravis автоматично вставляє його у відповідне поле при натисненні F8 або при скануванні тієї самої LPN. При відкритті вкладки з Gravis активуйте скрипт в ній також.',
-            excludeDeps: ['REFURB', 'WHD'],
+            excludeDeps: ['REFURB', 'WHD', 'PS'],
             getHandler: () => window.__gravis
         }
     ];

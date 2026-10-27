@@ -12,26 +12,10 @@ import '../scripts/off_task';
 import '../scripts/gravis';
 import '../scripts/clear_session';
 
+import { initGravis } from './hub_gravis';
+
 if (window.location.href.includes('gravis')) {
-    (async () => {
-        const currentBranch = window.__SH_BRANCH || 'main';
-        const url = currentBranch === 'local' 
-            ? 'http://localhost:3000/dist/hub_gravis.js'
-            : `https://raw.githubusercontent.com/alisohub/fc_amazon/refs/heads/${currentBranch}/dist/hub_gravis.js`;
-        
-        try {
-            debugLog('gravis', 'Fetching Gravis Hub from:', url);
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const code = await response.text();
-            
-            const script = document.createElement('script');
-            script.textContent = code;
-            document.head.appendChild(script);
-        } catch (err) {
-            alert(`⚠️ Failed to load Gravis Hub: ${err}`);
-        }
-    })();
+    initGravis();
 } else {
     if (window.__scriptHubLoaded) {
         const panel = document.getElementById('sh-panel');
@@ -55,7 +39,6 @@ if (window.location.href.includes('gravis')) {
         const urlParams = new URLSearchParams(window.location.search);
         const gradingMode = urlParams.get('gradingMode');
         
-        // TODO add ps
         let DEPARTAMENT_OPTIONS: Department[] = [];
         if (gradingMode === 'CRETURN_PRIMARY_GRADING') {
             DEPARTAMENT_OPTIONS = ["UG"];
@@ -66,11 +49,11 @@ if (window.location.href.includes('gravis')) {
         } else if (gradingMode === 'WAREHOUSE_DEALS') {
             DEPARTAMENT_OPTIONS = ["WHD"];
         } else {
-            DEPARTAMENT_OPTIONS = ["FAST", "CRET", "UG", "REFURB", "WHD"]; 
+            DEPARTAMENT_OPTIONS = Object.keys(DEPARTMENT_CONFIG) as Array<Department>;
         }
         
         function isDepartment(value: string | null): value is Department {
-            return value === "FAST" || value === "CRET" || value === "UG" || value === "REFURB" || value === "WHD";
+            return value !== null && value in DEPARTMENT_CONFIG;
         }
 
         const storedDep = localStorage.getItem(STORAGE_KEY_DEP);
