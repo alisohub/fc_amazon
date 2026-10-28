@@ -46,6 +46,10 @@ if (window.location.href.includes('gravis')) {
             DEPARTAMENT_OPTIONS = ["FAST", "CRET"];
         } else if (gradingMode === 'CRETURN_REFURB') {
             DEPARTAMENT_OPTIONS = ["REFURB"];
+        } else if (gradingMode === 'CRETURN_CLEAN_DECANT') {
+            DEPARTAMENT_OPTIONS = ["CD"];
+        } else if (gradingMode === 'CRETURN_PROBLEM_SOLVE') {
+            DEPARTAMENT_OPTIONS = ["PS"];
         } else if (gradingMode === 'WAREHOUSE_DEALS') {
             DEPARTAMENT_OPTIONS = ["WHD"];
         } else {

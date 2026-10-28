@@ -4,7 +4,8 @@ export const DEPARTMENT_CONFIG: Record<Department, DepartmentConfig> = {
     "UG":   { targetRate: 47, doubleCountMode: true},
     "REFURB": { targetRate: 30, doubleCountMode: false},
     "WHD": { targetRate: 25, doubleCountMode: false},
-    "PS" : { targetRate: 22, doubleCountMode: false}
+    "PS" : { targetRate: 22.5, doubleCountMode: false},
+    "CD" : { targetRate: 113, doubleCountMode: false}
 };
 // Local Storage 
 export const STORAGE_KEY_DEP = 'sh_hub_dep';

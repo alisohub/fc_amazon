@@ -8,7 +8,7 @@ declare global {
     // ==========================================
     
     // The base contract every script MUST follow.
-    type Department = "FAST" | "CRET" | "UG" | "REFURB" | "WHD" | "PS";
+    type Department = "FAST" | "CRET" | "UG" | "REFURB" | "CD" | "WHD" | "PS";
 
     interface DepartmentConfig {
         targetRate: number;
