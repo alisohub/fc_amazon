@@ -13,6 +13,7 @@ declare global {
     interface DepartmentConfig {
         targetRate: number;
         doubleCountMode: boolean;
+        clickCount: boolean;
     }
 
     interface ScriptDefinition {
@@ -65,6 +66,7 @@ declare global {
         customStartTime: string | null;
         targetRate?: number;
         doubleCountMode?: boolean;
+        clickCount?: boolean;
     }
 
     // ==========================================

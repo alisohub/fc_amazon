@@ -46,11 +46,15 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
 
                 const configRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
                 const configDoubleCount = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].doubleCountMode : false;
+                const configClickCount = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].clickCount : false;
+
                 const targetRate = settings.targetRate !== undefined ? settings.targetRate : configRate;
+                const clickCount = settings.clickCount !== undefined ? settings.clickCount : true;
 
                 handler.updateSettings({
                     targetRate: targetRate,
                     doubleCountMode: configDoubleCount,
+                    clickCount: clickCount
                 });
 
                 content.innerHTML = `
@@ -83,8 +87,28 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                             <button id="sh-btn-start-reset" class="sh-time-btn">Скинути</button>
                         </div>
                     </div>
+
+                    ${configClickCount ? `
+                    <div class="sh-setting-row sh-space-between" title="Авто підтвердження">
+                        <span style="font-size: 12px; color: #3c4043; font-weight: 500;">Авто підтвердження</span>
+                        <label class="sh-switch">
+                            <input type="checkbox" id="sh-cfg-count-click" ${clickCount ? 'checked' : ''}>
+                            <span class="sh-slider"></span>
+                        </label>
+                    </div>
+                    ` : ''}
                 `;
 
+                // Add listener for the new toggle
+                const countClickToggle = content.querySelector('#sh-cfg-count-click') as HTMLInputElement;
+                if (countClickToggle) {
+                    countClickToggle.addEventListener('change', (e: Event) => {
+                        const target = e.target as HTMLInputElement;
+                        handler.updateSettings({ clickCount: target.checked });
+                    });
+                }
+
+                // ... Keep all the other existing event listeners (lunchBreak, counts, opacity, targetRate, timeInputs) below this ...
                 content.querySelectorAll('.sh-opt-btn').forEach(btn => {
                     btn.addEventListener('click', (e: Event) => {
                         const target = e.target as HTMLElement;

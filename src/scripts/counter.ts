@@ -1,4 +1,5 @@
-import { STORAGE_KEY_COUNT, STORAGE_KEY_COUNTER, STORAGE_KEY_DBL_COUNT_ID } from '@shared/constants';
+import { ITM_CMT_SCRTS, STORAGE_KEY_COUNT, STORAGE_KEY_COUNTER, STORAGE_KEY_DBL_COUNT_ID } from '@shared/constants';
+import { findButtonByTestId } from '@shared/dom';
 import { getEffectiveWorkTime, calculateUPH, calculatePercentageStr, calculateFreeTime } from '@shared/time';
 import { debugLog } from '@shared/utils';
 
@@ -176,6 +177,16 @@ if (!window.__counterLoaded) {
         debugLog('item-counter', 'Counter UI updated:', { count, currentUPH, time: timeData.formatted, freeTime: currentFT });
     }
 
+    async function clickBlueButton(): Promise<void> {
+        const btn = await findButtonByTestId(ITM_CMT_SCRTS, 3000) as HTMLButtonElement;
+
+        if (btn && !btn.disabled) {
+            debugLog('item-counter', 'Clicking conformstion button');
+            
+            btn.click();
+        }   
+    }
+
     const originalOpen = XMLHttpRequest.prototype.open;
     const originalSend = XMLHttpRequest.prototype.send;
 
@@ -264,6 +275,10 @@ if (!window.__counterLoaded) {
 
                     debugLog('item-counter', `Container scan succeeded! Incrementing count by +${increment}`);
                     updateCounterUI(itemCounter + increment);
+                    if (settings.clickCount) {
+                        debugLog('item-counter', 'setting active click count');
+                        clickBlueButton().catch(err => debugLog('item-counter', 'Failed to click green button:', err));
+                    }
                 }
             } catch (error) {
                 debugLog('item-counter', 'Error parsing executeProcess XHR:', error);
