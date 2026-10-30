@@ -202,7 +202,7 @@ if (!window.__counterLoaded) {
                         const cls = (typeof el.className === 'string' ? el.className : '').toLowerCase();
 
                         // 1. Direct success confirmation text (e.g., Problem Solve item dispatch)
-                        const hasSuccessText = text.includes('wysłano pomyślnie') || text.includes('przedmiot wysłano');
+                        const hasSuccessText = text.includes('wysłano pomyślnie');
 
                         // 2. Generic toast/notification/alert success container
                         const isSuccessToast = cls.includes('success') && (
