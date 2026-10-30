@@ -7,7 +7,6 @@ const tamperMonkeyBanner = `// ==UserScript==
 // @description  Integrated automation scripts for Amazon FC 
 // @author       aliso
 // @match        *://trex-prod-eu.aka.amazon.com/*
-// @match        *://eu-cretfc-tools-dub.dub.proxy.amazon.com/*
 // @run-at       document-end
 // @grant        GM_setValue
 // @grant        GM_getValue

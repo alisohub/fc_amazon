@@ -5,6 +5,7 @@ export const DEPARTMENT_CONFIG: Record<Department, DepartmentConfig> = {
     "REFURB": { targetRate: 30, doubleCountMode: false, clickCount: true},
     "WHD": { targetRate: 25, doubleCountMode: false, clickCount: true},
     "PS" : { targetRate: 22.5, doubleCountMode: false, clickCount: false},
+    "PS(CD)" : { targetRate: 27, doubleCountMode: false, clickCount: false},
     "CD" : { targetRate: 113, doubleCountMode: false, clickCount: false}
 };
 // Local Storage 

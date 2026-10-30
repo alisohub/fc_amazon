@@ -8,7 +8,7 @@ declare global {
     // ==========================================
     
     // The base contract every script MUST follow.
-    type Department = "FAST" | "CRET" | "UG" | "REFURB" | "CD" | "WHD" | "PS";
+    type Department = "FAST" | "CRET" | "UG" | "REFURB" | "CD" | "WHD" | "PS" | "PS(CD)";
 
     interface DepartmentConfig {
         targetRate: number;
@@ -67,6 +67,7 @@ declare global {
         targetRate?: number;
         doubleCountMode?: boolean;
         clickCount?: boolean;
+        isPS?: boolean;
     }
 
     // ==========================================

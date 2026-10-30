@@ -32,6 +32,9 @@ if (!window.__counterLoaded) {
     let active: boolean = false;
     let overlayVisible: boolean = true;
 
+    let psObserver: MutationObserver | null = null;
+    let lastToastTime = 0;
+
     function saveCount(count: number): void {
         itemCounter = count;
         try { localStorage.setItem(STORAGE_KEY_COUNT, count.toString()); }
@@ -187,106 +190,158 @@ if (!window.__counterLoaded) {
         }   
     }
 
-    const originalOpen = XMLHttpRequest.prototype.open;
-    const originalSend = XMLHttpRequest.prototype.send;
+    function startPSCounter() {
+        if (psObserver) return; // Prevent multiple observers
+        psObserver = new MutationObserver((mutations) => {
+            if (!active) return; // Don't count if script is paused/off
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        const el = node as HTMLElement;
+                        const text = (el.innerText || el.textContent || '').toLowerCase();
+                        const cls = (typeof el.className === 'string' ? el.className : '').toLowerCase();
 
-    XMLHttpRequest.prototype.open = function(method: string, url: string | URL, ...rest: any[]) {
-        (this as any).__targetUrl = String(url);
-        return (originalOpen as any).call(this, method, url, ...rest);
-    };
+                        // 1. Direct success confirmation text (e.g., Problem Solve item dispatch)
+                        const hasSuccessText = text.includes('wysłano pomyślnie') || text.includes('przedmiot wysłano');
 
-    XMLHttpRequest.prototype.send = function(body: Document | XMLHttpRequestBodyInit | null) {
-        if (typeof body === "string") {
-            try {
-                (this as any).__requestBody = JSON.parse(body);
-            } catch {
-                (this as any).__requestBody = null;
-            }
-        } else {
-            (this as any).__requestBody = null;
-        }
+                        // 2. Generic toast/notification/alert success container
+                        const isSuccessToast = cls.includes('success') && (
+                            cls.includes('notification') ||
+                            cls.includes('toast') ||
+                            cls.includes('alert')
+                        );
 
-        this.addEventListener("load", function () {
-            if (!active) return;
+                        if (hasSuccessText || isSuccessToast) {
+                            // Guard: Ignore session reset or clear actions
+                            const isClearNotification = (
+                                text.includes('wyczyszczony') ||
+                                text.includes('wyczyszczono') ||
+                                text.includes('cleared') ||
+                                text.includes('clear')
+                            );
 
-            const targetUrl = (this as any).__targetUrl;
-            if (!targetUrl?.includes("/api/executeProcess")) {
-                return;
-            }
-
-            try {
-                const responseBody = typeof this.response === "string"
-                    ? JSON.parse(this.response)
-                    : this.response;
-
-                if (!responseBody) return;
-
-                let resPayload = responseBody.actionPayload;
-                if (typeof resPayload === "string") {
-                    try { resPayload = JSON.parse(resPayload); } catch (e) {}
-                }
-
-                const requestBody = (this as any).__requestBody;
-                let reqPayload = requestBody?.actionPayload;
-                if (typeof reqPayload === "string") {
-                    try { reqPayload = JSON.parse(reqPayload); } catch (e) {}
-                }
-
-                const pid = responseBody.processManagerId || resPayload?.processManagerId || requestBody?.processManagerId;
-                debugLog('item-counter', 'Intercepted /api/executeProcess:', {
-                    action: requestBody?.action?.name,
-                    status: this.status,
-                    pid,
-                    isInputScanned: reqPayload?.isInputScanned
-                });
-
-                if (settings.doubleCountMode) {
-                    if (
-                        resPayload?.listingConditionEvaluated === true &&
-                        resPayload?.decantedUnit === true &&
-                        resPayload?.sellable === true &&
-                        typeof pid === "string"
-                    ) {
-                        debugLog('item-counter', 'Double-count eligible unit detected, saving PID:', pid);
-                        try {
-                            localStorage.setItem(STORAGE_KEY_DBL_COUNT_ID, pid);
-                        } catch (e) {}
-                    }
-                }
-
-                if (
-                    this.status === 200 &&
-                    requestBody?.action?.name === "SCAN_CONTAINER_IDENTIFIER" &&
-                    reqPayload?.isInputScanned === true
-                ) {
-                    let increment = 1;
-                    try {
-                        const savedPid = localStorage.getItem(STORAGE_KEY_DBL_COUNT_ID);
-                        if (
-                            settings.doubleCountMode &&
-                            savedPid !== null &&
-                            pid === savedPid
-                        ) {
-                            increment = 2;
-                            localStorage.removeItem(STORAGE_KEY_DBL_COUNT_ID);
-                            debugLog('item-counter', 'Matched double-count PID! Incrementing by 2');
+                            if (!isClearNotification) {
+                                const now = Date.now();
+                                // 500ms cooldown to debounce multi-node DOM insertions
+                                if (now - lastToastTime > 500) {
+                                    lastToastTime = now;
+                                    debugLog('item-counter', 'PS Toast/Success notification detected! Incrementing by +1');
+                                    updateCounterUI(itemCounter + 1);
+                                    return;
+                                }
+                            }
                         }
-                    } catch (e) {}
-
-                    debugLog('item-counter', `Container scan succeeded! Incrementing count by +${increment}`);
-                    updateCounterUI(itemCounter + increment);
-                    if (settings.clickCount) {
-                        debugLog('item-counter', 'setting active click count');
-                        clickBlueButton().catch(err => debugLog('item-counter', 'Failed to click green button:', err));
                     }
                 }
-            } catch (error) {
-                debugLog('item-counter', 'Error parsing executeProcess XHR:', error);
             }
         });
+        psObserver.observe(document.body, { childList: true, subtree: true });
+        debugLog('item-counter', 'Started PS Toast Observer');
+    }   
 
-        return originalSend.call(this, body);
-    };
+    if (!settings.isPS) {
+        const originalOpen = XMLHttpRequest.prototype.open;
+        const originalSend = XMLHttpRequest.prototype.send;
+
+        XMLHttpRequest.prototype.open = function(method: string, url: string | URL, ...rest: any[]) {
+            (this as any).__targetUrl = String(url);
+            return (originalOpen as any).call(this, method, url, ...rest);
+        };
+
+        XMLHttpRequest.prototype.send = function(body: Document | XMLHttpRequestBodyInit | null) {
+            if (typeof body === "string") {
+                try {
+                    (this as any).__requestBody = JSON.parse(body);
+                } catch {
+                    (this as any).__requestBody = null;
+                }
+            } else {
+                (this as any).__requestBody = null;
+            }
+
+            this.addEventListener("load", function () {
+                if (!active) return;
+
+                const targetUrl = (this as any).__targetUrl;
+                if (!targetUrl?.includes("/api/executeProcess")) {
+                    return;
+                }
+
+                try {
+                    const responseBody = typeof this.response === "string"
+                        ? JSON.parse(this.response)
+                        : this.response;
+
+                    if (!responseBody) return;
+
+                    let resPayload = responseBody.actionPayload;
+                    if (typeof resPayload === "string") {
+                        try { resPayload = JSON.parse(resPayload); } catch (e) {}
+                    }
+
+                    const requestBody = (this as any).__requestBody;
+                    let reqPayload = requestBody?.actionPayload;
+                    if (typeof reqPayload === "string") {
+                        try { reqPayload = JSON.parse(reqPayload); } catch (e) {}
+                    }
+
+                    const pid = responseBody.processManagerId || resPayload?.processManagerId || requestBody?.processManagerId;
+                    debugLog('item-counter', 'Intercepted /api/executeProcess:', {
+                        action: requestBody?.action?.name,
+                        status: this.status,
+                        pid,
+                        isInputScanned: reqPayload?.isInputScanned
+                    });
+
+                    if (settings.doubleCountMode) {
+                        if (
+                            resPayload?.listingConditionEvaluated === true &&
+                            resPayload?.decantedUnit === true &&
+                            resPayload?.sellable === true &&
+                            typeof pid === "string"
+                        ) {
+                            debugLog('item-counter', 'Double-count eligible unit detected, saving PID:', pid);
+                            try {
+                                localStorage.setItem(STORAGE_KEY_DBL_COUNT_ID, pid);
+                            } catch (e) {}
+                        }
+                    }
+
+                    if (
+                        this.status === 200 &&
+                        requestBody?.action?.name === "SCAN_CONTAINER_IDENTIFIER" &&
+                        reqPayload?.isInputScanned === true
+                    ) {
+                        let increment = 1;
+                        try {
+                            const savedPid = localStorage.getItem(STORAGE_KEY_DBL_COUNT_ID);
+                            if (
+                                settings.doubleCountMode &&
+                                savedPid !== null &&
+                                pid === savedPid
+                            ) {
+                                increment = 2;
+                                localStorage.removeItem(STORAGE_KEY_DBL_COUNT_ID);
+                                debugLog('item-counter', 'Matched double-count PID! Incrementing by 2');
+                            }
+                        } catch (e) {}
+
+                        debugLog('item-counter', `Container scan succeeded! Incrementing count by +${increment}`);
+                        updateCounterUI(itemCounter + increment);
+                        if (settings.clickCount) {
+                            debugLog('item-counter', 'setting active click count');
+                            clickBlueButton().catch(err => debugLog('item-counter', 'Failed to click green button:', err));
+                        }
+                    }
+                } catch (error) {
+                    debugLog('item-counter', 'Error parsing executeProcess XHR:', error);
+                }
+            });
+
+            return originalSend.call(this, body);
+        };
+    }
+
 
     document.addEventListener('keydown', (e: KeyboardEvent) => {
         if (!active) return;
@@ -329,12 +384,19 @@ if (!window.__counterLoaded) {
         enable: (): void => {
             active = true;
             debugLog('item-counter', 'Enabled');
+            if (settings.isPS) {
+                startPSCounter();
+            }
             const overlay = createOrGetOverlay();
             if (overlay) overlay.style.display = overlayVisible ? 'block' : 'none';
             updateCounterUI(itemCounter);
         },
         disable: (): void => {
             active = false;
+            if (psObserver) {
+                psObserver.disconnect();
+                psObserver = null;
+            }
             debugLog('item-counter', 'Disabled');
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay) overlay.style.display = 'none';

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon FC Scripts
 // @namespace    http://tampermonkey.net/
-// @version      0.9.1
+// @version      1.0.0
 // @description  Integrated automation scripts for Amazon FC 
 // @author       aliso
 // @match        *://trex-prod-eu.aka.amazon.com/*

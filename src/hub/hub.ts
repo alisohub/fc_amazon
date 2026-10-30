@@ -11,7 +11,6 @@ import '../scripts/counter';
 import '../scripts/off_task';
 import '../scripts/gravis';
 import '../scripts/clear_session';
-
 import { initGravis } from './hub_gravis';
 
 if (window.location.href.includes('gravis')) {
@@ -33,12 +32,13 @@ if (window.location.href.includes('gravis')) {
     } 
     else {
         window.__scriptHubLoaded = true;
+
         type Branch = "main" | "development" | "local";
-        
         const currentBranch: Branch = (window.__SH_BRANCH as Branch) || 'main';
+
         const urlParams = new URLSearchParams(window.location.search);
         const gradingMode = urlParams.get('gradingMode');
-        
+
         let DEPARTAMENT_OPTIONS: Department[] = [];
         if (gradingMode === 'CRETURN_PRIMARY_GRADING') {
             DEPARTAMENT_OPTIONS = ["UG"];
@@ -55,7 +55,7 @@ if (window.location.href.includes('gravis')) {
         } else {
             DEPARTAMENT_OPTIONS = Object.keys(DEPARTMENT_CONFIG) as Array<Department>;
         }
-        
+
         function isDepartment(value: string | null): value is Department {
             return value !== null && value in DEPARTMENT_CONFIG;
         }
@@ -101,10 +101,19 @@ if (window.location.href.includes('gravis')) {
             }
         }
 
+        // 1. Only stop propagation on inputs/controls when the panel is actually open,
+        // and let Ctrl+Shift+H pass through
         ['keydown', 'keyup', 'keypress'].forEach(eventType => {
             window.addEventListener(eventType, (e: Event) => {
+                if (eventType === 'keydown') {
+                    const ke = e as KeyboardEvent;
+                    if (ke.ctrlKey && ke.shiftKey && (ke.code === 'KeyH' || ke.key.toLowerCase() === 'h')) {
+                        return;
+                    }
+                }
+                const panel = document.getElementById('sh-panel');
                 const target = e.target as HTMLElement | null;
-                if (target && target.closest('#sh-root')) {
+                if (panel?.classList.contains('sh-open') && target && target.closest('#sh-root')) {
                     e.stopPropagation();
                 }
             }, true);
@@ -153,7 +162,7 @@ if (window.location.href.includes('gravis')) {
                 <style>
                     ${HUB_STYLES}
                 </style>
-                
+                                
                 <div id="sh-panel" style="opacity: ${panelOpacity};">
                     <div class="sh-header">
                         <div class="sh-header-group">
@@ -222,24 +231,42 @@ if (window.location.href.includes('gravis')) {
                 document.querySelectorAll('.sh-adv-container').forEach(el => el.classList.remove('sh-expanded'));
                 if (globalSettings) globalSettings.classList.remove('sh-expanded');
                 if (settingsToggleBtn) settingsToggleBtn.classList.remove('active');
+
+                // Release focus from off-screen Hub elements so hotkeys work on the page
+                if (document.activeElement instanceof HTMLElement && hub.contains(document.activeElement)) {
+                    document.activeElement.blur();
+                }
+
                 window.dispatchEvent(new CustomEvent('sh-panel-closed'));
             }
+
+            function openPanel(): void {
+                panelEl.classList.add('sh-open');
+            }
+
+            // Attach to window (capture phase) so it runs at the very top of the event chain
+            window.addEventListener('keydown', (e: KeyboardEvent) => {
+                if (e.ctrlKey && e.shiftKey && (e.code === 'KeyH' || e.key.toLowerCase() === 'h')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openPanel();
+                }
+            }, true);
 
             document.addEventListener('mousedown', (e: MouseEvent) => { 
                 const target = e.target as Node;
                 if (panelEl.classList.contains('sh-open') && !panelEl.contains(target)) closePanel(); 
             });
-            
+
             const subDepSelect = document.getElementById('sh-subdep-select') as HTMLSelectElement;
             if (subDepSelect) {
                 subDepSelect.addEventListener('change', (e: Event) => {
                     const target = e.target as HTMLSelectElement;
-                    
                     if (isDepartment(target.value)) {
                         currentDep = target.value;
                         localStorage.setItem(STORAGE_KEY_DEP, currentDep);
                         debugLog('hub', `Department changed to: ${currentDep}`);
-                        
+
                         const newConfig = DEPARTMENT_CONFIG[currentDep];
                         if (newConfig) {
                             if (window.__itemCounter) {
@@ -275,6 +302,8 @@ if (window.location.href.includes('gravis')) {
                                 }
                             }
                         });
+
+                        updateMasterToggleState();
                     }
                 });
             }
@@ -282,10 +311,9 @@ if (window.location.href.includes('gravis')) {
             document.addEventListener('keydown', (e: KeyboardEvent) => {
                 if (e.key !== 'Enter') return;
                 if (!window.__refurbLpnLoaded && !window.__gravisLoaded && !window.__clearSession) return;
-                    
+
                 const input = e.target as HTMLInputElement;
                 if (!input || !input.matches('input')) return;
-
                 const val = input.value?.trim();
                 if (!val) return;
 
@@ -301,7 +329,6 @@ if (window.location.href.includes('gravis')) {
 
                 try {
                     const isLpnInput = LABELS.lpnTestId.some(tstid => currentTestId.includes(tstid.toLowerCase()));
-                    
                     if (isLpnInput && /^lpn[a-z0-9]+/i.test(val)) {
                         debugLog('hub', `LPN scan detected on [${currentTestId}]: ${val}`);
                         if (localStorage.getItem(STORAGE_KEY_LPN) !== val) {
@@ -313,7 +340,6 @@ if (window.location.href.includes('gravis')) {
                     }
 
                     const isWsInput = currentTestId.includes(LABELS.wsTestId);
-                    
                     if (isWsInput && /^ws[_-]+/i.test(val)) {
                         debugLog('hub', `Workstation scan detected on [${currentTestId}]: ${val}`);
                         localStorage.setItem(STORAGE_KEY_STATION, val);
@@ -328,11 +354,11 @@ if (window.location.href.includes('gravis')) {
                 if (script.experimental && !['development', 'local'].includes(currentBranch)) return false;
                 return true;
             });
-            
+
             const updateMasterToggleState = (): void => {
                 const chkAll = document.getElementById('sh-chk-all') as HTMLInputElement;
                 if (!chkAll) return;
-                
+
                 const standardScripts = visibleScripts.filter(s => {
                     if (s.experimental) return false;
                     if (s.excludeDeps && s.excludeDeps.includes(currentDep)) return false;
@@ -342,17 +368,17 @@ if (window.location.href.includes('gravis')) {
                 const checkBoxes = standardScripts.map(s => document.getElementById(`sh-chk-${s.id}`) as HTMLInputElement | null);
                 chkAll.checked = checkBoxes.length > 0 && checkBoxes.every(chk => chk && chk.checked);
             };
-            
+
             const listContainer = document.getElementById('sh-list');
             if (listContainer) {
                 visibleScripts.forEach(script => {
                     const handler = script.getHandler();
                     const isCurrentlyActive = handler ? handler.isActive() : false;
-                    
+
                     const card = document.createElement('div');
                     card.id = `sh-card-${script.id}`; 
                     card.className = 'sh-card';
-                    
+
                     if (script.excludeDeps?.includes(currentDep)) {
                         card.style.display = 'none';
                     }
@@ -370,17 +396,17 @@ if (window.location.href.includes('gravis')) {
                         </div>
                         <div class="sh-card-settings" id="sh-settings-${script.id}"></div>
                     `;
-                    
+
                     listContainer.appendChild(card);
-                    
+
                     const chk = card.querySelector(`#sh-chk-${script.id}`) as HTMLInputElement;
                     const settingsContainer = card.querySelector(`#sh-settings-${script.id}`) as HTMLElement;
-                    
+
                     if (isCurrentlyActive && script.renderSettings) {
                         settingsContainer.style.display = 'block';
                         script.renderSettings(settingsContainer);
                     }
-                    
+
                     if (chk) {
                         chk.onchange = async () => {
                             await handleToggle(script, chk, settingsContainer);
@@ -389,20 +415,21 @@ if (window.location.href.includes('gravis')) {
                     }
                 });
             }
-            
+
             const chkAll = document.getElementById('sh-chk-all') as HTMLInputElement;
             if (chkAll) {
                 chkAll.addEventListener('change', (e) => {
                     const turnOn = (e.target as HTMLInputElement).checked;
                     debugLog('hub', `Master toggle clicked: ${turnOn}`);
                     const togglePromises: Promise<void>[] = [];
-                    
+
                     visibleScripts.forEach(script => {
-                        if (script.experimental) return; 
+                        if (script.experimental) return;
                         if (script.excludeDeps && script.excludeDeps.includes(currentDep)) return;
-                        
+
                         const chk = document.getElementById(`sh-chk-${script.id}`) as HTMLInputElement;
                         const settingsContainer = document.getElementById(`sh-settings-${script.id}`);
+
                         if (chk && chk.checked !== turnOn && !chk.disabled) {
                             chk.checked = turnOn;
                             togglePromises.push(handleToggle(script, chk, settingsContainer));
@@ -418,11 +445,11 @@ if (window.location.href.includes('gravis')) {
                     }
                 });
             }
-            
+
             updateMasterToggleState();
             setTimeout(() => { panelEl.classList.add('sh-open'); }, 100);
         }
-        
+
         injectUI();
     }
 }
