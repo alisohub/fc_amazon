@@ -5,11 +5,10 @@ on:
     branches:
       - main
       - development
-      - ts-all-the-way
     paths:
       - 'src/**'            # Only run if code inside src/ changes
       - 'package.json'
-      - 'tsup.config.ts'
+      - 'tsdown.config.ts'
 
 # 2. What should it do?
 jobs:
@@ -32,7 +31,7 @@ jobs:
           node-version: '24'
           cache: 'npm'
 
-      # Step C: Install tsup and typescript
+      # Step C: Install tsdown and typescript
       - name: Install dependencies
         run: npm install
 

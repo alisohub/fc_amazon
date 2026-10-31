@@ -18,12 +18,22 @@ export const STORAGE_KEY_LPN = 'sh_lpn';
 export const STORAGE_KEY_STATION = 'sh_work_station';
 export const STORAGE_KEY_DBL_COUNT_ID = 'sh_double_count_pid';
 export const STORAGE_KEY_DEBUG = 'sh_debug_config';
+export const STORAGE_KEY_COUNT_MID_STATE = {
+    mId: "sh_count_mid",
+    state: "sh_count_state"
+};  
 
 
 export const READY_STATE = {
     NOT_STARTED: "NOT_STARTED",
     IN_PROGRESS: "IN_PROGRESS",
     NOT_FOUND: "NOT_FOUND"
+};
+
+export const COUNT_STATE = {
+    IN_PROGRESS: "in_progress",
+    COMPLETED_BY_TOAST: "completed_by_toast",
+    COMPLETED_BY_XHR: "completed_by_xhr"
 };
 
 // BUTTON LABEL

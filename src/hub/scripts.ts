@@ -49,7 +49,7 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                 const configClickCount = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].clickCount : false;
 
                 const targetRate = settings.targetRate !== undefined ? settings.targetRate : configRate;
-                const clickCount = settings.clickCount !== undefined ? settings.clickCount : true;
+                const clickCount = settings.clickCount !== undefined ? settings.clickCount : false;
 
                 const isPS = currentDep === 'PS' || currentDep === 'PS(CD)';
 
