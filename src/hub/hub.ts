@@ -49,7 +49,7 @@ if (window.location.href.includes('gravis')) {
         } else if (gradingMode === 'CRETURN_CLEAN_DECANT') {
             DEPARTAMENT_OPTIONS = ["CD"];
         } else if (gradingMode === 'CRETURN_PROBLEM_SOLVE') {
-            DEPARTAMENT_OPTIONS = ["PS"];
+            DEPARTAMENT_OPTIONS = ["PS" /*,"PS(CD)" */];
         } else if (gradingMode === 'WAREHOUSE_DEALS') {
             DEPARTAMENT_OPTIONS = ["WHD"];
         } else {
