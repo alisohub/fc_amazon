@@ -16,9 +16,6 @@ if (!window.__autoLpnLoaded) {
         if (!input.matches || input.closest('#sh-root')) return;
         if (!input.matches('input:not([type="hidden"]):not([disabled])') || isInsideModal(input)) return;
 
-        const inputLabel = input.getAttribute('aria-label');
-        if (!hasTargetLabel(inputLabel)) return;
-
         const now: number = Date.now();
         if (now < cooldownUntil) {
             debugLog('auto-lpn', `Cooldown active (${cooldownUntil - now}ms remaining)`);
