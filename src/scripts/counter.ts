@@ -310,7 +310,7 @@ if (!window.__counterLoaded) {
                     if (
                         this.status === 200 &&
                         requestBody?.action?.name === "SCAN_CONTAINER_IDENTIFIER" &&
-                        reqPayload?.isInputScanned === true
+                        reqPayload?.containerIdentifier !== ""
                     ) {
                         let increment = 1;
                         try {

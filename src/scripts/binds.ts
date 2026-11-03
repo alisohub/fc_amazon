@@ -159,7 +159,7 @@ if (!window.__bindsLoaded) {
                 const targetEl = (document.activeElement as HTMLElement) || document.body;
                 triggerEnter(targetEl);
             }
-        }, 500);
+        }, 600);
         
         fallbackTimer = setTimeout(() => { if (!domChanged) stopScript(); }, 3000);
     }
