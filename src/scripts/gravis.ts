@@ -1,4 +1,4 @@
-import { CHS_ITM_LST_BTN_TSTID, ITM_SCN_INPT_TSTID, READY_STATE, STORAGE_KEY_LPN } from '@shared/constants';
+import { CHS_ITM_LST_BTN_TSTID, ITM_SCN_INPT_TSTID, READY_STATE, STORAGE_SAVED } from '@shared/constants';
 import { setNativeValue, triggerEnter, findInputByTestId, findButtonByTestId } from '@shared/dom';
 import { debugLog, isDebugEnabled } from '@shared/utils';
 
@@ -47,6 +47,15 @@ if (!window.__gravisLoaded) {
         }
     }
 
+    function fillAsin(asin: string): void {
+        const asinInput = findInputByTestId(ITM_SCN_INPT_TSTID) as HTMLInputElement;
+        if (asinInput) {
+            debugLog('gravis', `Filling ASIN input with: ${asin}`);
+            setNativeValue(asinInput, asin);
+            triggerEnter(asinInput);
+        }
+    }
+
     // Use capture phase (true) so we can intercept LPN scans into the item input BEFORE Socrates submits them
     document.addEventListener('keydown', async (e: KeyboardEvent) => {
         if (!active || !gravisWindow || gravisWindow.closed) return;
@@ -58,6 +67,14 @@ if (!window.__gravisLoaded) {
                 debugLog('gravis', 'F8 pressed, but item scan input is not on screen');
                 return;
             }
+            try {
+                const currentAsin = localStorage.getItem(STORAGE_SAVED.current.asin);
+                if (currentAsin) {
+                    debugLog('gravis', 'F8 pressed, got saved asin');
+                    fillAsin(currentAsin);
+                    return;
+                }
+            } catch {}
             debugLog('gravis', 'F8 pressed, requesting ASIN from Gravis tab');
             pollRetries = 0;
             gravisWindow.postMessage({ type: 'TRIGGER_ASIN_SEARCH' }, '*');
@@ -75,12 +92,20 @@ if (!window.__gravisLoaded) {
         const currentTestId = (input.getAttribute('data-testid') || '').toLowerCase();
         try {
             const isItemScanInput = currentTestId.includes(ITM_SCN_INPT_TSTID.toLowerCase());
-            const savedLpn = localStorage.getItem(STORAGE_KEY_LPN);
+            const savedLpn = localStorage.getItem(STORAGE_SAVED.current.lpn);
 
             if (isItemScanInput && savedLpn && savedLpn.toLowerCase() === val.toLowerCase()) {
                 e.preventDefault();
                 e.stopPropagation();
                 setNativeValue(input, '');
+                try {
+                    const currentAsin = localStorage.getItem(STORAGE_SAVED.current.asin);
+                    if (currentAsin) {
+                        debugLog('gravis', 'LPN scanned, got saved asin');
+                        fillAsin(currentAsin);
+                        return;
+                    }
+                } catch {}
 
                 debugLog('gravis', 'LPN scanned in item input! Requesting ASIN from Gravis tab');
                 pollRetries = 0;
@@ -158,11 +183,10 @@ if (!window.__gravisLoaded) {
                 }, delay);
             } else {
                 pollRetries = 0;
-                const asinInput = findInputByTestId(ITM_SCN_INPT_TSTID) as HTMLInputElement;
-                if (asinInput) {
-                    debugLog('gravis', `Filling ASIN input with: ${data.payload}`);
-                    setNativeValue(asinInput, data.payload);
-                    triggerEnter(asinInput);
+                try {
+                    localStorage.setItem(STORAGE_SAVED.current.asin, data.payload);
+                } finally {
+                    fillAsin(data.payload);
                 }
             }
         }

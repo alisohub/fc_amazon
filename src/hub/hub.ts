@@ -1,4 +1,4 @@
-import { STORAGE_KEY_DEP, STORAGE_KEY_LPN, STORAGE_KEY_COUNTER, STORAGE_KEY_STATION, PKG_INPT_TSTID, WD_ITM_SCN_INPT_TSTID, LPN_INPT_TSTID, WS_INPT_TSTID, DEPARTMENT_CONFIG } from '@shared/constants';
+import { STORAGE_KEY_DEP, STORAGE_KEY_COUNTER, STORAGE_KEY_STATION, PKG_INPT_TSTID, WD_ITM_SCN_INPT_TSTID, LPN_INPT_TSTID, WS_INPT_TSTID, DEPARTMENT_CONFIG, STORAGE_SAVED } from '@shared/constants';
 import { debugLog, getDebugConfig, setDebugFlag, isDevEnv, DebugScope } from '@shared/utils';
 import { HUB_STYLES } from './styles';
 import { getScriptsConfig } from './scripts';
@@ -331,9 +331,18 @@ if (window.location.href.includes('gravis')) {
                     const isLpnInput = LABELS.lpnTestId.some(tstid => currentTestId.includes(tstid.toLowerCase()));
                     if (isLpnInput && /^lpn[a-z0-9]+/i.test(val)) {
                         debugLog('hub', `LPN scan detected on [${currentTestId}]: ${val}`);
-                        if (localStorage.getItem(STORAGE_KEY_LPN) !== val) {
-                            localStorage.setItem(STORAGE_KEY_LPN, val);
+                        const currentLpn = localStorage.getItem(STORAGE_SAVED.current.lpn);
+                        const currentAsin = localStorage.getItem(STORAGE_SAVED.current.asin);
+                        if (currentLpn !== val) {
+                            localStorage.setItem(STORAGE_SAVED.previous.lpn, currentLpn ? currentLpn : '');
+                            localStorage.setItem(STORAGE_SAVED.previous.asin, currentAsin ? currentAsin : '');
+                            localStorage.setItem(STORAGE_SAVED.current.lpn, val);
+                            localStorage.removeItem(STORAGE_SAVED.current.asin);
                             debugLog('hub', `Saved new LPN to localStorage & syncing to Gravis: ${val}`);
+                            if (window.__refurbLpn) {
+                                debugLog('hub', 'Send reufrb-lpn-updated event');
+                                window.dispatchEvent(new CustomEvent("refurb-lpn-updated"));
+                            }
                             window.__gravis?.sendLpn(val);
                         }
                         return;

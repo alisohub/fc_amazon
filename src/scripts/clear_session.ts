@@ -1,4 +1,4 @@
-import { CLR_BTN_TSTID, CNT_BTN_TSTID, LPN_INPT_TSTID, STORAGE_KEY_LPN, STORAGE_KEY_STATION, WS_INPT_TSTID } from "@shared/constants";
+import { CLR_BTN_TSTID, CNT_BTN_TSTID, LPN_INPT_TSTID, STORAGE_KEY_STATION, STORAGE_SAVED, WS_INPT_TSTID } from "@shared/constants";
 import { setNativeValue, triggerEnter, findButtonByTestId, findInputByTestId } from "@shared/dom";
 import { debugLog } from "@shared/utils";
 
@@ -29,7 +29,7 @@ if (!window.__clearSessionLoaded) {
 
             const lpnInp = await findInputByTestId(LPN_INPT_TSTID, 1000) as HTMLInputElement;
             if (lpnInp) {
-                const savedLpn = localStorage.getItem(STORAGE_KEY_LPN);
+                const savedLpn = localStorage.getItem(STORAGE_SAVED.current.lpn);
                 if (!savedLpn) {
                     debugLog('clear-session', 'Aborted: No saved LPN in localStorage');
                     alert("Ще жодної LPN не записано, спробуйте з наступним товаром.");

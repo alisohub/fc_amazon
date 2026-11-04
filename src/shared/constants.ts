@@ -14,7 +14,6 @@ export const STORAGE_KEY_COUNT = 'sh_item_counter_count';
 export const STORAGE_KEY_COUNTER = 'sh_item_counter_settings';
 export const STORAGE_KEY_TASK = 'sh_off_task_settings';
 export const STORAGE_KEY_BINDS = 'sh_binds_config';
-export const STORAGE_KEY_LPN = 'sh_lpn';
 export const STORAGE_KEY_STATION = 'sh_work_station';
 export const STORAGE_KEY_DBL_COUNT_ID = 'sh_double_count_pid';
 export const STORAGE_KEY_DEBUG = 'sh_debug_config';
@@ -23,6 +22,16 @@ export const STORAGE_KEY_COUNT_MID_STATE = {
     state: "sh_count_state"
 };  
 
+export const STORAGE_SAVED = {
+    previous: {
+        lpn: "sh_previous_lpn",
+        asin: "sh_previous_asin"
+    },
+    current: {
+        lpn: "sh_current_lpn",
+        asin: "sh_current_asin"
+    } 
+};
 
 export const READY_STATE = {
     NOT_STARTED: "NOT_STARTED",

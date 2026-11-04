@@ -225,7 +225,7 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             name: 'Авто-Введення (Off-Task)',
             file: 'off_task.js',
             description: 'Натисніть Alt+O, щоб задати час та відсканувати тот для авто-прибиття.',
-            excludeDeps: ["PS", "PS(CD)"],
+            excludeDeps: ["PS"],
             getHandler: () => window.__offTask
         },
         {
@@ -233,7 +233,7 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             name: 'Бінди',
             file: 'binds.js',
             description: 'Автоматично проклікує при натисненні.<br>Натисніть на F-кнопку для запису(альтернативно F9 і F1-F7) або на слово, щоб видалити його.',
-            excludeDeps: ["PS", "PS(CD)", "CD"],
+            excludeDeps: ["PS", "CD"],
             getHandler: () => window.__binds,
             renderSettings: createSettingsDrawer((content, signal) => {
                 const handler = window.__binds as BindsHandler;
@@ -314,15 +314,15 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             name: 'Авто-LPN',
             file: 'auto_lpn.js',
             description: 'Автоматично відкриває "перепризначити LPN" при скануванні LPN або будь-чого іншого, окрім тота',
-            excludeDeps: ['CD', 'REFURB', 'WHD', "PS", "PS(CD)"],
+            excludeDeps: ['CD', 'REFURB', 'WHD', "PS"],
             getHandler: () => window.__autoLpn
         },
         {
             id: 'refurb-lpn',
             name: 'Aвто-LPN',
             file: 'auto_lpn_refurb.js',
-            description: 'Автоматично заповнює стару LPN',
-            excludeDeps: ['CD', 'CRET', 'FAST', 'UG', "PS", "PS(CD)"],
+            description: 'Автоматично заповнює стару LPN. Нажміть кнопку перепризначення або проскануйте нову LPN',
+            excludeDeps: ['CD', 'CRET', 'FAST', 'UG', "PS"],
             getHandler: () => window.__refurbLpn
         },
         {
@@ -330,7 +330,7 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             name: 'Авто-скасуй',
             file: 'clear_session.js',
             description: 'Автоматично скасовує сесію при натисненні `us` на клавіатурі.',
-            excludeDeps: ['CD', "PS", "PS(CD)"],
+            excludeDeps: ['CD', "PS"],
             getHandler: () => window.__clearSession
         },
         {
@@ -338,7 +338,7 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
             name: 'Gravis',
             file: 'gravis.js',
             description: 'Якщо штрих-код товару доступний в Gravis автоматично вставляє його у відповідне поле при натисненні F8 або при скануванні тієї самої LPN. При відкритті вкладки з Gravis активуйте скрипт в ній також.',
-            excludeDeps: ['CD', 'REFURB', 'WHD', "PS", "PS(CD)"],
+            excludeDeps: ['CD', 'REFURB', 'WHD', "PS"],
             getHandler: () => window.__gravis
         }
     ];

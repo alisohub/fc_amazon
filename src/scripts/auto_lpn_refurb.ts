@@ -1,5 +1,5 @@
-import { LPN_ASGN_NEW_BTN_SPN, LPN_OLD_LPN_INPT_TSTID, STORAGE_KEY_LPN } from "@shared/constants";
-import { findInputByTestId, setNativeValue, triggerEnter } from "@shared/dom";
+import { LPN_ASGN_NEW_BTN_TSTID, LPN_OLD_LPN_INPT_TSTID, STORAGE_SAVED } from "@shared/constants";
+import { findButtonByTestId, findInputByTestId, setNativeValue, triggerEnter } from "@shared/dom";
 import { debugLog } from "@shared/utils";
 
 if (!window.__refurbLpnLoaded) {
@@ -9,57 +9,69 @@ if (!window.__refurbLpnLoaded) {
     let isProcessing: boolean = false;
 
     const UI_STRINGS = {
-        triggerBtn: LPN_ASGN_NEW_BTN_SPN,
+        triggerBtn: LPN_ASGN_NEW_BTN_TSTID,
         oldLpnInput: LPN_OLD_LPN_INPT_TSTID
     };
 
-    async function executeSequence(): Promise<void> {
-        if (isProcessing) return;
-        isProcessing = true;
+    async function executeSequence(oldLpn: string | null): Promise<void> {
         debugLog('refurb-lpn', 'Starting old LPN auto-fill sequence');
 
-        try {
-            const oldLpnInput = await findInputByTestId(UI_STRINGS.oldLpnInput, 2000) as HTMLInputElement;
-            if (!oldLpnInput) {
-                debugLog('refurb-lpn', 'Old LPN input not found within 2000ms');
-                return;
-            }
-            
-            const oldLpn = localStorage.getItem(STORAGE_KEY_LPN);
-            if (!oldLpn) {
-                debugLog('refurb-lpn', 'No saved LPN in localStorage');
-                alert("Жодна LPN ще не була записана, спробуйте з наступним товаром");
-                return;
-            }
-
-            debugLog('refurb-lpn', `Filling old LPN input with: ${oldLpn}`);
-            setNativeValue(oldLpnInput, oldLpn);
-            triggerEnter(oldLpnInput);
-        } finally {
-            isProcessing = false;
+        const oldLpnInput = await findInputByTestId(UI_STRINGS.oldLpnInput, 1000) as HTMLInputElement;
+        if (!oldLpnInput) {
+            debugLog('refurb-lpn', 'Old LPN input not found within 1000ms');
+            return;
         }
+        
+        if (!oldLpn) {
+            debugLog('refurb-lpn', 'No saved LPN in localStorage');
+            alert("Жодна LPN ще не була записана, спробуйте з наступним товаром");
+            return;
+        }
+
+        debugLog('refurb-lpn', `Filling old LPN input with: ${oldLpn}`);
+        setNativeValue(oldLpnInput, oldLpn);
+        triggerEnter(oldLpnInput);
     }
 
-    // TODO find by testid
     document.addEventListener('click', (e: MouseEvent) => {
         if (!active) return;
 
         const target = e.target as HTMLElement;
-        let isTrigger = false;
-        const directText = target.textContent?.trim();
-        const childText = target.querySelector('span')?.textContent?.trim();
+        const button = target.closest('button');
+        if (!button || button.disabled) return;
 
-        if (target.tagName.toLowerCase() === 'span' && directText && UI_STRINGS.triggerBtn.includes(directText)) {
-            isTrigger = true;
-        } else if (childText && UI_STRINGS.triggerBtn.includes(childText)) {
-            isTrigger = true;
-        }
+        if (isProcessing) return;
+        isProcessing = true;
 
-        if (isTrigger) {
-            debugLog('refurb-lpn', 'Assign New LPN button click detected');
-            setTimeout(executeSequence, 100); 
+        const currentTestId = (button.getAttribute('data-testid') || '');
+        try {
+            if (currentTestId === UI_STRINGS.triggerBtn) {
+                debugLog('refurb-lpn', 'Assign New LPN button click detected');
+                executeSequence(localStorage.getItem(STORAGE_SAVED.current.lpn)); 
+            }
+        } finally {
+            isProcessing = false;
         }
     }, true);
+
+    
+    window.addEventListener("refurb-lpn-updated", ((_: CustomEvent) => {
+        if (!active) return;
+        debugLog("refurb-lpn", "Captured event refurb-lpn-updated from hub");
+        const asgnBtn = findButtonByTestId(UI_STRINGS.triggerBtn) as HTMLButtonElement;
+        
+        if (!asgnBtn || asgnBtn.disabled) return; 
+            
+        if (isProcessing) return;
+        isProcessing = true;
+        try {
+            asgnBtn.click();
+            debugLog('refurb-lpn', 'Assign New LPN input event detected');
+            executeSequence(localStorage.getItem(STORAGE_SAVED.previous.lpn));
+        } finally {
+            isProcessing = false;
+        }
+    }) as EventListener);
 
     window.__refurbLpn = {
         enable: (): void => { active = true; debugLog('refurb-lpn', 'Enabled'); },
