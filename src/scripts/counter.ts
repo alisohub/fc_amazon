@@ -1,4 +1,4 @@
-import { ITM_CMT_SCRTS, STORAGE_KEY_COUNT, STORAGE_KEY_COUNTER, STORAGE_KEY_DBL_COUNT_ID } from '@shared/constants';
+import { CNFRM_SMR_TSTID, ITM_CMT_SCRTS_TSTID, STORAGE_KEY_COUNT, STORAGE_KEY_COUNTER, STORAGE_KEY_DBL_COUNT_ID } from '@shared/constants';
 import { findButtonByTestId } from '@shared/dom';
 import { getEffectiveWorkTime, calculateUPH, calculatePercentageStr, calculateFreeTime } from '@shared/time';
 import { debugLog } from '@shared/utils';
@@ -181,13 +181,42 @@ if (!window.__counterLoaded) {
     }
 
     async function clickBlueButton(): Promise<void> {
-        const btn = await findButtonByTestId(ITM_CMT_SCRTS, 3000) as HTMLButtonElement;
+        const btn = await findButtonByTestId(ITM_CMT_SCRTS_TSTID, 3000);
 
-        if (btn && !btn.disabled) {
+        if (btn) {
             debugLog('item-counter', 'Clicking conformstion button');
             
             btn.click();
         }   
+    }
+    
+    let isNumberBlockerActive = false;
+
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+        const isNumberKey = /^[0-9]$/.test(e.key) || 
+                            /^Digit[0-9]$/.test(e.code) || 
+                            /^Numpad[0-9]$/.test(e.code);
+
+        if (isNumberKey) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            debugLog('item-counter', `Blocked number key: ${e.key}`);
+        }
+    };
+
+    function enableNumberBlocker() {
+        if (isNumberBlockerActive) return;      
+
+        isNumberBlockerActive = true;
+        document.addEventListener('keydown', handleKeyDown, true);
+    }
+
+    function disableNumberBlocker() {
+        if (!isNumberBlockerActive) return;      
+
+        isNumberBlockerActive = false;
+        document.removeEventListener('keydown', handleKeyDown, true);
     }
 
     function startPSCounter() {
@@ -292,6 +321,25 @@ if (!window.__counterLoaded) {
                         pid,
                         isInputScanned: reqPayload?.isInputScanned
                     });
+
+                    if (settings.summaryPreventNums) {
+
+                        let resAction = responseBody.action;
+                        if (typeof resAction === "string") {
+                            try { resAction = JSON.parse(resPayload); } catch (e) {}
+                        }
+
+                        if (resAction?.id === "CONFIRM_SUMMARY") {
+                            debugLog("item-counter", "Got response action CONFIRM_SUMMARY"); 
+                            if (findButtonByTestId(CNFRM_SMR_TSTID, 3000) as HTMLButtonElement) {
+                                debugLog("item-counter", "Found button summary, starting blocking numbers"); 
+                                enableNumberBlocker();
+                            }
+                        } else {
+                            debugLog('item-counter', 'Change detected cleaning up number blocker');
+                            disableNumberBlocker();
+                        }
+                    } else {disableNumberBlocker();}
 
                     if (settings.doubleCountMode) {
                         if (

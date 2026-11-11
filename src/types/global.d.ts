@@ -12,8 +12,9 @@ declare global {
 
     interface DepartmentConfig {
         targetRate: number;
-        doubleCountMode: boolean;
-        clickCount: boolean;
+        doubleCountMode?: boolean;
+        clickCount?: boolean;
+        summaryPreventNums?: boolean;
     }
 
     interface ScriptDefinition {
@@ -67,6 +68,7 @@ declare global {
         targetRate?: number;
         doubleCountMode?: boolean;
         clickCount?: boolean;
+        summaryPreventNums?: boolean;
         isPS?: boolean;
     }
 

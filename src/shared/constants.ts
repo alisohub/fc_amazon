@@ -1,12 +1,12 @@
 export const DEPARTMENT_CONFIG: Record<Department, DepartmentConfig> = {
-    "FAST": { targetRate: 80, doubleCountMode: false, clickCount: false},
-    "CRET": { targetRate: 47, doubleCountMode: false, clickCount: false},
-    "UG":   { targetRate: 47, doubleCountMode: true, clickCount: false},
-    "REFURB": { targetRate: 30, doubleCountMode: false, clickCount: true},
-    "WHD": { targetRate: 25, doubleCountMode: false, clickCount: true},
-    "PS" : { targetRate: 22.5, doubleCountMode: false, clickCount: false},
-//    "PS(CD)" : { targetRate: 27, doubleCountMode: false, clickCount: false},
-    "CD" : { targetRate: 113, doubleCountMode: false, clickCount: false}
+    "FAST": { targetRate: 80, summaryPreventNums: true },
+    "CRET": { targetRate: 47, summaryPreventNums: true },
+    "UG":   { targetRate: 47, doubleCountMode: true, summaryPreventNums: true},
+    "REFURB": { targetRate: 30, clickCount: true},
+    "WHD": { targetRate: 25, clickCount: true, summaryPreventNums: true},
+    "PS" : { targetRate: 22.5 },
+//    "PS(CD)" : { targetRate: 27 },
+    "CD" : { targetRate: 113 }
 };
 // Local Storage 
 export const STORAGE_KEY_DEP = 'sh_hub_dep';
@@ -86,4 +86,5 @@ export const LPN_RSGN_BTN_TSTID: string = "button-reassign-lpn-id";
 export const CHS_ITM_LST_BTN_TSTID: string = "button-choose-item-from-the-list-socrates";
 export const CLR_BTN_TSTID: string = "clear-session-icon";
 export const LPN_ASGN_NEW_BTN_TSTID: string = "button-assign-new-lpn-link-socrates";
-export const ITM_CMT_SCRTS: string = "button-item-commit-complete-button-text-socrates";
+export const ITM_CMT_SCRTS_TSTID: string = "button-item-commit-complete-button-text-socrates";
+export const CNFRM_SMR_TSTID: string = "button-complete-summary";

@@ -47,9 +47,11 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                 const configRate = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].targetRate : 47;
                 const configDoubleCount = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].doubleCountMode : false;
                 const configClickCount = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].clickCount : false;
+                const configSummaryPreventNums = DEPARTMENT_CONFIG[currentDep] ? DEPARTMENT_CONFIG[currentDep].summaryPreventNums : false;
 
                 const targetRate = settings.targetRate !== undefined ? settings.targetRate : configRate;
                 const clickCount = settings.clickCount !== undefined ? settings.clickCount : false;
+                const summaryPreventNums = settings.summaryPreventNums !== undefined ? settings.summaryPreventNums : true;
 
                 const isPS = currentDep === 'PS'; // || currentDep === 'PS(CD)';
 
@@ -57,6 +59,7 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                     targetRate: targetRate,
                     doubleCountMode: configDoubleCount,
                     clickCount: clickCount,
+                    summaryPreventNums: summaryPreventNums,
                     isPS: isPS
                 });
 
@@ -100,14 +103,31 @@ export const getScriptsConfig = (getCurrentDep: () => Department): ScriptDefinit
                         </label>
                     </div>
                     ` : ''}
+
+                    ${configSummaryPreventNums ? `
+                    <div class="sh-setting-row sh-space-between" title="Авто підтвердження">
+                        <span style="font-size: 12px; color: #3c4043; font-weight: 500;">Дозволити підтвердження сканером</span>
+                        <label class="sh-switch">
+                            <input type="checkbox" id="sh-cfg-summary-prevent-nums" ${summaryPreventNums ? 'checked' : ''}>
+                            <span class="sh-slider"></span>
+                        </label>
+                    </div>
+                    ` : ''}
                 `;
 
-                // Add listener for the new toggle
                 const countClickToggle = content.querySelector('#sh-cfg-count-click') as HTMLInputElement;
                 if (countClickToggle) {
                     countClickToggle.addEventListener('change', (e: Event) => {
                         const target = e.target as HTMLInputElement;
                         handler.updateSettings({ clickCount: target.checked });
+                    });
+                }
+
+                const preventNumsToggle = content.querySelector('#sh-cfg-summary-prevent-nums') as HTMLInputElement;
+                if (preventNumsToggle) {
+                    preventNumsToggle.addEventListener('change', (e: Event) => {
+                        const target = e.target as HTMLInputElement;
+                        handler.updateSettings({ summaryPreventNums : target.checked });
                     });
                 }
 
