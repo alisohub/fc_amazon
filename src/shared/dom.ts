@@ -1,10 +1,4 @@
-import { TOTE_INPT_LBL } from "./constants";
 import { normalizeText } from "./utils";
-
-export function hasTargetLabel(labelString: string | null): boolean {
-    const lowerLabel = (labelString || '').toLowerCase();
-    return TOTE_INPT_LBL.some(target => lowerLabel.includes(target.toLowerCase()));
-}
 
 export function triggerEnter(el: HTMLElement): void {
     el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
@@ -18,7 +12,6 @@ function findElement(selector: string): HTMLElement | null {
     if (el && el.offsetParent !== null) return el;
     return null;
 }
-
 
 async function waitForElement(selector: string, timeout: number): Promise<HTMLElement | null> {
     const start = Date.now();
@@ -154,7 +147,7 @@ export function showInitializationToast(scriptName: string, message: string): vo
     toast.style.cssText = `
         position: fixed;
         bottom: 24px;
-        right: 24px;
+        left: 24px;
         background-color: #323232;
         color: rgba(255, 255, 255, 0.87);
         padding: 14px 16px;

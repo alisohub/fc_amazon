@@ -1,5 +1,5 @@
 import { LPN_RSGN_BTN_TSTID } from '@shared/constants';
-import { isInsideModal, hasTargetLabel, findButtonByTestId } from '@shared/dom'; 
+import { isInsideModal, findButtonByTestId } from '@shared/dom'; 
 import { normalizeText, debugLog } from '@shared/utils';
 
 if (!window.__autoLpnLoaded) {

@@ -12,6 +12,7 @@ import '../scripts/off_task';
 import '../scripts/gravis';
 import '../scripts/clear_session';
 import { initGravis } from './hub_gravis';
+import { showInitializationToast } from '@shared/dom';
 
 if (window.location.href.includes('gravis')) {
     initGravis();
@@ -29,7 +30,7 @@ if (window.location.href.includes('gravis')) {
                 debugLog('hub', 'Hub panel opened via re-invocation');
             }
         }
-    } 
+    }
     else {
         window.__scriptHubLoaded = true;
 
@@ -49,7 +50,7 @@ if (window.location.href.includes('gravis')) {
         } else if (gradingMode === 'CRETURN_CLEAN_DECANT') {
             DEPARTAMENT_OPTIONS = ["CD"];
         } else if (gradingMode === 'CRETURN_PROBLEM_SOLVE') {
-            DEPARTAMENT_OPTIONS = ["PS" /*,"PS(CD)" */];
+            DEPARTAMENT_OPTIONS = ["PS" ,"PS(CD)"];
         } else if (gradingMode === 'WAREHOUSE_DEALS') {
             DEPARTAMENT_OPTIONS = ["WHD"];
         } else {
@@ -107,7 +108,7 @@ if (window.location.href.includes('gravis')) {
             window.addEventListener(eventType, (e: Event) => {
                 if (eventType === 'keydown') {
                     const ke = e as KeyboardEvent;
-                    if (ke.ctrlKey && ke.shiftKey && (ke.code === 'KeyH' || ke.key.toLowerCase() === 'h')) {
+                    if (ke.ctrlKey && ke.code === "F1") {
                         return;
                     }
                 }
@@ -246,10 +247,14 @@ if (window.location.href.includes('gravis')) {
 
             // Attach to window (capture phase) so it runs at the very top of the event chain
             window.addEventListener('keydown', (e: KeyboardEvent) => {
-                if (e.ctrlKey && e.shiftKey && (e.code === 'KeyH' || e.key.toLowerCase() === 'h')) {
+                if (e.ctrlKey && e.code === "F1") {
                     e.preventDefault();
                     e.stopPropagation();
-                    openPanel();
+                    if (panelEl.classList.contains('sh-open')) {
+                        closePanel();
+                    } else {
+                        openPanel();
+                    }
                 }
             }, true);
 
@@ -456,9 +461,9 @@ if (window.location.href.includes('gravis')) {
             }
 
             updateMasterToggleState();
-            setTimeout(() => { panelEl.classList.add('sh-open'); }, 100);
         }
 
         injectUI();
+        showInitializationToast('Скрипт успішно запущений', 'Відкрити панель: <b>Ctrl + F1<b> або нажміть на закладку ще раз')
     }
 }

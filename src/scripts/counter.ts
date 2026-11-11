@@ -9,8 +9,8 @@ if (!window.__counterLoaded) {
     //TODO storage sync
     let settings: CounterSettings = {
         overlayOpacity: 0.4,
-        lunchBreak: 1,
-        overlayLeft: 40,
+        lunchBreak: 4,
+        overlayLeft: 44,
         overlayTop: 2,
         customStartTime: null,
     };
@@ -189,9 +189,12 @@ if (!window.__counterLoaded) {
             btn.click();
         }   
     }
+
+    // -----------------------------
+    // DIGIT BLOCKER ON SUMMARY PAGE
+    // -----------------------------
     
     let isNumberBlockerActive = false;
-
 
     const handleKeyDown = (e: KeyboardEvent) => {
         const isNumberKey = /^[0-9]$/.test(e.key) || 
@@ -219,6 +222,83 @@ if (!window.__counterLoaded) {
         document.removeEventListener('keydown', handleKeyDown, true);
     }
 
+    function watchElementLifecycle(
+        onAppear: () => void, 
+        onDisappear: () => void
+    ): MutationObserver {
+        let isPresent = false;
+
+        const check = () => {
+            const el = findButtonByTestId(CNFRM_SMR_TSTID) as HTMLElement;
+            let isAvailable = false;
+
+            if (el && el.isConnected) {
+                const style = window.getComputedStyle(el);
+                const isHidden = style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0';
+
+                if (!isHidden) {
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        const centerX = rect.left + rect.width / 2;
+                        const centerY = rect.top + rect.height / 2;
+                        const topElement = document.elementFromPoint(centerX, centerY);
+                        
+                        const isBlocked = topElement && topElement !== el && !el.contains(topElement);
+                        isAvailable = !isBlocked;
+                    }
+                }
+            }
+
+            if (isAvailable && !isPresent) {
+                isPresent = true;
+                onAppear();
+            } else if (!isAvailable && isPresent) {
+                isPresent = false;
+                onDisappear();
+            }
+        };
+
+        check();
+
+        const observer = new MutationObserver(check);
+        observer.observe(document.body, { 
+            childList: true, 
+            subtree: true, 
+            attributes: true, 
+            attributeFilter: ['style', 'class'] 
+        });
+
+        return observer;
+    }
+
+    let summaryLifecycleObserver: MutationObserver | null = null;
+
+    function startSummaryWatcher() {
+        if (summaryLifecycleObserver) return;
+        summaryLifecycleObserver = watchElementLifecycle(
+            () => {
+                debugLog('item-counter', 'CONFIRM_SUMMARY button appeared & available, enabling number blocker');
+                enableNumberBlocker();
+            },
+            () => {
+                debugLog('item-counter', 'CONFIRM_SUMMARY button disappeared or blocked, disabling number blocker');
+                disableNumberBlocker();
+            }
+        );
+    }
+
+    function stopSummaryWatcher() {
+        if (summaryLifecycleObserver) {
+            summaryLifecycleObserver.disconnect();
+            summaryLifecycleObserver = null;
+            disableNumberBlocker();
+        }
+    }
+
+    // ---------------------
+    // DECECTING COUNT LOGIC
+    // ---------------------
+    
     function startPSCounter() {
         if (psObserver) return; // Prevent multiple observers
         psObserver = new MutationObserver((mutations) => {
@@ -322,25 +402,6 @@ if (!window.__counterLoaded) {
                         isInputScanned: reqPayload?.isInputScanned
                     });
 
-                    if (settings.summaryPreventNums) {
-
-                        let resAction = responseBody.action;
-                        if (typeof resAction === "string") {
-                            try { resAction = JSON.parse(resPayload); } catch (e) {}
-                        }
-
-                        if (resAction?.id === "CONFIRM_SUMMARY") {
-                            debugLog("item-counter", "Got response action CONFIRM_SUMMARY"); 
-                            if (findButtonByTestId(CNFRM_SMR_TSTID, 3000) as HTMLButtonElement) {
-                                debugLog("item-counter", "Found button summary, starting blocking numbers"); 
-                                enableNumberBlocker();
-                            }
-                        } else {
-                            debugLog('item-counter', 'Change detected cleaning up number blocker');
-                            disableNumberBlocker();
-                        }
-                    } else {disableNumberBlocker();}
-
                     if (settings.doubleCountMode) {
                         if (
                             resPayload?.listingConditionEvaluated === true &&
@@ -378,7 +439,7 @@ if (!window.__counterLoaded) {
                         updateCounterUI(itemCounter + increment);
                         if (settings.clickCount) {
                             debugLog('item-counter', 'setting active click count');
-                            clickBlueButton().catch(err => debugLog('item-counter', 'Failed to click green button:', err));
+                            clickBlueButton().catch(err => debugLog('item-counter', 'Failed to click blue button:', err));
                         }
                     }
                 } catch (error) {
@@ -389,7 +450,10 @@ if (!window.__counterLoaded) {
             return originalSend.call(this, body);
         };
     }
-
+    
+    // ------------
+    // 
+    // ------------
 
     document.addEventListener('keydown', (e: KeyboardEvent) => {
         if (!active) return;
@@ -432,9 +496,14 @@ if (!window.__counterLoaded) {
         enable: (): void => {
             active = true;
             debugLog('item-counter', 'Enabled');
-            if (settings.isPS) {
+            if (settings.isPS || settings.isPSCD) {
                 startPSCounter();
             }
+
+            if (settings.summaryPreventNums) {
+                startSummaryWatcher();
+            }
+
             const overlay = createOrGetOverlay();
             if (overlay) overlay.style.display = overlayVisible ? 'block' : 'none';
             updateCounterUI(itemCounter);
@@ -445,6 +514,8 @@ if (!window.__counterLoaded) {
                 psObserver.disconnect();
                 psObserver = null;
             }
+            stopSummaryWatcher();
+
             debugLog('item-counter', 'Disabled');
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay) overlay.style.display = 'none';
@@ -454,9 +525,20 @@ if (!window.__counterLoaded) {
         setCount: (newCount: number): void => updateCounterUI(newCount),
         getSettings: (): CounterSettings => settings,
         updateSettings: (newSettings: Partial<CounterSettings>): void => {
+            const oldSummaryPreventNums = settings.summaryPreventNums;
             settings = { ...settings, ...newSettings };
             debugLog('item-counter', 'Settings updated:', settings);
             try { localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify(settings)); } catch (e) {}
+
+            // Dynamically connect or disconnect when summaryPreventNums changes
+            if (active) {
+                if (settings.summaryPreventNums && !oldSummaryPreventNums) {
+                    startSummaryWatcher();
+                } else if (!settings.summaryPreventNums && oldSummaryPreventNums) {
+                    stopSummaryWatcher();
+                }
+            }
+
             const overlay = document.getElementById('sh-item-overlay');
             if (overlay && overlayVisible) overlay.style.opacity = settings.overlayOpacity.toString();
             updateCounterUI(itemCounter);

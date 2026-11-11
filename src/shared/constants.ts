@@ -4,9 +4,9 @@ export const DEPARTMENT_CONFIG: Record<Department, DepartmentConfig> = {
     "UG":   { targetRate: 47, doubleCountMode: true, summaryPreventNums: true},
     "REFURB": { targetRate: 30, clickCount: true},
     "WHD": { targetRate: 25, clickCount: true, summaryPreventNums: true},
-    "PS" : { targetRate: 22.5 },
-//    "PS(CD)" : { targetRate: 27 },
-    "CD" : { targetRate: 113 }
+    "PS" : { targetRate: 22.5, clickCount: true },
+    "PS(CD)" : { targetRate: 27, clickCount: true },
+    "CD" : { targetRate: 114 }
 };
 // Local Storage 
 export const STORAGE_KEY_DEP = 'sh_hub_dep';
@@ -37,12 +37,6 @@ export const READY_STATE = {
     NOT_STARTED: "NOT_STARTED",
     IN_PROGRESS: "IN_PROGRESS",
     NOT_FOUND: "NOT_FOUND"
-};
-
-export const COUNT_STATE = {
-    IN_PROGRESS: "in_progress",
-    COMPLETED_BY_TOAST: "completed_by_toast",
-    COMPLETED_BY_XHR: "completed_by_xhr"
 };
 
 // BUTTON LABEL
