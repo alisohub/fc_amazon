@@ -84,6 +84,10 @@ if (window.location.href.includes('gravis')) {
                 checkbox.checked = false;
                 return;
             }
+            
+            // Save-state for after page reload
+            const storageKey = `__sh_${scriptObj.id}_active`;
+            localStorage.setItem(storageKey, String(isChecked));
 
             if (isChecked) {
                 debugLog('hub', `Enabling script: ${scriptObj.id}`);
@@ -387,7 +391,8 @@ if (window.location.href.includes('gravis')) {
             if (listContainer) {
                 visibleScripts.forEach(script => {
                     const handler = script.getHandler();
-                    const isCurrentlyActive = handler ? handler.isActive() : false;
+                    const storageKey = `__sh_${script.id}_active`;
+                    let isCurrentlyActive = handler ? localStorage.getItem(storageKey) === 'true' : false;
 
                     const card = document.createElement('div');
                     card.id = `sh-card-${script.id}`; 
@@ -395,6 +400,7 @@ if (window.location.href.includes('gravis')) {
 
                     if (script.excludeDeps?.includes(currentDep)) {
                         card.style.display = 'none';
+                        isCurrentlyActive = false;
                     }
 
                     card.innerHTML = `
@@ -415,6 +421,10 @@ if (window.location.href.includes('gravis')) {
 
                     const chk = card.querySelector(`#sh-chk-${script.id}`) as HTMLInputElement;
                     const settingsContainer = card.querySelector(`#sh-settings-${script.id}`) as HTMLElement;
+
+                    if (isCurrentlyActive && handler && !handler.isActive()) {
+                        handler.enable();
+                    }
 
                     if (isCurrentlyActive && script.renderSettings) {
                         settingsContainer.style.display = 'block';
@@ -464,6 +474,6 @@ if (window.location.href.includes('gravis')) {
         }
 
         injectUI();
-        showInitializationToast('Скрипт успішно запущений', 'Відкрити панель: <b>Ctrl + F1<b> або нажміть на закладку ще раз')
+        showInitializationToast('Скрипт успішно запущений', 'Відкрити панель: <b>Ctrl + F1</b> або нажміть на закладку ще раз')
     }
 }
